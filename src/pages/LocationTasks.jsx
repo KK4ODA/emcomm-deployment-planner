@@ -3,50 +3,58 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, ArrowLeft, CheckCircle2, Clock, ListTodo } from "lucide-react";
+import { Plus, ArrowLeft, CheckCircle2, Clock, ListTodo, Wifi, WifiOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
 import TaskForm from "@/components/TaskForm";
 import TaskItem from "@/components/TaskItem";
 import { canCreate, canEdit, canDelete } from "@/components/permissions.jsx";
+import { useOffline } from "@/components/OfflineProvider";
+import {
+  createTaskEvent,
+  updateTaskEvent,
+  deleteTaskEvent,
+  listTasksLocal,
+} from "@/api/taskEvents";
 
 export default function LocationTasksPage() {
   const [user, setUser] = useState(null);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [selectedLocation, setSelectedLocation] = useState(null);
 
+  const { isOnline, tier } = useOffline();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const locationId = urlParams.get('location');
-  const currentDeploymentId = localStorage.getItem('currentDeploymentId');
 
   useEffect(() => {
     base44.auth.me().then(setUser);
   }, []);
 
+  // Read tasks from IndexedDB (materialized local view)
   const { data: allTasks = [] } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list()
+    queryFn: listTasksLocal,
+    // Re-run whenever sync engine applies remote events
+    staleTime: 0,
   });
 
-  // Real-time task updates
+  // Listen for tasks updated by the sync engine (Realtime or inbox fetch)
   useEffect(() => {
-    const unsubscribe = base44.entities.Task.subscribe((event) => {
-      queryClient.invalidateQueries(['tasks']);
-    });
-    return unsubscribe;
+    const handler = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    window.addEventListener('emcomm:tasks-updated', handler);
+    return () => window.removeEventListener('emcomm:tasks-updated', handler);
   }, [queryClient]);
 
   const { data: allLocations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list('sort_order')
+    queryFn: () => base44.entities.DeploymentLocation.list('sort_order'),
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => base44.entities.User.list(),
   });
 
   const location = allLocations.find(l => l.id === locationId);
@@ -57,27 +65,28 @@ export default function LocationTasksPage() {
   const canDeleteTask = canDelete(userRole, 'task');
 
   const availableCallSigns = location?.assigned_call_signs || [];
+  const deploymentId = location?.deployment_id ?? null;
 
   const createTask = useMutation({
-    mutationFn: (data) => base44.entities.Task.create(data),
+    mutationFn: (data) => createTaskEvent(data, user, isOnline),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks']);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setTaskFormOpen(false);
-    }
+    },
   });
 
   const updateTask = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
+    mutationFn: ({ id, data }) => updateTaskEvent(id, data, user, deploymentId, isOnline),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks']);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setTaskFormOpen(false);
       setEditingTask(null);
-    }
+    },
   });
 
   const deleteTask = useMutation({
-    mutationFn: (id) => base44.entities.Task.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+    mutationFn: (id) => deleteTaskEvent(id, user, deploymentId, isOnline),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
   });
 
   const handleSubmit = (data) => {
@@ -92,11 +101,11 @@ export default function LocationTasksPage() {
     const nextStatus = {
       pending: 'in_progress',
       in_progress: 'completed',
-      completed: 'pending'
+      completed: 'pending',
     };
-    updateTask.mutate({ 
-      id: task.id, 
-      data: { ...task, status: nextStatus[task.status] } 
+    updateTask.mutate({
+      id: task.id,
+      data: { status: nextStatus[task.status] },
     });
   };
 
@@ -128,15 +137,28 @@ export default function LocationTasksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <Link 
-          to={createPageUrl('Locations')} 
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Locations
-        </Link>
+        <div className="flex items-center justify-between mb-2">
+          <Link
+            to={createPageUrl('Locations')}
+            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Locations
+          </Link>
+          {/* Connectivity tier indicator */}
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
+            isOnline
+              ? 'bg-green-50 text-green-700'
+              : 'bg-amber-50 text-amber-700'
+          }`}>
+            {isOnline
+              ? <><Wifi className="h-3 w-3" /> Online</>
+              : <><WifiOff className="h-3 w-3" /> Offline — changes queued</>
+            }
+          </span>
+        </div>
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 mt-6">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Setup Tasks</h1>
             <p className="text-slate-500">{location.name}</p>
@@ -217,7 +239,7 @@ export default function LocationTasksPage() {
             <div>
               <h2 className="font-semibold text-slate-700 mb-3">Pending</h2>
               <div className="space-y-3">
-                {pendingTasks.map((task, index) => (
+                {pendingTasks.map((task) => (
                   <TaskItem
                     key={task.id}
                     task={task}
@@ -225,9 +247,7 @@ export default function LocationTasksPage() {
                     canDelete={canDeleteTask}
                     onEdit={(task) => { setEditingTask(task); setTaskFormOpen(true); }}
                     onDelete={(task) => {
-                      if (confirm('Delete this task?')) {
-                        deleteTask.mutate(task.id);
-                      }
+                      if (confirm('Delete this task?')) deleteTask.mutate(task.id);
                     }}
                     onStatusChange={handleStatusChange}
                   />
@@ -242,7 +262,7 @@ export default function LocationTasksPage() {
             <div>
               <h2 className="font-semibold text-slate-700 mb-3">In Progress</h2>
               <div className="space-y-3">
-                {inProgressTasks.map((task, index) => (
+                {inProgressTasks.map((task) => (
                   <TaskItem
                     key={task.id}
                     task={task}
@@ -250,9 +270,7 @@ export default function LocationTasksPage() {
                     canDelete={canDeleteTask}
                     onEdit={(task) => { setEditingTask(task); setTaskFormOpen(true); }}
                     onDelete={(task) => {
-                      if (confirm('Delete this task?')) {
-                        deleteTask.mutate(task.id);
-                      }
+                      if (confirm('Delete this task?')) deleteTask.mutate(task.id);
                     }}
                     onStatusChange={handleStatusChange}
                   />
@@ -267,7 +285,7 @@ export default function LocationTasksPage() {
             <div>
               <h2 className="font-semibold text-slate-700 mb-3">Completed</h2>
               <div className="space-y-3">
-                {completedTasks.map((task, index) => (
+                {completedTasks.map((task) => (
                   <TaskItem
                     key={task.id}
                     task={task}
@@ -275,9 +293,7 @@ export default function LocationTasksPage() {
                     canDelete={canDeleteTask}
                     onEdit={(task) => { setEditingTask(task); setTaskFormOpen(true); }}
                     onDelete={(task) => {
-                      if (confirm('Delete this task?')) {
-                        deleteTask.mutate(task.id);
-                      }
+                      if (confirm('Delete this task?')) deleteTask.mutate(task.id);
                     }}
                     onStatusChange={handleStatusChange}
                   />

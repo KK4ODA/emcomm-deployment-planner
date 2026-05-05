@@ -5,6 +5,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { OfflineProvider } from '@/components/OfflineProvider';
 import Login from './pages/Login';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -46,6 +47,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <OfflineProvider>
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -65,6 +67,7 @@ const AuthenticatedApp = () => {
       ))}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </OfflineProvider>
   );
 };
 

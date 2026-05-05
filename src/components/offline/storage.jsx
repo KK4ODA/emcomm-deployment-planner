@@ -1,6 +1,6 @@
 // IndexedDB wrapper for offline storage
 const DB_NAME = 'EmCommPlannerDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 class OfflineStorage {
   constructor() {
@@ -42,6 +42,22 @@ class OfflineStorage {
         if (!db.objectStoreNames.contains('sync_queue')) {
           const syncStore = db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
           syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+        // Phase 1: event-log stores
+        if (!db.objectStoreNames.contains('events')) {
+          db.createObjectStore('events', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('entities.tasks')) {
+          db.createObjectStore('entities.tasks', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('outbox')) {
+          db.createObjectStore('outbox', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('inbox')) {
+          db.createObjectStore('inbox', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('sync_state')) {
+          db.createObjectStore('sync_state', { keyPath: 'peer' });
         }
       };
     });
@@ -146,15 +162,30 @@ class OfflineStorage {
 
   async clearStore(storeName) {
     if (!this.db) await this.init();
-    
+
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const request = store.clear();
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
+  }
+
+  async getEntity(storeName, id) {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllEntities(storeName) {
+    return this.getEntities(storeName);
   }
 }
 
