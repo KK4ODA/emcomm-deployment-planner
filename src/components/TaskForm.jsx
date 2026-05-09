@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function TaskForm({ open, onClose, onSubmit, task, locationId, availableCallSigns = [] }) {
+export default function TaskForm({ open, onClose, onSubmit, task, locationId, availableCallSigns = [], submitting = false }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -49,6 +49,7 @@ export default function TaskForm({ open, onClose, onSubmit, task, locationId, av
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (submitting) return; // Ignore re-submits while a request is in flight
     onSubmit(formData);
   };
 
@@ -146,11 +147,11 @@ export default function TaskForm({ open, onClose, onSubmit, task, locationId, av
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
-              {task ? 'Update Task' : 'Create Task'}
+            <Button type="submit" className="bg-slate-900 hover:bg-slate-800" disabled={submitting}>
+              {submitting ? (task ? 'Updating…' : 'Creating…') : (task ? 'Update Task' : 'Create Task')}
             </Button>
           </DialogFooter>
         </form>

@@ -324,6 +324,7 @@ export default function LocationTasksPage() {
           task={editingTask}
           locationId={locationId}
           availableCallSigns={availableCallSigns}
+          submitting={createTask.isPending || updateTask.isPending}
         />
       </div>
     </div>
