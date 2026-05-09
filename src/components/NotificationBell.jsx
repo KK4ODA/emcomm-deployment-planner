@@ -46,24 +46,31 @@ export default function NotificationBell({ user }) {
     return unsubscribe;
   }, [user?.email, queryClient]);
 
+  // Bell mutations are low-impact (mark read / delete a notification);
+  // we log to console instead of toasting to avoid UI noise on retries.
+  const onErrorLog = (label) => (err) => console.error(`${label} failed:`, err);
+
   const markAsRead = useMutation({
     mutationFn: (id) => base44.entities.Notification.update(id, { read: true }),
-    onSuccess: () => queryClient.invalidateQueries(['notifications'])
+    onSuccess: () => queryClient.invalidateQueries(['notifications']),
+    onError: onErrorLog('Mark notification as read'),
   });
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
       const unreadNotifications = notifications.filter(n => !n.read);
-      await Promise.all(unreadNotifications.map(n => 
+      await Promise.all(unreadNotifications.map(n =>
         base44.entities.Notification.update(n.id, { read: true })
       ));
     },
-    onSuccess: () => queryClient.invalidateQueries(['notifications'])
+    onSuccess: () => queryClient.invalidateQueries(['notifications']),
+    onError: onErrorLog('Mark all as read'),
   });
 
   const deleteNotification = useMutation({
     mutationFn: (id) => base44.entities.Notification.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['notifications'])
+    onSuccess: () => queryClient.invalidateQueries(['notifications']),
+    onError: onErrorLog('Delete notification'),
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;

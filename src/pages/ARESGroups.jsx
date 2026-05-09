@@ -38,13 +38,19 @@ export default function ARESGroups() {
 
   const isGlobalAdmin = user?.app_role === 'admin';
 
+  const onErrorToast = (label) => (err) => {
+    console.error(`${label} failed:`, err);
+    toast.error(`${label} failed: ${err?.message || 'unknown error'}`);
+  };
+
   const createGroup = useMutation({
     mutationFn: (data) => base44.entities.ARESGroup.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['ares-groups']);
       setFormOpen(false);
       toast.success('ARES group created successfully');
-    }
+    },
+    onError: onErrorToast('Create ARES group'),
   });
 
   const updateGroup = useMutation({
@@ -54,7 +60,8 @@ export default function ARESGroups() {
       setFormOpen(false);
       setEditingGroup(null);
       toast.success('ARES group updated successfully');
-    }
+    },
+    onError: onErrorToast('Update ARES group'),
   });
 
   const deleteGroup = useMutation({
@@ -62,7 +69,8 @@ export default function ARESGroups() {
     onSuccess: () => {
       queryClient.invalidateQueries(['ares-groups']);
       toast.success('ARES group deleted successfully');
-    }
+    },
+    onError: onErrorToast('Delete ARES group'),
   });
 
   const handleSubmit = (data) => {

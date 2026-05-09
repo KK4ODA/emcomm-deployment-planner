@@ -11,6 +11,7 @@ import TaskForm from "@/components/TaskForm";
 import TaskItem from "@/components/TaskItem";
 import { canCreate, canEdit, canDelete } from "@/components/permissions.jsx";
 import { useOffline } from "@/components/OfflineProvider";
+import { toast } from "sonner";
 import {
   createTaskEvent,
   updateTaskEvent,
@@ -72,6 +73,11 @@ export default function LocationTasksPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setTaskFormOpen(false);
+      toast.success('Task created');
+    },
+    onError: (err) => {
+      console.error('Create task failed:', err);
+      toast.error(`Failed to create task: ${err?.message || 'unknown error'}`);
     },
   });
 
@@ -82,11 +88,19 @@ export default function LocationTasksPage() {
       setTaskFormOpen(false);
       setEditingTask(null);
     },
+    onError: (err) => {
+      console.error('Update task failed:', err);
+      toast.error(`Failed to update task: ${err?.message || 'unknown error'}`);
+    },
   });
 
   const deleteTask = useMutation({
     mutationFn: (id) => deleteTaskEvent(id, user, deploymentId, isOnline),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onError: (err) => {
+      console.error('Delete task failed:', err);
+      toast.error(`Failed to delete task: ${err?.message || 'unknown error'}`);
+    },
   });
 
   const handleSubmit = (data) => {

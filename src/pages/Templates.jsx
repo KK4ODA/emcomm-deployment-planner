@@ -34,7 +34,11 @@ export default function TemplatesPage() {
       setEditFormOpen(false);
       setEditingTemplate(null);
       toast.success('Template updated');
-    }
+    },
+    onError: (err) => {
+      console.error('Update template failed:', err);
+      toast.error(`Failed to update template: ${err?.message || 'unknown error'}`);
+    },
   });
 
   const deleteTemplate = useMutation({
@@ -42,7 +46,11 @@ export default function TemplatesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['templates']);
       toast.success('Template deleted');
-    }
+    },
+    onError: (err) => {
+      console.error('Delete template failed:', err);
+      toast.error(`Failed to delete template: ${err?.message || 'unknown error'}`);
+    },
   });
 
   const handleEditSubmit = (data) => {

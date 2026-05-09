@@ -19,6 +19,7 @@ import LandscapeNotice from "@/components/LandscapeNotice";
 import { canCreate, canEdit, canDelete, hasPermission } from "@/components/permissions.jsx";
 import { listTasksLocal, updateTaskEvent } from "@/api/taskEvents";
 import { useOffline } from "@/components/OfflineProvider";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -176,13 +177,20 @@ export default function Dashboard() {
   const canDeleteItem = canDelete(userRole, 'item');
   const canAssignItem = hasPermission(userRole, 'ASSIGN_ITEM');
 
+  // Generic error handler factory — surfaces silent failures as toasts
+  const onErrorToast = (label) => (err) => {
+    console.error(`${label} failed:`, err);
+    toast.error(`${label} failed: ${err?.message || 'unknown error'}`);
+  };
+
   // Category mutations
   const createCategory = useMutation({
     mutationFn: (data) => base44.entities.Category.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['categories']);
       setCategoryFormOpen(false);
-    }
+    },
+    onError: onErrorToast('Create category'),
   });
 
   const updateCategory = useMutation({
@@ -191,12 +199,14 @@ export default function Dashboard() {
       queryClient.invalidateQueries(['categories']);
       setCategoryFormOpen(false);
       setEditingCategory(null);
-    }
+    },
+    onError: onErrorToast('Update category'),
   });
 
   const deleteCategory = useMutation({
     mutationFn: (id) => base44.entities.Category.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['categories'])
+    onSuccess: () => queryClient.invalidateQueries(['categories']),
+    onError: onErrorToast('Delete category'),
   });
 
   // Item mutations
@@ -205,7 +215,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries(['items']);
       setItemFormOpen(false);
-    }
+    },
+    onError: onErrorToast('Create item'),
   });
 
   const updateItem = useMutation({
@@ -214,12 +225,14 @@ export default function Dashboard() {
       queryClient.invalidateQueries(['items']);
       setItemFormOpen(false);
       setEditingItem(null);
-    }
+    },
+    onError: onErrorToast('Update item'),
   });
 
   const deleteItem = useMutation({
     mutationFn: (id) => base44.entities.DeploymentItem.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['items'])
+    onSuccess: () => queryClient.invalidateQueries(['items']),
+    onError: onErrorToast('Delete item'),
   });
 
   const duplicateItem = useMutation({
@@ -231,7 +244,8 @@ export default function Dashboard() {
         assigned_to: []
       });
     },
-    onSuccess: () => queryClient.invalidateQueries(['items'])
+    onSuccess: () => queryClient.invalidateQueries(['items']),
+    onError: onErrorToast('Duplicate item'),
   });
 
   const handleCategorySubmit = (data) => {
