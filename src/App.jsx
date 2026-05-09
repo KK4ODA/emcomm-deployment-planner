@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
+import UpdatePrompt from '@/components/UpdatePrompt';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -79,6 +80,7 @@ function App() {
         </Router>
         <Toaster />
         <SonnerToaster position="top-right" />
+        <UpdatePrompt />
       </QueryClientProvider>
     </AuthProvider>
   )

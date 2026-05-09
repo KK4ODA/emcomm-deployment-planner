@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Radio, Package, Users, ChevronDown, ChevronRight, MapPin, GripVertical } from "lucide-react";
+import { Plus, Search, Radio, Package, Users, ChevronDown, ChevronRight, MapPin, GripVertical, ListTodo, CheckCircle2, Clock, Play, Check } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -17,6 +17,8 @@ import CategoryForm from "@/components/CategoryForm";
 import ItemForm from "@/components/ItemForm";
 import LandscapeNotice from "@/components/LandscapeNotice";
 import { canCreate, canEdit, canDelete, hasPermission } from "@/components/permissions.jsx";
+import { listTasksLocal, updateTaskEvent } from "@/api/taskEvents";
+import { useOffline } from "@/components/OfflineProvider";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -36,6 +38,7 @@ export default function Dashboard() {
   });
 
   const queryClient = useQueryClient();
+  const { isOnline } = useOffline();
 
   useEffect(() => {
     base44.auth.me().then(setUser);
@@ -75,6 +78,20 @@ export default function Dashboard() {
     queryFn: () => base44.entities.DeploymentLocation.list('sort_order')
   });
 
+  // Phase 1: tasks come from the IndexedDB materialized view
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: listTasksLocal,
+    staleTime: 0,
+  });
+
+  // Sync engine fires this when remote events apply locally
+  useEffect(() => {
+    const handler = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    window.addEventListener('emcomm:tasks-updated', handler);
+    return () => window.removeEventListener('emcomm:tasks-updated', handler);
+  }, [queryClient]);
+
   const { data: allDeployments = [] } = useQuery({
     queryKey: ['deployments'],
     queryFn: () => base44.entities.Deployment.list()
@@ -101,6 +118,54 @@ export default function Dashboard() {
     }
     return locations.some(loc => loc.id === i.deployment_location_id);
   });
+
+  // Tasks scoped to this deployment (and optionally a single site)
+  const locationIdsInDeployment = new Set(locations.map(l => l.id));
+  const tasksInDeployment = allTasks.filter(t =>
+    locationIdsInDeployment.has(t.deployment_location_id) &&
+    (!currentLocationId || t.deployment_location_id === currentLocationId)
+  );
+  const tasksTotal = tasksInDeployment.length;
+  const tasksDone = tasksInDeployment.filter(t => t.status === 'completed').length;
+
+  // "My Open Tasks": tasks assigned to the current user's call sign that aren't done
+  const STATUS_ORDER = { in_progress: 0, pending: 1, completed: 2 };
+  const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+  const myOpenTasks = tasksInDeployment
+    .filter(t =>
+      user?.call_sign &&
+      t.assigned_to_call_sign === user.call_sign &&
+      t.status !== 'completed'
+    )
+    .sort((a, b) => {
+      const s = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+      if (s !== 0) return s;
+      const p = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99);
+      if (p !== 0) return p;
+      // Earlier due date first; null due dates sort last
+      const ad = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+      const bd = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+      return ad - bd;
+    });
+
+  const advanceTaskStatus = async (task) => {
+    const next = task.status === 'pending' ? 'in_progress'
+      : task.status === 'in_progress' ? 'completed'
+      : null;
+    if (!next) return;
+    try {
+      await updateTaskEvent(
+        task.id,
+        { status: next },
+        user,
+        currentDeploymentId,
+        isOnline,
+      );
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch (err) {
+      console.error('Status advance failed:', err);
+    }
+  };
 
   const userRole = user?.app_role;
   const canCreateCategory = canCreate(userRole, 'category');
@@ -421,7 +486,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-3 sm:mb-4">
           <div className="bg-white rounded-lg p-2 sm:p-3 border border-slate-100">
             <div className="flex items-center gap-2">
               <div className="p-1 sm:p-1.5 bg-sky-100 rounded">
@@ -455,7 +520,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          <button 
+          <button
             onClick={scrollToFirstUnassigned}
             className="bg-white rounded-lg p-2 sm:p-3 border border-slate-100 hover:border-rose-300 hover:shadow-sm transition-all cursor-pointer w-full text-left"
           >
@@ -471,7 +536,146 @@ export default function Dashboard() {
               </div>
             </div>
           </button>
+          <button
+            onClick={() => document.getElementById('my-open-tasks')?.scrollIntoView({ behavior: 'smooth' })}
+            className="bg-white rounded-lg p-2 sm:p-3 border border-slate-100 hover:border-violet-300 hover:shadow-sm transition-all cursor-pointer w-full text-left"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1 sm:p-1.5 bg-violet-100 rounded">
+                <ListTodo className="h-3 w-3 sm:h-4 sm:w-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-lg sm:text-xl font-bold text-slate-900">
+                  {tasksDone}<span className="text-slate-400 text-sm font-medium">/{tasksTotal}</span>
+                </p>
+                <p className="text-xs text-slate-500">Tasks done</p>
+              </div>
+            </div>
+          </button>
         </div>
+
+        {/* My Open Tasks */}
+        {user?.call_sign && myOpenTasks.length > 0 && (
+          <div id="my-open-tasks" className="bg-white rounded-lg p-3 sm:p-4 border border-slate-100 mb-3 sm:mb-4">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-xs sm:text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <ListTodo className="h-3.5 w-3.5 text-violet-600" />
+                My Open Tasks ({user.call_sign})
+              </h3>
+              <span className="text-xs text-slate-500">{myOpenTasks.length} open</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {myOpenTasks.slice(0, 10).map(task => {
+                const site = locations.find(l => l.id === task.deployment_location_id);
+                const priorityClass =
+                  task.priority === 'high'   ? 'text-rose-600 bg-rose-50' :
+                  task.priority === 'medium' ? 'text-amber-600 bg-amber-50' :
+                                                'text-slate-500 bg-slate-100';
+                const StatusIcon = task.status === 'in_progress' ? Play : Clock;
+                const statusLabel = task.status === 'in_progress' ? 'In progress' : 'Pending';
+                const advanceLabel = task.status === 'pending' ? 'Start' : 'Mark done';
+                const AdvanceIcon = task.status === 'pending' ? Play : Check;
+
+                return (
+                  <Link
+                    key={task.id}
+                    to={createPageUrl('LocationTasks') + `?location=${task.deployment_location_id}`}
+                    className="flex items-center justify-between gap-3 py-2.5 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded ${priorityClass}`}>
+                        {task.priority || 'medium'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-900 truncate">{task.name}</p>
+                        <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                          <StatusIcon className="h-3 w-3" />
+                          {statusLabel}
+                          {site && <><span>·</span><span>{site.name}</span></>}
+                          {task.due_date && <><span>·</span><span>due {new Date(task.due_date).toLocaleDateString()}</span></>}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 shrink-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        advanceTaskStatus(task);
+                      }}
+                    >
+                      <AdvanceIcon className="h-3 w-3 mr-1" />
+                      {advanceLabel}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </div>
+            {myOpenTasks.length > 10 && (
+              <p className="text-center text-xs text-slate-400 mt-2">
+                Showing 10 of {myOpenTasks.length}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Task Progress by Site */}
+        {locations.length > 0 && tasksTotal > 0 && (
+          <div className="bg-white rounded-lg p-3 sm:p-4 border border-slate-100 mb-3 sm:mb-4">
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-700 mb-2 sm:mb-3 flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              Task Progress by Site
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+              {locations.map(loc => {
+                const siteTasks = tasksInDeployment.filter(t => t.deployment_location_id === loc.id);
+                if (siteTasks.length === 0) return null;
+                const done = siteTasks.filter(t => t.status === 'completed').length;
+                const inProgress = siteTasks.filter(t => t.status === 'in_progress').length;
+                const pending = siteTasks.filter(t => t.status === 'pending').length;
+                const pct = siteTasks.length > 0 ? Math.round((done / siteTasks.length) * 100) : 0;
+                const allDone = done === siteTasks.length;
+
+                return (
+                  <Link
+                    key={loc.id}
+                    to={createPageUrl('LocationTasks') + `?location=${loc.id}`}
+                    className="block p-2 sm:p-3 rounded bg-slate-50 hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-sm font-medium text-slate-900 truncate flex-1 mr-2">{loc.name}</p>
+                      <span className={`text-xs font-medium ${allDone ? 'text-emerald-600' : 'text-slate-600'}`}>
+                        {done}/{siteTasks.length}{allDone && ' ✓'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1.5">
+                      <div
+                        className={`h-full transition-all ${allDone ? 'bg-emerald-500' : 'bg-violet-500'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        {done}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Play className="h-3 w-3 text-blue-500" />
+                        {inProgress}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-slate-400" />
+                        {pending}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Unassigned Items by Location */}
         {locations.length > 0 && (

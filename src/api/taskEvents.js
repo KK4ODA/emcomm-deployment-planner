@@ -37,7 +37,19 @@ export function getDeviceId() {
 }
 
 // ─── Local materialization ────────────────────────────────────────────────────
-// Mirrors the Postgres trigger logic in 003_event_log.sql on the client side.
+// Mirrors the Postgres trigger logic in 003_event_log.sql + 006 state machine
+// on the client side so optimistic UI matches what the server will materialize.
+
+const STATUS_RANK = { pending: 1, in_progress: 2, completed: 3 };
+
+// "Most-advanced wins": never regress a task's status. If incoming is less
+// advanced than current, return current. (Matches the Postgres trigger.)
+function mergeStatus(currentStatus, incomingStatus) {
+  if (!incomingStatus) return currentStatus;
+  const cur = STATUS_RANK[currentStatus] ?? 0;
+  const inc = STATUS_RANK[incomingStatus] ?? 0;
+  return inc >= cur ? incomingStatus : currentStatus;
+}
 
 export async function applyTaskEvent(event) {
   const { op, entity_id, patch, ts } = event;
@@ -62,7 +74,11 @@ export async function applyTaskEvent(event) {
     if (!existing) return; // Task not seeded yet; server will handle it
     const updated = { ...existing };
     for (const [k, v] of Object.entries(patch)) {
-      updated[k] = v;
+      if (k === 'status') {
+        updated.status = mergeStatus(existing.status, v);
+      } else {
+        updated[k] = v;
+      }
     }
     updated.updated_at = new Date().toISOString();
     await offlineStorage.saveEntity('entities.tasks', updated);
