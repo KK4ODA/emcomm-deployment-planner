@@ -152,13 +152,13 @@ export default function ItemForm({ open, onClose, onSubmit, item, categories, lo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">Site</Label>
             <Select
               value={form.deployment_location_id}
               onValueChange={(value) => setForm({ ...form, deployment_location_id: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select location" />
+                <SelectValue placeholder="Select site" />
               </SelectTrigger>
               <SelectContent>
                 {locations.map(loc => (

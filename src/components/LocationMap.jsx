@@ -155,9 +155,9 @@ export default function LocationMap({ locations, items = [], onLocationClick }) 
         <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="text-center p-6">
             <MapPin className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-600 font-medium">No locations with coordinates</p>
+            <p className="text-sm text-slate-600 font-medium">No sites with coordinates</p>
             <p className="text-xs text-slate-500 mt-1">
-              Add coordinates to location addresses to see them on the map
+              Add coordinates to site addresses to see them on the map
             </p>
             <p className="text-xs text-slate-400 mt-2 font-mono">
               Format: latitude, longitude (e.g., 40.7128, -74.0060)

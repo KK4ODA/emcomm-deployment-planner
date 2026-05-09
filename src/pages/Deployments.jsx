@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Package, Pencil, Trash2, ArrowRight, Clock, Save, FileDown, FileText, CheckSquare } from "lucide-react";
+import { Plus, Calendar, MapPin, Globe, Package, Pencil, Trash2, ArrowRight, Clock, Save, FileDown, FileText, CheckSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,16 +86,25 @@ export default function Deployments() {
 
   const createDeployment = useMutation({
     mutationFn: async (data) => {
-      const deployment = await base44.entities.Deployment.create(data);
-      
+      // template_id isn't a column on deployments — strip before insert
+      const { template_id, start_date, end_date, ...rest } = data;
+      const deploymentData = {
+        ...rest,
+        // Empty strings break DATE columns; convert to null
+        start_date: start_date || null,
+        end_date: end_date || null,
+      };
+
+      const deployment = await base44.entities.Deployment.create(deploymentData);
+
       // If creating from template, copy structure
-      if (data.template_id) {
-        const template = await base44.entities.DeploymentTemplate.filter({ id: data.template_id }).then(t => t[0]);
+      if (template_id) {
+        const template = await base44.entities.DeploymentTemplate.filter({ id: template_id }).then(t => t[0]);
         if (template?.structure) {
           await applyTemplate(deployment.id, template.structure);
         }
       }
-      
+
       return deployment;
     },
     onSuccess: () => {
@@ -105,7 +114,10 @@ export default function Deployments() {
       queryClient.invalidateQueries(['locations']);
       setFormOpen(false);
       toast.success('Deployment created successfully');
-    }
+    },
+    onError: (err) => {
+      toast.error(`Failed to create deployment: ${err.message}`);
+    },
   });
 
   const saveAsTemplate = useMutation({
@@ -193,13 +205,23 @@ export default function Deployments() {
   };
 
   const updateDeployment = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Deployment.update(id, data),
+    mutationFn: ({ id, data }) => {
+      const { template_id, start_date, end_date, ...rest } = data;
+      return base44.entities.Deployment.update(id, {
+        ...rest,
+        start_date: start_date || null,
+        end_date: end_date || null,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['deployments']);
       setFormOpen(false);
       setEditingDeployment(null);
       toast.success('Deployment updated successfully');
-    }
+    },
+    onError: (err) => {
+      toast.error(`Failed to update deployment: ${err.message}`);
+    },
   });
 
   const deleteDeployment = useMutation({
@@ -341,7 +363,7 @@ export default function Deployments() {
                           </div>
                           {deployment.location && (
                             <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                              <MapPin className="h-4 w-4" />
+                              <Globe className="h-4 w-4" />
                               {deployment.location}
                             </div>
                           )}

@@ -404,10 +404,10 @@ export default function Dashboard() {
                 <MapPin className="h-4 w-4 text-slate-400" />
                 <Select value={currentLocationId || 'all'} onValueChange={(val) => handleLocationChange(val === 'all' ? null : val)}>
                   <SelectTrigger className="w-full sm:w-56 bg-white">
-                    <SelectValue placeholder="All Locations" />
+                    <SelectValue placeholder="All Sites" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Locations</SelectItem>
+                    <SelectItem value="all">All Sites</SelectItem>
                     {locations.map(loc => (
                       <SelectItem key={loc.id} value={loc.id}>
                         {loc.name}
@@ -476,7 +476,7 @@ export default function Dashboard() {
         {/* Unassigned Items by Location */}
         {locations.length > 0 && (
           <div className="bg-white rounded-lg p-3 sm:p-4 border border-slate-100 mb-3 sm:mb-4">
-            <h3 className="text-xs sm:text-sm font-semibold text-slate-700 mb-2 sm:mb-3">Unassigned Items by Location</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-700 mb-2 sm:mb-3">Unassigned Items by Site</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
               {locations.map(location => {
                 const locationItems = allItems.filter(i => i.deployment_location_id === location.id);

@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Radio, User, Menu, LayoutDashboard, Users, Package, LogOut, Settings, FolderOpen, MapPin, FileText, UserCog } from "lucide-react";
 import { OfflineProvider } from '@/components/OfflineProvider';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
 import CookieBanner from '@/components/CookieBanner';
 import RequireAresGroup from '@/components/RequireAresGroup';
@@ -56,10 +57,10 @@ export default function Layout({ children, currentPageName }) {
   const isAdmin = user?.app_role === 'admin';
 
   const navItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
     { name: 'Deployments', icon: FolderOpen, page: 'Deployments' },
     { name: 'Templates', icon: FileText, page: 'Templates' },
-    { name: 'Locations', icon: MapPin, page: 'Locations' },
-    { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+    { name: 'Deployment Sites', icon: MapPin, page: 'Locations' },
     { name: 'My Items', icon: Package, page: 'MyAssignments' },
     { name: 'Members', icon: Users, page: 'Members' },
     ...(isAdmin ? [{ name: 'ARES Groups', icon: UserCog, page: 'ARESGroups' }] : []),
@@ -124,11 +125,7 @@ export default function Layout({ children, currentPageName }) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-slate-800 to-slate-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-medium">
-                        {user?.full_name?.charAt(0) || '?'}
-                      </span>
-                    </div>
+                    <UserAvatar user={user} size="sm" />
                     <span className="hidden sm:block text-sm font-medium text-slate-700">
                       {user?.call_sign || user?.full_name || 'User'}
                     </span>

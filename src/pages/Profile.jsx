@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +9,47 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Radio, Phone, Mail, Save, ArrowLeft, MessageCircle, Users, Lock, X } from "lucide-react";
+import { User, Radio, Phone, Mail, Save, ArrowLeft, Users, Lock, X, Camera, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { validateCallsign, validateEmail } from '@/components/utils/callsignValidation';
+import UserAvatar from '@/components/UserAvatar';
+
+// Resize an image File to fit within maxSize x maxSize, returning a JPEG Blob.
+async function resizeImageFile(file, maxSize = 512, quality = 0.9) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(objectUrl);
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to encode image'));
+        },
+        'image/jpeg',
+        quality,
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Could not read image'));
+    };
+    img.src = objectUrl;
+  });
+}
 
 export default function Profile() {
-  const [user, setUser] = useState(null);
+  const { user, checkAppState } = useAuth();
+  const fileInputRef = useRef(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [form, setForm] = useState({
     call_sign: '',
     phone: '',
@@ -30,6 +65,9 @@ export default function Profile() {
   });
   const [saving, setSaving] = useState(false);
   const [adminSaving, setAdminSaving] = useState(false);
+  // Member lookup flow: idle → searching → found/not_found
+  const [lookupStatus, setLookupStatus] = useState('idle');
+  const [foundMember, setFoundMember] = useState(null);
   const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [emailSaving, setEmailSaving] = useState(false);
@@ -43,17 +81,83 @@ export default function Profile() {
   });
 
   useEffect(() => {
-    base44.auth.me().then(userData => {
-      if (!userData) return;
-      setUser(userData);
-      setForm({
-        call_sign: userData.call_sign || '',
-        phone: userData.phone || '',
-        aprs_call_sign: userData.aprs_call_sign || '',
-        ares_group_ids: userData.ares_group_ids || []
-      });
-    }).catch(err => console.error('Profile load error:', err));
-  }, []);
+    if (!user) return;
+    setForm({
+      call_sign: user.call_sign || '',
+      phone: user.phone || '',
+      aprs_call_sign: user.aprs_call_sign || '',
+      ares_group_ids: user.ares_group_ids || []
+    });
+  }, [user]);
+
+  const handleAvatarSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Resize client-side to ~512px and re-encode as JPEG
+      const blob = await resizeImageFile(file, 512, 0.9);
+
+      // Path: <user_id>/avatar.jpg — RLS allows write only to your own folder
+      const path = `${user.id}/avatar.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, {
+          upsert: true,
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      // Cache-bust so the new image actually shows after upsert overwrites
+      const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_image_url: publicUrl })
+        .eq('id', user.id);
+      if (updateError) throw updateError;
+
+      // Refresh AuthContext so the new URL propagates everywhere (Layout, Profile)
+      await checkAppState();
+      toast.success('Profile photo updated');
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+      toast.error(`Upload failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!user || !user.profile_image_url) return;
+    setUploadingAvatar(true);
+    try {
+      // Best-effort delete from Storage; ignore "not found" since the URL might be stale
+      await supabase.storage.from('avatars').remove([`${user.id}/avatar.jpg`]);
+
+      const { error } = await supabase
+        .from('users')
+        .update({ profile_image_url: null })
+        .eq('id', user.id);
+      if (error) throw error;
+
+      await checkAppState();
+      toast.success('Profile photo removed');
+    } catch (err) {
+      toast.error(`Could not remove photo: ${err.message || 'unknown error'}`);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -100,30 +204,76 @@ export default function Profile() {
   const selectedGroups = aresGroups.filter(g => form.ares_group_ids.includes(g.id));
   const availableGroups = aresGroups.filter(g => !form.ares_group_ids.includes(g.id));
 
-  const handleAdminCreateProfile = async () => {
-    if (!adminForm.email || !adminForm.full_name || !adminForm.call_sign || !adminForm.phone) {
-      toast.error('Email, full name, call sign, and phone are required');
+  const resetMemberLookup = () => {
+    setLookupStatus('idle');
+    setFoundMember(null);
+    setAdminForm({ email: '', full_name: '', call_sign: '', phone: '', aprs_call_sign: '' });
+    setAdminErrors({});
+  };
+
+  const handleLookupMember = async () => {
+    setAdminErrors({});
+
+    const emailValidation = validateEmail(adminForm.email);
+    if (!emailValidation.isValid) {
+      setAdminErrors({ email: emailValidation.error });
       return;
     }
-    
-    // Validate email and callsigns
-    const emailValidation = validateEmail(adminForm.email);
+
+    setLookupStatus('searching');
+    try {
+      const { data: existing, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', adminForm.email)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (existing) {
+        setFoundMember(existing);
+        setAdminForm({
+          email: adminForm.email,
+          full_name: existing.full_name || '',
+          call_sign: existing.call_sign || '',
+          phone: existing.phone || '',
+          aprs_call_sign: existing.aprs_call_sign || '',
+        });
+        setLookupStatus('found');
+      } else {
+        setFoundMember(null);
+        setAdminForm({
+          email: adminForm.email,
+          full_name: '',
+          call_sign: '',
+          phone: '',
+          aprs_call_sign: '',
+        });
+        setLookupStatus('not_found');
+      }
+    } catch (err) {
+      toast.error('Lookup failed: ' + (err.message || 'unknown error'));
+      setLookupStatus('idle');
+    }
+  };
+
+  const handleAdminCreateProfile = async (e) => {
+    e?.preventDefault?.();
+
+    if (!adminForm.full_name || !adminForm.call_sign || !adminForm.phone) {
+      toast.error('Full name, call sign, and phone are required');
+      return;
+    }
+
+    // Validate callsigns (email already validated during lookup)
     const callSignValidation = validateCallsign(adminForm.call_sign);
     const aprsValidation = validateCallsign(adminForm.aprs_call_sign);
-    
+
     const newErrors = {};
-    if (!emailValidation.isValid) {
-      newErrors.email = emailValidation.error;
-    }
-    if (!callSignValidation.isValid) {
-      newErrors.call_sign = callSignValidation.error;
-    }
-    if (!aprsValidation.isValid) {
-      newErrors.aprs_call_sign = aprsValidation.error;
-    }
-    
+    if (!callSignValidation.isValid) newErrors.call_sign = callSignValidation.error;
+    if (!aprsValidation.isValid) newErrors.aprs_call_sign = aprsValidation.error;
+
     setAdminErrors(newErrors);
-    
     if (Object.keys(newErrors).length > 0) {
       toast.error('Please fix the validation errors');
       return;
@@ -133,16 +283,9 @@ export default function Profile() {
     try {
       const response = await base44.functions.invoke('createOrUpdateUserProfile', adminForm);
       toast.success(response.data.message);
-      setAdminForm({
-        full_name: '',
-        email: '',
-        call_sign: '',
-        phone: '',
-        aprs_call_sign: ''
-      });
-      setAdminErrors({});
+      resetMemberLookup();
     } catch (error) {
-      toast.error('Failed to create/update profile: ' + error.message);
+      toast.error('Failed: ' + error.message);
     } finally {
       setAdminSaving(false);
     }
@@ -224,9 +367,37 @@ export default function Profile() {
 
         <Card className="border-0 shadow-xl">
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-slate-800 to-slate-600 rounded-full flex items-center justify-center mb-4">
-              <User className="h-10 w-10 text-white" />
+            <div className="mx-auto relative w-20 h-20 mb-4 group">
+              <UserAvatar user={user} size="lg" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Change profile photo"
+                className="absolute -bottom-1 -right-1 bg-slate-900 hover:bg-slate-800 text-white rounded-full p-1.5 shadow-md disabled:opacity-60 transition"
+              >
+                {uploadingAvatar
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Camera className="h-3.5 w-3.5" />}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarSelect}
+                className="hidden"
+              />
             </div>
+            {user?.profile_image_url && (
+              <button
+                type="button"
+                onClick={handleAvatarRemove}
+                disabled={uploadingAvatar}
+                className="mx-auto block text-xs text-slate-500 hover:text-rose-600 mb-2 disabled:opacity-60"
+              >
+                Remove photo
+              </button>
+            )}
             <CardTitle className="text-2xl">{user.full_name}</CardTitle>
             <CardDescription className="flex items-center justify-center gap-2">
               <Mail className="h-4 w-4" />
@@ -238,7 +409,7 @@ export default function Profile() {
               <Tabs defaultValue="my-profile" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="my-profile">My Profile</TabsTrigger>
-                  <TabsTrigger value="create-profile">Create Profile</TabsTrigger>
+                  <TabsTrigger value="create-profile">Add Member</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="my-profile">
@@ -376,124 +547,173 @@ export default function Profile() {
                 </TabsContent>
 
                 <TabsContent value="create-profile">
-                  <form onSubmit={handleAdminCreateProfile} className="space-y-6">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                      <p className="text-sm text-blue-900">
-                        Create or override user profiles. If a call sign already exists, it will be replaced.
-                      </p>
-                    </div>
-
+                  <div className="space-y-6">
+                    {/* Step 1: Email lookup */}
                     <div className="space-y-2">
                       <Label htmlFor="admin_email" className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-slate-500" />
-                        User Email
+                        Member Email
                       </Label>
-                      <Input
-                        id="admin_email"
-                        type="email"
-                        value={adminForm.email}
-                        onChange={(e) => {
-                          setAdminForm({ ...adminForm, email: e.target.value });
-                          setAdminErrors({ ...adminErrors, email: null });
-                        }}
-                        placeholder="user@example.com"
-                        className={adminErrors.email ? 'border-red-500' : ''}
-                        required
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="admin_email"
+                          type="email"
+                          value={adminForm.email}
+                          onChange={(e) => {
+                            setAdminForm({ ...adminForm, email: e.target.value });
+                            setAdminErrors({ ...adminErrors, email: null });
+                            // Editing the email after a lookup invalidates the result
+                            if (lookupStatus !== 'idle' && lookupStatus !== 'searching') {
+                              setLookupStatus('idle');
+                              setFoundMember(null);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && lookupStatus === 'idle') {
+                              e.preventDefault();
+                              handleLookupMember();
+                            }
+                          }}
+                          placeholder="user@example.com"
+                          disabled={lookupStatus === 'searching' || lookupStatus === 'found' || lookupStatus === 'not_found'}
+                          className={adminErrors.email ? 'border-red-500' : ''}
+                        />
+                        {(lookupStatus === 'idle' || lookupStatus === 'searching') ? (
+                          <Button
+                            type="button"
+                            onClick={handleLookupMember}
+                            disabled={lookupStatus === 'searching' || !adminForm.email}
+                            className="bg-slate-900 hover:bg-slate-800 shrink-0"
+                          >
+                            {lookupStatus === 'searching' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Look up'}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetMemberLookup}
+                            className="shrink-0"
+                          >
+                            Start over
+                          </Button>
+                        )}
+                      </div>
                       {adminErrors.email && (
                         <p className="text-sm text-red-600">{adminErrors.email}</p>
                       )}
-                      <p className="text-sm text-slate-500">
-                        User must have already signed up to the app
-                      </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="admin_full_name" className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-slate-500" />
-                        Full Name
-                      </Label>
-                      <Input
-                        id="admin_full_name"
-                        value={adminForm.full_name}
-                        onChange={(e) => setAdminForm({ ...adminForm, full_name: e.target.value })}
-                        placeholder="John Doe"
-                        required
-                      />
-                    </div>
+                    {/* Status banner */}
+                    {lookupStatus === 'found' && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+                        <p className="font-medium text-blue-900">
+                          Existing member: {foundMember?.full_name || foundMember?.email}
+                        </p>
+                        <p className="text-blue-800 mt-1">
+                          Editing the fields below updates this member's profile. Their password is not affected.
+                        </p>
+                      </div>
+                    )}
+                    {lookupStatus === 'not_found' && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm">
+                        <p className="font-medium text-emerald-900">No member with this email yet</p>
+                        <p className="text-emerald-800 mt-1">
+                          An invitation will be emailed to this address. They'll set their own password when they accept.
+                          The fields below pre-fill their profile.
+                        </p>
+                      </div>
+                    )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="admin_call_sign" className="flex items-center gap-2">
-                        <Radio className="h-4 w-4 text-slate-500" />
-                        Ham Radio Call Sign
-                      </Label>
-                      <Input
-                        id="admin_call_sign"
-                        value={adminForm.call_sign}
-                        onChange={(e) => {
-                          setAdminForm({ ...adminForm, call_sign: e.target.value.toUpperCase() });
-                          setAdminErrors({ ...adminErrors, call_sign: null });
-                        }}
-                        placeholder="e.g., W1ABC"
-                        className={`uppercase text-lg font-mono ${adminErrors.call_sign ? 'border-red-500' : ''}`}
-                        required
-                      />
-                      {adminErrors.call_sign && (
-                        <p className="text-sm text-red-600">{adminErrors.call_sign}</p>
-                      )}
-                    </div>
+                    {/* Step 2: Profile fields + submit (only after lookup) */}
+                    {(lookupStatus === 'found' || lookupStatus === 'not_found') && (
+                      <form onSubmit={handleAdminCreateProfile} className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_full_name" className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-slate-500" />
+                            Full Name
+                          </Label>
+                          <Input
+                            id="admin_full_name"
+                            value={adminForm.full_name}
+                            onChange={(e) => setAdminForm({ ...adminForm, full_name: e.target.value })}
+                            placeholder="John Doe"
+                            required
+                          />
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="admin_phone" className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-slate-500" />
-                        Phone Number
-                      </Label>
-                      <Input
-                        id="admin_phone"
-                        type="tel"
-                        value={adminForm.phone}
-                        onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
-                        placeholder="(555) 123-4567"
-                        required
-                      />
-                    </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_call_sign" className="flex items-center gap-2">
+                            <Radio className="h-4 w-4 text-slate-500" />
+                            Ham Radio Call Sign
+                          </Label>
+                          <Input
+                            id="admin_call_sign"
+                            value={adminForm.call_sign}
+                            onChange={(e) => {
+                              setAdminForm({ ...adminForm, call_sign: e.target.value.toUpperCase() });
+                              setAdminErrors({ ...adminErrors, call_sign: null });
+                            }}
+                            placeholder="e.g., W1ABC"
+                            className={`uppercase text-lg font-mono ${adminErrors.call_sign ? 'border-red-500' : ''}`}
+                            required
+                          />
+                          {adminErrors.call_sign && (
+                            <p className="text-sm text-red-600">{adminErrors.call_sign}</p>
+                          )}
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="admin_aprs" className="flex items-center gap-2">
-                        <Radio className="h-4 w-4 text-slate-500" />
-                        APRS Call Sign with SSID
-                      </Label>
-                      <Input
-                        id="admin_aprs"
-                        value={adminForm.aprs_call_sign}
-                        onChange={(e) => {
-                          setAdminForm({ ...adminForm, aprs_call_sign: e.target.value.toUpperCase() });
-                          setAdminErrors({ ...adminErrors, aprs_call_sign: null });
-                        }}
-                        placeholder="e.g., W1ABC-9"
-                        className={`uppercase text-lg font-mono ${adminErrors.aprs_call_sign ? 'border-red-500' : ''}`}
-                      />
-                      {adminErrors.aprs_call_sign && (
-                        <p className="text-sm text-red-600">{adminErrors.aprs_call_sign}</p>
-                      )}
-                    </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_phone" className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-slate-500" />
+                            Phone Number
+                          </Label>
+                          <Input
+                            id="admin_phone"
+                            type="tel"
+                            value={adminForm.phone}
+                            onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                            placeholder="(555) 123-4567"
+                            required
+                          />
+                        </div>
 
-                    <Button
-                      type="button"
-                      onClick={handleAdminCreateProfile}
-                      className="w-full bg-slate-900 hover:bg-slate-800 h-12 text-base"
-                      disabled={adminSaving}
-                    >
-                      {adminSaving ? (
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                      ) : (
-                        <>
-                          <Users className="h-5 w-5 mr-2" />
-                          Create/Update Profile
-                        </>
-                      )}
-                    </Button>
-                  </form>
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_aprs" className="flex items-center gap-2">
+                            <Radio className="h-4 w-4 text-slate-500" />
+                            APRS Call Sign with SSID
+                          </Label>
+                          <Input
+                            id="admin_aprs"
+                            value={adminForm.aprs_call_sign}
+                            onChange={(e) => {
+                              setAdminForm({ ...adminForm, aprs_call_sign: e.target.value.toUpperCase() });
+                              setAdminErrors({ ...adminErrors, aprs_call_sign: null });
+                            }}
+                            placeholder="e.g., W1ABC-9"
+                            className={`uppercase text-lg font-mono ${adminErrors.aprs_call_sign ? 'border-red-500' : ''}`}
+                          />
+                          {adminErrors.aprs_call_sign && (
+                            <p className="text-sm text-red-600">{adminErrors.aprs_call_sign}</p>
+                          )}
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full bg-slate-900 hover:bg-slate-800 h-12 text-base"
+                          disabled={adminSaving}
+                        >
+                          {adminSaving ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <>
+                              <Users className="h-5 w-5 mr-2" />
+                              {lookupStatus === 'found' ? 'Update Member' : 'Send Invitation'}
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
             ) : (
@@ -739,24 +959,6 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-xl mt-6">
-          <CardContent className="pt-6">
-            <h3 className="font-semibold text-slate-900 mb-3">Mobile Access</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Connect to the EmComm Assistant via WhatsApp to manage your tasks and equipment on the go.
-            </p>
-            <a 
-              href={base44.agents.getWhatsAppConnectURL('emcomm_assistant')} 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-base gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Connect to WhatsApp
-              </Button>
-            </a>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

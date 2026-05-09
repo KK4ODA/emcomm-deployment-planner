@@ -5,8 +5,8 @@ import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import { OfflineProvider } from '@/components/OfflineProvider';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -28,7 +28,6 @@ const PageNotFound = () => (
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -37,7 +36,6 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors — redirect to login
   if (authError) {
     if (authError.type === 'auth_required') {
       navigateToLogin();
@@ -45,9 +43,7 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Render the main app
   return (
-    <OfflineProvider>
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -67,10 +63,8 @@ const AuthenticatedApp = () => {
       ))}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
-    </OfflineProvider>
   );
 };
-
 
 function App() {
   return (
@@ -79,6 +73,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/Login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>

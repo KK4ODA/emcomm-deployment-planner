@@ -107,7 +107,7 @@ export default function DeploymentForm({ open, onClose, onSubmit, deployment }) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">Deployment Region</Label>
             <Input
               id="location"
               value={form.location}

@@ -123,17 +123,9 @@ const users = {
   }
 };
 
-// Agents shim (WhatsApp integration - not available in standalone mode)
-const agents = {
-  getWhatsAppConnectURL() {
-    return '#';
-  }
-};
-
 export const base44 = {
   entities,
   auth,
   functions,
   users,
-  agents,
 };

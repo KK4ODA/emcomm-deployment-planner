@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,98 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Crosshair, Loader2 } from "lucide-react";
+import { MapContainer, TileLayer, Marker, LayersControl, useMapEvents, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Ensure default Leaflet marker icons load (LocationMap.jsx does the same;
+// repeating here makes the form robust if opened before the map renders)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+// Parse "lat, lng" out of a free-form address string
+function parseCoords(s) {
+  if (!s) return null;
+  const m = s.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return [lat, lng];
+}
+
+// Click-to-set helper rendered inside the MapContainer
+function ClickToSet({ onPick }) {
+  useMapEvents({
+    click(e) {
+      onPick([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
+// Floating "locate me" button rendered inside the MapContainer
+function LocateMeButton() {
+  const map = useMap();
+  const btnRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Prevent map click/scroll handlers from firing through the button
+    if (btnRef.current) {
+      L.DomEvent.disableClickPropagation(btnRef.current);
+      L.DomEvent.disableScrollPropagation(btnRef.current);
+    }
+  }, []);
+
+  const locate = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported by this browser');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.flyTo([pos.coords.latitude, pos.coords.longitude], 14);
+        setBusy(false);
+      },
+      (err) => {
+        setBusy(false);
+        setError(err.message || 'Could not determine your location');
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 }
+    );
+  };
+
+  return (
+    <div className="absolute top-2 right-2 z-[1000] flex flex-col items-end gap-1">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={locate}
+        disabled={busy}
+        className="bg-white border border-slate-300 rounded-md p-2 shadow-md hover:bg-slate-50 disabled:opacity-60"
+        title="Center on my location"
+      >
+        {busy
+          ? <Loader2 className="h-4 w-4 text-slate-700 animate-spin" />
+          : <Crosshair className="h-4 w-4 text-slate-700" />}
+      </button>
+      {error && (
+        <span className="bg-rose-50 border border-rose-200 text-rose-700 text-xs px-2 py-1 rounded shadow-sm max-w-[200px]">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function LocationForm({ open, onClose, onSubmit, location, users = [], allLocations = [] }) {
   const [formData, setFormData] = useState({
@@ -20,7 +111,7 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
     address: '',
     contact_person: '',
     assigned_call_signs: [],
-    sort_order: 0
+    sort_order: 1
   });
 
   useEffect(() => {
@@ -31,7 +122,7 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
         address: location.address || '',
         contact_person: location.contact_person || '',
         assigned_call_signs: location.assigned_call_signs || [],
-        sort_order: location.sort_order || 0
+        sort_order: location.sort_order ?? 1
       });
     } else {
       setFormData({
@@ -40,10 +131,19 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
         address: '',
         contact_person: '',
         assigned_call_signs: [],
-        sort_order: 0
+        sort_order: 1
       });
     }
   }, [location, open]);
+
+  const pickedCoords = parseCoords(formData.address);
+  const mapCenter = pickedCoords || [39.8283, -98.5795]; // default: continental US
+  const mapZoom = pickedCoords ? 13 : 4;
+
+  const handleMapPick = ([lat, lng]) => {
+    // 5 decimals is ~1.1m at the equator — plenty for site location
+    setFormData({ ...formData, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -78,13 +178,13 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{location ? 'Edit Location' : 'New Location'}</DialogTitle>
+          <DialogTitle>{location ? 'Edit Site' : 'New Site'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Location Name</Label>
+            <Label htmlFor="name">Site Name</Label>
             <Input
               id="name"
               placeholder="e.g., Main Command Post"
@@ -98,7 +198,7 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              placeholder="Purpose or details about this location"
+              placeholder="Purpose or details about this site"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
@@ -114,15 +214,42 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             />
             <p className="text-xs text-slate-500 mt-1">
-              Enter coordinates as: latitude, longitude (e.g., 40.7128, -74.0060) to show on map
+              Enter coordinates as: latitude, longitude — or click on the map below to drop a pin
             </p>
+            <div className="mt-2 rounded-lg overflow-hidden border border-slate-200">
+              <MapContainer
+                center={mapCenter}
+                zoom={mapZoom}
+                style={{ height: '220px', width: '100%' }}
+                key={location?.id ?? 'new'}
+              >
+                <LayersControl position="topleft">
+                  <LayersControl.BaseLayer checked name="Street">
+                    <TileLayer
+                      attribution='&copy; OpenStreetMap contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                  </LayersControl.BaseLayer>
+                  <LayersControl.BaseLayer name="Satellite">
+                    <TileLayer
+                      attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      maxZoom={19}
+                    />
+                  </LayersControl.BaseLayer>
+                </LayersControl>
+                {pickedCoords && <Marker position={pickedCoords} />}
+                <ClickToSet onPick={handleMapPick} />
+                <LocateMeButton />
+              </MapContainer>
+            </div>
           </div>
 
           <div>
             <Label htmlFor="contact">Contact Person (Call Sign)</Label>
             <Input
               id="contact"
-              placeholder="Call sign of location lead"
+              placeholder="Call sign of site lead"
               value={formData.contact_person}
               onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
             />
@@ -183,7 +310,7 @@ export default function LocationForm({ open, onClose, onSubmit, location, users 
               Cancel
             </Button>
             <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
-              {location ? 'Update Location' : 'Create Location'}
+              {location ? 'Update Site' : 'Create Site'}
             </Button>
           </DialogFooter>
         </form>

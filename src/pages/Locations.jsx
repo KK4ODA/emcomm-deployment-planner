@@ -13,6 +13,7 @@ import ICS205Form from "@/components/ICS205Form";
 import { canCreate, canEdit, canDelete } from "@/components/permissions.jsx";
 import LocationMap from "@/components/LocationMap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function LocationsPage() {
   const [user, setUser] = useState(null);
@@ -123,7 +124,11 @@ export default function LocationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['locations']);
       setLocationFormOpen(false);
-    }
+      toast.success('Site created');
+    },
+    onError: (err) => {
+      toast.error(`Failed to create site: ${err.message}`);
+    },
   });
 
   const updateLocation = useMutation({
@@ -132,7 +137,11 @@ export default function LocationsPage() {
       queryClient.invalidateQueries(['locations']);
       setLocationFormOpen(false);
       setEditingLocation(null);
-    }
+      toast.success('Site updated');
+    },
+    onError: (err) => {
+      toast.error(`Failed to update site: ${err.message}`);
+    },
   });
 
   const deleteLocation = useMutation({
@@ -225,7 +234,7 @@ export default function LocationsPage() {
             <MapPin className="h-16 w-16 text-rose-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
             <p className="text-slate-500 mb-6">
-              You don't have access to this deployment's locations.
+              You don't have access to this deployment's sites.
             </p>
             <Link to={createPageUrl('Deployments')}>
               <Button className="bg-slate-900 hover:bg-slate-800">
@@ -251,7 +260,7 @@ export default function LocationsPage() {
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Deployment Locations</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Deployment Sites</h1>
             <p className="text-slate-500">{currentDeployment?.name}</p>
           </div>
           {canCreateLocation && (
@@ -260,7 +269,7 @@ export default function LocationsPage() {
               className="gap-2 bg-slate-900 hover:bg-slate-800"
             >
               <Plus className="h-4 w-4" />
-              Add Location
+              Add Site
             </Button>
           )}
         </div>
@@ -269,14 +278,14 @@ export default function LocationsPage() {
           <Card className="border-slate-100">
             <CardContent className="py-16 text-center">
               <MapPin className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No locations yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No sites yet</h3>
               <p className="text-slate-500 mb-4">
-                {canCreateLocation ? 'Start by creating deployment locations' : 'Waiting for the leader to set up locations'}
+                {canCreateLocation ? 'Start by creating deployment sites' : 'Waiting for the leader to set up sites'}
               </p>
               {canCreateLocation && (
                 <Button onClick={() => setLocationFormOpen(true)} className="bg-slate-900 hover:bg-slate-800">
                   <Plus className="h-4 w-4 mr-2" />
-                  Create First Location
+                  Create First Site
                 </Button>
               )}
             </CardContent>

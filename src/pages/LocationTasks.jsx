@@ -119,13 +119,13 @@ export default function LocationTasksPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 text-center">
           <div className="bg-white rounded-2xl border border-slate-100 p-12">
             <ListTodo className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Location Not Found</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Site Not Found</h2>
             <p className="text-slate-500 mb-6">
-              Please select a location from the locations page.
+              Please select a site from the Deployment Sites page.
             </p>
             <Link to={createPageUrl('Locations')}>
               <Button className="bg-slate-900 hover:bg-slate-800">
-                Go to Locations
+                Go to Deployment Sites
               </Button>
             </Link>
           </div>
@@ -143,7 +143,7 @@ export default function LocationTasksPage() {
             className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Locations
+            Back to Deployment Sites
           </Link>
           {/* Connectivity tier indicator */}
           <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
