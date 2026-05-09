@@ -8,9 +8,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // 'prompt' = user clicks "reload to update" instead of silent auto-update.
-      // Avoids stomping on operators mid-task while still letting them get fresh code.
-      registerType: 'prompt',
+      // 'autoUpdate' silently activates new SW versions on next page load.
+      // Operators don't get a "reload to update" banner — they just get fresh
+      // code on their next refresh. Trade-off: if you push during active use,
+      // their next navigation reloads the page; with the event log + outbox,
+      // unsaved work survives, so this is safe in practice.
+      registerType: 'autoUpdate',
       // Don't run the SW in dev (would interfere with HMR)
       devOptions: { enabled: false },
       includeAssets: ['login-bg.jpg', '.htaccess'],
@@ -43,9 +46,9 @@ export default defineConfig({
             },
           },
         ],
-        // Generated SW updates take effect on next page load (with prompt)
-        skipWaiting: false,
-        clientsClaim: false,
+        // With autoUpdate, the new SW takes over next page load
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
