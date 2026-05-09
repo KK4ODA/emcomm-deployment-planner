@@ -111,15 +111,32 @@ async function dispatch(event, isOnline) {
   await applyTaskEvent(event);
   await offlineStorage.saveEntity('events', event);
 
-  if (isOnline) {
-    const { error } = await supabase.from('events').insert(event);
-    if (error) {
-      // Post failed; queue for retry
-      console.warn('Event post failed, queuing for outbox:', error.message);
-      await offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
+  const queueToOutbox = () =>
+    offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
+
+  if (!isOnline) {
+    await queueToOutbox();
+    return;
+  }
+
+  // Race the Supabase insert against a 5s timeout. If our isOnline flag is
+  // stale (e.g., DevTools throttle hasn't been detected yet by the sync
+  // engine probe), the network request silently hangs — without this race
+  // the UI looks frozen.
+  try {
+    const result = await Promise.race([
+      supabase.from('events').insert(event),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Insert timeout')), 5000)
+      ),
+    ]);
+    if (result?.error) {
+      console.warn('Event post failed, queuing for outbox:', result.error.message);
+      await queueToOutbox();
     }
-  } else {
-    await offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
+  } catch (err) {
+    console.warn('Event post timed out, queuing for outbox:', err.message);
+    await queueToOutbox();
   }
 }
 

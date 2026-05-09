@@ -195,6 +195,12 @@ export async function initSyncEngine() {
   // Re-sync immediately when coming back online
   window.addEventListener('online', syncNow);
 
+  // Flip tier immediately when the browser detects offline (avoids the
+  // up-to-30s probe lag on a real network drop). DevTools throttle doesn't
+  // always flip navigator.onLine, but this helps for true offline (airplane
+  // mode, lost wifi, etc.).
+  window.addEventListener('offline', () => setTier('OFFLINE'));
+
   // Every 30 s: probe tier if degraded, or pull fresh events if ONLINE
   setInterval(async () => {
     if (_tier !== 'ONLINE') {
