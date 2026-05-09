@@ -169,7 +169,7 @@ export default function NotificationBell({ user }) {
                         <p className="text-sm text-slate-600 mt-1">{notification.message}</p>
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-xs text-slate-400">
-                            {getRelativeTime(notification.created_date)}
+                            {getRelativeTime(notification.created_at || notification.created_date)}
                           </span>
                           <Button
                             variant="ghost"
