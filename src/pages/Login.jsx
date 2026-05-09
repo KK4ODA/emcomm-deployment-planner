@@ -30,14 +30,14 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Raw fetch bypasses the Supabase JS client's Web Locks deadlock for the
-    // initial password grant. We then call setSession() to register the
-    // tokens with the Supabase JS client so it starts the auto-refresh timer
-    // — without setSession the access_token expires after 1 hour and queries
-    // start silently failing with PGRST303 ("JWT expired").
+    // Raw fetch bypasses the Supabase JS client's Web Locks deadlock.
+    // We persist the session in localStorage in the canonical shape that
+    // @supabase/supabase-js expects so that on the next page load the SDK
+    // hydrates it and sets up the auto-refresh timer naturally.
     try {
       const url = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const projectRef = url.replace(/^https:\/\//, '').split('.')[0];
 
       const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
         method: 'POST',
@@ -48,17 +48,16 @@ export default function Login() {
       if (!response.ok) {
         throw new Error(data.msg || data.error_description || 'Invalid login credentials');
       }
-      if (!data.access_token || !data.refresh_token) {
-        throw new Error('Auth response missing tokens');
-      }
+      if (!data.access_token) throw new Error('No access token returned');
 
-      // setSession persists to localStorage in the canonical Supabase format
-      // AND wires up the refresh timer in one call.
-      const { error: setErr } = await supabase.auth.setSession({
+      localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
-      });
-      if (setErr) throw setErr;
+        expires_at: data.expires_at,
+        expires_in: data.expires_in,
+        token_type: data.token_type,
+        user: data.user,
+      }));
 
       window.location.href = '/';
     } catch (error) {
