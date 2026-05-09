@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Package, CheckCircle, ArrowLeft, AlertCircle, Radio, ListTodo, Clock, Printer } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useAuth } from "@/lib/AuthContext";
 import { motion } from "framer-motion";
 
 const priorityStyles = {
@@ -23,16 +24,12 @@ const priorityIcons = {
 };
 
 export default function MyAssignments() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [currentDeploymentId] = useState(
     localStorage.getItem('currentDeploymentId') || null
   );
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: allCategories = [] } = useQuery({
     queryKey: ['categories'],

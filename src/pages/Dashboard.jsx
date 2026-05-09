@@ -20,9 +20,10 @@ import { canCreate, canEdit, canDelete, hasPermission } from "@/components/permi
 import { listTasksLocal, updateTaskEvent } from "@/api/taskEvents";
 import { useOffline } from "@/components/OfflineProvider";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [itemFormOpen, setItemFormOpen] = useState(false);
@@ -40,10 +41,6 @@ export default function Dashboard() {
 
   const queryClient = useQueryClient();
   const { isOnline } = useOffline();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: allCategories = [] } = useQuery({
     queryKey: ['categories'],

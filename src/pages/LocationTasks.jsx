@@ -18,9 +18,10 @@ import {
   deleteTaskEvent,
   listTasksLocal,
 } from "@/api/taskEvents";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function LocationTasksPage() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
@@ -28,10 +29,6 @@ export default function LocationTasksPage() {
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const locationId = urlParams.get('location');
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   // Read tasks from IndexedDB (materialized local view)
   const { data: allTasks = [] } = useQuery({

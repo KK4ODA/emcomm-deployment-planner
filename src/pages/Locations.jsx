@@ -14,9 +14,10 @@ import { canCreate, canEdit, canDelete } from "@/components/permissions.jsx";
 import LocationMap from "@/components/LocationMap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function LocationsPage() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [locationFormOpen, setLocationFormOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
   const [ics205FormOpen, setIcs205FormOpen] = useState(false);
@@ -28,10 +29,6 @@ export default function LocationsPage() {
   );
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: allLocations = [] } = useQuery({
     queryKey: ['locations'],

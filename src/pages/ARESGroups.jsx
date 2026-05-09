@@ -9,17 +9,14 @@ import { motion } from "framer-motion";
 import ARESGroupForm from "@/components/ARESGroupForm";
 import { toast } from "sonner";
 import { hasPermission } from "@/components/permissions.jsx";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function ARESGroups() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [formOpen, setFormOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: groups = [] } = useQuery({
     queryKey: ['ares-groups'],

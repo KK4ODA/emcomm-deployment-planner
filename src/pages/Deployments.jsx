@@ -18,6 +18,7 @@ import DeploymentForm from "@/components/DeploymentForm";
 import TemplateForm from "@/components/TemplateForm";
 import { toast } from "sonner";
 import { canCreate, canEdit, canDelete, hasPermission } from "@/components/permissions.jsx";
+import { useAuth } from "@/lib/AuthContext";
 
 const statusStyles = {
   planning: "bg-blue-100 text-blue-700 border-blue-200",
@@ -34,17 +35,13 @@ const statusIcons = {
 };
 
 export default function Deployments() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [formOpen, setFormOpen] = useState(false);
   const [editingDeployment, setEditingDeployment] = useState(null);
   const [templateFormOpen, setTemplateFormOpen] = useState(false);
   const [savingDeploymentId, setSavingDeploymentId] = useState(null);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: allDeployments = [] } = useQuery({
     queryKey: ['deployments'],

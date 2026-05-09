@@ -15,20 +15,17 @@ import UserEditDialog from "@/components/UserEditDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Members() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState(null);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: users = [], refetch: refetchUsers } = useQuery({
     queryKey: ['users'],

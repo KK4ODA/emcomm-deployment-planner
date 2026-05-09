@@ -8,17 +8,14 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import TemplateForm from "@/components/TemplateForm";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function TemplatesPage() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: templates = [] } = useQuery({
     queryKey: ['templates'],
