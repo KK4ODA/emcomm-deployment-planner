@@ -25,17 +25,14 @@ import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
 import CookieBanner from '@/components/CookieBanner';
 import RequireAresGroup from '@/components/RequireAresGroup';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Layout({ children, currentPageName }) {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentDeploymentId, setCurrentDeploymentId] = useState(
     localStorage.getItem('currentDeploymentId') || null
   );
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const { data: deployments = [] } = useQuery({
     queryKey: ['deployments'],
