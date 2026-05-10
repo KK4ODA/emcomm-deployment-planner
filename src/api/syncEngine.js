@@ -31,12 +31,14 @@ async function detectTier() {
     return 'OFFLINE';
   }
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      method: 'HEAD',
+    // /auth/v1/health returns 200 OK without auth — quieter than /rest/v1/
+    // which 401s without a JWT and clutters the DevTools console.
+    await fetch(`${SUPABASE_URL}/auth/v1/health`, {
+      method: 'GET',
       signal: AbortSignal.timeout(3000),
       headers: { apikey: SUPABASE_ANON_KEY },
     });
-    // Any response (even 4xx) means the server is reachable
+    // Any response means the server is reachable
     setTier('ONLINE');
     return 'ONLINE';
   } catch (_) {
