@@ -49,8 +49,14 @@ export default function TaskForm({ open, onClose, onSubmit, task, locationId, av
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (submitting) return; // Ignore re-submits while a request is in flight
+    console.warn('[TaskForm.handleSubmit] fired', { submitting, hasFormData: !!formData });
+    if (submitting) {
+      console.warn('[TaskForm.handleSubmit] submitting=true, returning early — DIALOG WILL APPEAR HUNG');
+      return;
+    }
+    console.warn('[TaskForm.handleSubmit] calling onSubmit');
     onSubmit(formData);
+    console.warn('[TaskForm.handleSubmit] onSubmit returned');
   };
 
   return (
