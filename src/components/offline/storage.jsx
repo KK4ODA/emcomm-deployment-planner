@@ -9,45 +9,79 @@ const IDB_OP_TIMEOUT_MS = 8000;
 
 class OfflineStorage {
   constructor() {
+    // No more cached connection — _runOp opens fresh per call. The legacy
+    // sync_queue methods below still use this.db if set, but they're inert
+    // in the current Phase 1 hot path (kept only for backward compat).
     this.db = null;
     this._initInFlight = null;
   }
 
-  // Run an IDB op with a timeout + retry-once-on-stale-connection.
-  // Detects scenarios like: another tab triggered a versionchange, the page
-  // cleared site data and the cached handle is now bogus, the connection
-  // was force-closed, etc. Forces a re-init in those cases.
+  // Run an IDB op with a fresh connection per call. Caching the connection
+  // led to silent hangs when the cached handle went stale (clear-site-data,
+  // versionchange in another tab, etc.). Opening fresh per op is ~1ms in
+  // Chrome and avoids the entire stale-handle class of bugs.
   async _runOp(label, fn) {
-    if (!this.db) await this._ensureInit();
+    console.log(`[idb] ${label} start`);
+    let db;
+    try {
+      db = await this._openFresh();
+      console.log(`[idb] ${label} db opened`);
+    } catch (err) {
+      console.error(`[idb] ${label} open failed`, err);
+      throw err;
+    }
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error(`${label} timed out`)), IDB_OP_TIMEOUT_MS);
+        Promise.resolve()
+          .then(() => fn(db))
+          .then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+      });
+      console.log(`[idb] ${label} ok`);
+      return result;
+    } catch (err) {
+      console.error(`[idb] ${label} failed`, err);
+      throw err;
+    } finally {
+      try { db.close(); } catch (_) { /* ignore */ }
+    }
+  }
+
+  // Open a fresh IDBDatabase, applying the upgrade if needed.
+  async _openFresh() {
     return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = (err, value) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        if (err) reject(err);
-        else resolve(value);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const t = setTimeout(() => reject(new Error('indexedDB.open timed out')), IDB_OP_TIMEOUT_MS);
+      request.onerror = () => { clearTimeout(t); reject(request.error); };
+      request.onblocked = () => { clearTimeout(t); reject(new Error('indexedDB.open blocked by another connection')); };
+      request.onsuccess = () => {
+        clearTimeout(t);
+        const db = request.result;
+        // If something else needs to upgrade this DB, close our connection
+        // so it can proceed (we're per-op anyway).
+        db.onversionchange = () => { try { db.close(); } catch (_) { /* ignore */ } };
+        resolve(db);
       };
-      const timer = setTimeout(async () => {
-        // Likely a stale handle. Drop it, reinit, and retry once.
-        if (settled) return;
-        console.warn(`IDB op "${label}" timed out; reinitialising connection`);
-        try { this.db?.close(); } catch (_) { /* ignore */ }
-        this.db = null;
-        try {
-          await this._ensureInit();
-          // Retry the op once on the fresh connection
-          const retryResult = await fn(this.db);
-          finish(null, retryResult);
-        } catch (retryErr) {
-          finish(retryErr);
-        }
-      }, IDB_OP_TIMEOUT_MS);
-      // First attempt
-      Promise.resolve()
-        .then(() => fn(this.db))
-        .then(value => finish(null, value), err => finish(err));
+      request.onupgradeneeded = (event) => this._applySchema(event.target.result);
     });
+  }
+
+  _applySchema(db) {
+    if (!db.objectStoreNames.contains('deployments'))   db.createObjectStore('deployments',   { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('categories'))    db.createObjectStore('categories',    { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('items'))         db.createObjectStore('items',         { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('locations'))     db.createObjectStore('locations',     { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('users'))         db.createObjectStore('users',         { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('ics205forms'))   db.createObjectStore('ics205forms',   { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('sync_queue')) {
+      const s = db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
+      s.createIndex('timestamp', 'timestamp', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('events'))        db.createObjectStore('events',        { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('entities.tasks'))db.createObjectStore('entities.tasks',{ keyPath: 'id' });
+    if (!db.objectStoreNames.contains('outbox'))        db.createObjectStore('outbox',        { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('inbox'))         db.createObjectStore('inbox',         { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('sync_state'))    db.createObjectStore('sync_state',    { keyPath: 'peer' });
   }
 
   async _ensureInit() {

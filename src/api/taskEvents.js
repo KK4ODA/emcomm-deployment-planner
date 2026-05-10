@@ -107,22 +107,23 @@ function buildEvent({ op, entityId, patch, actor, deploymentId }) {
 }
 
 async function dispatch(event, isOnline) {
-  // Apply optimistically to local store first
+  console.log('[dispatch] start', { op: event.op, id: event.id, isOnline });
   await applyTaskEvent(event);
+  console.log('[dispatch] applyTaskEvent done');
   await offlineStorage.saveEntity('events', event);
+  console.log('[dispatch] saved to events store');
 
   const queueToOutbox = () =>
     offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
 
   if (!isOnline) {
+    console.log('[dispatch] offline path, queueing to outbox');
     await queueToOutbox();
+    console.log('[dispatch] queued, returning');
     return;
   }
 
-  // Race the Supabase insert against a 5s timeout. If our isOnline flag is
-  // stale (e.g., DevTools throttle hasn't been detected yet by the sync
-  // engine probe), the network request silently hangs — without this race
-  // the UI looks frozen.
+  console.log('[dispatch] online path, posting to Supabase with 5s race');
   try {
     const result = await Promise.race([
       supabase.from('events').insert(event),
@@ -130,14 +131,16 @@ async function dispatch(event, isOnline) {
         setTimeout(() => reject(new Error('Insert timeout')), 5000)
       ),
     ]);
+    console.log('[dispatch] insert race resolved', { error: result?.error?.message });
     if (result?.error) {
       console.warn('Event post failed, queuing for outbox:', result.error.message);
       await queueToOutbox();
     }
   } catch (err) {
-    console.warn('Event post timed out, queuing for outbox:', err.message);
+    console.warn('[dispatch] insert timed out, queuing for outbox:', err.message);
     await queueToOutbox();
   }
+  console.log('[dispatch] returning');
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
