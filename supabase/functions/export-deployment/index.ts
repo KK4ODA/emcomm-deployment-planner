@@ -1,6 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
+const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -16,20 +26,20 @@ Deno.serve(async (req) => {
     )
     const { data: { user } } = await supabaseUser.auth.getUser()
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
     }
 
     const { deploymentId, format = 'txt', includeGoKit = true } = await req.json()
 
     if (!deploymentId) {
-      return new Response(JSON.stringify({ error: 'Deployment ID required' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Deployment ID required' }), { status: 400, headers: jsonHeaders })
     }
 
     // Fetch all data
     const { data: deployments } = await supabaseAdmin.from('deployments').select('*').eq('id', deploymentId)
     const deployment = deployments?.[0]
     if (!deployment) {
-      return new Response(JSON.stringify({ error: 'Deployment not found' }), { status: 404 })
+      return new Response(JSON.stringify({ error: 'Deployment not found' }), { status: 404, headers: jsonHeaders })
     }
 
     const { data: locations } = await supabaseAdmin.from('deployment_locations').select('*').eq('deployment_id', deploymentId).order('sort_order')
@@ -252,11 +262,12 @@ Deno.serve(async (req) => {
     const safeName = deployment.name.replace(/[^a-z0-9]/gi, '_')
     return new Response(output, {
       headers: {
+        ...corsHeaders,
         'Content-Type': 'text/plain',
         'Content-Disposition': `attachment; filename="${safeName}_export.txt"`
       }
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders })
   }
 })

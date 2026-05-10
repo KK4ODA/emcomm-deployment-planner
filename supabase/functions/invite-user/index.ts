@@ -1,6 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
+const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -16,18 +26,18 @@ Deno.serve(async (req) => {
     )
     const { data: { user } } = await supabaseUser.auth.getUser()
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
     }
 
     const { data: callerProfile } = await supabaseAdmin.from('users').select('app_role').eq('id', user.id).single()
     if (!callerProfile || !['admin', 'operator'].includes(callerProfile.app_role)) {
-      return new Response(JSON.stringify({ error: 'Insufficient permissions' }), { status: 403 })
+      return new Response(JSON.stringify({ error: 'Insufficient permissions' }), { status: 403, headers: jsonHeaders })
     }
 
     const { email, role, aresGroupIds } = await req.json()
 
     if (!email) {
-      return new Response(JSON.stringify({ error: 'Email is required' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Email is required' }), { status: 400, headers: jsonHeaders })
     }
 
     // Invite user via Supabase auth
@@ -46,9 +56,9 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, message: `Invitation sent to ${email}` }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: jsonHeaders,
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders })
   }
 })

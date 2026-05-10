@@ -1,6 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
+const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -16,19 +26,19 @@ Deno.serve(async (req) => {
     )
     const { data: { user } } = await supabaseUser.auth.getUser()
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
     }
 
     // Check caller is admin
     const { data: callerProfile } = await supabaseAdmin.from('users').select('app_role').eq('id', user.id).single()
     if (callerProfile?.app_role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403 })
+      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: jsonHeaders })
     }
 
     const { email, full_name, call_sign, phone, aprs_call_sign } = await req.json()
 
     if (!email || !full_name || !call_sign || !phone) {
-      return new Response(JSON.stringify({ error: 'Email, full name, call sign, and phone are required' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Email, full name, call sign, and phone are required' }), { status: 400, headers: jsonHeaders })
     }
 
     // Check if user exists
@@ -44,7 +54,7 @@ Deno.serve(async (req) => {
       }).eq('id', existingUser.id)
 
       return new Response(JSON.stringify({ success: true, message: `Profile updated for ${email}` }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders,
       })
     } else {
       // Invite user via Supabase auth
@@ -62,10 +72,10 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, message: `Invitation sent and profile created for ${email}` }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders,
       })
     }
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders })
   }
 })

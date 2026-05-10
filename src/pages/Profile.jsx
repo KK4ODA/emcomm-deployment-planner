@@ -281,7 +281,7 @@ export default function Profile() {
 
     setAdminSaving(true);
     try {
-      const response = await base44.functions.invoke('createOrUpdateUserProfile', adminForm);
+      const response = await base44.functions.invoke('create-or-update-user-profile', adminForm);
       toast.success(response.data.message);
       resetMemberLookup();
     } catch (error) {

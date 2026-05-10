@@ -76,7 +76,7 @@ export default function Members() {
   };
 
   const updateProfile = useMutation({
-    mutationFn: (profileData) => base44.functions.invoke('createOrUpdateUserProfile', profileData),
+    mutationFn: (profileData) => base44.functions.invoke('create-or-update-user-profile', profileData),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
       toast.success('User profile updated successfully');
@@ -96,7 +96,7 @@ export default function Members() {
     mutationFn: async (userId) => {
       const userToDelete = users.find(u => u.id === userId);
       if (userToDelete?.call_sign) {
-        await base44.functions.invoke('cleanupDeletedUser', {
+        await base44.functions.invoke('cleanup-deleted-user', {
           event: { type: 'delete' },
           old_data: { call_sign: userToDelete.call_sign }
         });

@@ -109,7 +109,7 @@ export default function ICS205Form({ open, onClose, onSubmit, form: existingForm
 
     try {
       setExporting(true);
-      const { data } = await base44.functions.invoke('exportICS205', { formId: existingForm.id });
+      const { data } = await base44.functions.invoke('export-ics205', { formId: existingForm.id });
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

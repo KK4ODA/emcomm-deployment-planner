@@ -1,6 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
+const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -16,13 +26,13 @@ Deno.serve(async (req) => {
     )
     const { data: { user } } = await supabaseUser.auth.getUser()
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
     }
 
     const { event, old_data } = await req.json()
 
     if (event?.type !== 'delete' || !old_data?.call_sign) {
-      return new Response(JSON.stringify({ message: 'No action needed' }))
+      return new Response(JSON.stringify({ message: 'No action needed' }), { headers: jsonHeaders })
     }
 
     const callSign = old_data.call_sign
@@ -56,9 +66,9 @@ Deno.serve(async (req) => {
       .eq('assigned_to_call_sign', callSign)
 
     return new Response(JSON.stringify({ message: 'User references cleaned up', callSign }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: jsonHeaders,
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders })
   }
 })

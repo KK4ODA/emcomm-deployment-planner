@@ -259,7 +259,7 @@ export default function Deployments() {
   const handleExportDeployment = async (deploymentId, format = 'txt', includeGoKit = true) => {
     try {
       const deployment = deployments.find(d => d.id === deploymentId);
-      const response = await base44.functions.invoke('exportDeployment', { deploymentId, format, includeGoKit });
+      const response = await base44.functions.invoke('export-deployment', { deploymentId, format, includeGoKit });
       
       const mimeType = format === 'pdf' ? 'application/pdf' : 'text/plain';
       const extension = format === 'pdf' ? 'pdf' : 'txt';
