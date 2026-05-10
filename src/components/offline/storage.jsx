@@ -2,9 +2,59 @@
 const DB_NAME = 'EmCommPlannerDB';
 const DB_VERSION = 3;
 
+// Per-operation timeout. If an IDB transaction can't even progress within this
+// window something is very wrong (stale connection, blocked upgrade, etc.).
+// We'd rather reject and force a reinit than hang forever.
+const IDB_OP_TIMEOUT_MS = 8000;
+
 class OfflineStorage {
   constructor() {
     this.db = null;
+    this._initInFlight = null;
+  }
+
+  // Run an IDB op with a timeout + retry-once-on-stale-connection.
+  // Detects scenarios like: another tab triggered a versionchange, the page
+  // cleared site data and the cached handle is now bogus, the connection
+  // was force-closed, etc. Forces a re-init in those cases.
+  async _runOp(label, fn) {
+    if (!this.db) await this._ensureInit();
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (err, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (err) reject(err);
+        else resolve(value);
+      };
+      const timer = setTimeout(async () => {
+        // Likely a stale handle. Drop it, reinit, and retry once.
+        if (settled) return;
+        console.warn(`IDB op "${label}" timed out; reinitialising connection`);
+        try { this.db?.close(); } catch (_) { /* ignore */ }
+        this.db = null;
+        try {
+          await this._ensureInit();
+          // Retry the op once on the fresh connection
+          const retryResult = await fn(this.db);
+          finish(null, retryResult);
+        } catch (retryErr) {
+          finish(retryErr);
+        }
+      }, IDB_OP_TIMEOUT_MS);
+      // First attempt
+      Promise.resolve()
+        .then(() => fn(this.db))
+        .then(value => finish(null, value), err => finish(err));
+    });
+  }
+
+  async _ensureInit() {
+    if (this.db) return this.db;
+    if (this._initInFlight) return this._initInFlight;
+    this._initInFlight = this.init().finally(() => { this._initInFlight = null; });
+    return this._initInFlight;
   }
 
   async init() {
@@ -14,6 +64,15 @@ class OfflineStorage {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         this.db = request.result;
+        // If another tab tries to upgrade, close our handle so the upgrade
+        // can proceed; subsequent ops will re-init.
+        this.db.onversionchange = () => {
+          try { this.db?.close(); } catch (_) { /* ignore */ }
+          this.db = null;
+        };
+        // If the browser force-closes the connection (e.g., user clears
+        // site data while we're running), null our handle.
+        this.db.onclose = () => { this.db = null; };
         resolve(this.db);
       };
 
@@ -77,42 +136,33 @@ class OfflineStorage {
   }
 
   async getEntities(storeName) {
-    if (!this.db) await this.init();
-    
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(storeName, 'readonly');
+    return this._runOp(`getEntities(${storeName})`, (db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
       const request = store.getAll();
-      
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
-    });
+    }));
   }
 
   async saveEntity(storeName, entity) {
-    if (!this.db) await this.init();
-    
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(storeName, 'readwrite');
+    return this._runOp(`saveEntity(${storeName})`, (db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const request = store.put(entity);
-      
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
-    });
+    }));
   }
 
   async deleteEntity(storeName, id) {
-    if (!this.db) await this.init();
-    
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(storeName, 'readwrite');
+    return this._runOp(`deleteEntity(${storeName})`, (db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const request = store.delete(id);
-      
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
-    });
+    }));
   }
 
   async queueAction(action) {
@@ -161,27 +211,23 @@ class OfflineStorage {
   }
 
   async clearStore(storeName) {
-    if (!this.db) await this.init();
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(storeName, 'readwrite');
+    return this._runOp(`clearStore(${storeName})`, (db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const request = store.clear();
-
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
-    });
+    }));
   }
 
   async getEntity(storeName, id) {
-    if (!this.db) await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(storeName, 'readonly');
+    return this._runOp(`getEntity(${storeName})`, (db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result ?? null);
       request.onerror = () => reject(request.error);
-    });
+    }));
   }
 
   async getAllEntities(storeName) {
