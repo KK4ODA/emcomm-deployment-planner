@@ -16,7 +16,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Don't run the SW in dev (would interfere with HMR)
       devOptions: { enabled: false },
-      includeAssets: ['login-bg.jpg', '.htaccess'],
+      // Don't include .htaccess — Apache serves it 403 (server config, not a
+      // public asset), which makes Workbox's precache install fail and prevents
+      // SW activation entirely.
+      includeAssets: ['login-bg.jpg'],
       manifest: {
         name: 'EmComm Planner',
         short_name: 'EmComm',
