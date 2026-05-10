@@ -87,14 +87,20 @@ export default function LocationsPage() {
       return null;
     };
 
+    // what3words integration is disabled until the get-what3words Edge Function
+    // is deployed (with CORS headers) and WHAT3WORDS_API_KEY is set in
+    // Supabase project secrets. Flip this flag to true once that's in place.
+    const ENABLE_WHAT3WORDS = false;
+    if (!ENABLE_WHAT3WORDS) return;
+
     locations.forEach(async (location) => {
       // Skip if we already have data for this location
       if (what3wordsData[location.id]) return;
-      
+
       const coords = parseCoordinates(location.address);
       if (coords) {
         try {
-          const response = await base44.functions.invoke('getWhat3Words', {
+          const response = await base44.functions.invoke('get-what3words', {
             lat: coords[0],
             lng: coords[1]
           });
@@ -103,7 +109,6 @@ export default function LocationsPage() {
             [location.id]: response.data.words
           }));
         } catch (error) {
-          // Silently handle rate limit errors
           if (!error.message?.includes('Rate limit')) {
             console.error('Failed to fetch what3words:', error);
           }

@@ -53,13 +53,14 @@ export default function LocationMap({ locations, items = [], onLocationClick }) 
       setCenter([avgLat, avgLon]);
       setZoom(validLocations.length === 1 ? 10 : 8);
 
-      // Fetch what3words for each location (with caching)
+      // what3words disabled until Edge Function deployed; see Locations.jsx
+      const ENABLE_WHAT3WORDS = false;
+      if (!ENABLE_WHAT3WORDS) return;
+
       validLocations.forEach(async (loc) => {
-        // Skip if we already have data for this location
         if (what3wordsData[loc.id]) return;
-        
         try {
-          const response = await base44.functions.invoke('getWhat3Words', {
+          const response = await base44.functions.invoke('get-what3words', {
             lat: loc.coords[0],
             lng: loc.coords[1]
           });
@@ -68,7 +69,6 @@ export default function LocationMap({ locations, items = [], onLocationClick }) 
             [loc.id]: response.data.words
           }));
         } catch (error) {
-          // Silently handle rate limit errors
           if (!error.message?.includes('Rate limit')) {
             console.error('Failed to fetch what3words:', error);
           }
