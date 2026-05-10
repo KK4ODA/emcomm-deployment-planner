@@ -107,23 +107,23 @@ function buildEvent({ op, entityId, patch, actor, deploymentId }) {
 }
 
 async function dispatch(event, isOnline) {
-  console.log('[dispatch] start', { op: event.op, id: event.id, isOnline });
+  console.warn('[dispatch] start', { op: event.op, id: event.id, isOnline });
   await applyTaskEvent(event);
-  console.log('[dispatch] applyTaskEvent done');
+  console.warn('[dispatch] applyTaskEvent done');
   await offlineStorage.saveEntity('events', event);
-  console.log('[dispatch] saved to events store');
+  console.warn('[dispatch] saved to events store');
 
   const queueToOutbox = () =>
     offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
 
   if (!isOnline) {
-    console.log('[dispatch] offline path, queueing to outbox');
+    console.warn('[dispatch] offline path, queueing to outbox');
     await queueToOutbox();
-    console.log('[dispatch] queued, returning');
+    console.warn('[dispatch] queued, returning');
     return;
   }
 
-  console.log('[dispatch] online path, posting to Supabase with 5s race');
+  console.warn('[dispatch] online path, posting to Supabase with 5s race');
   try {
     const result = await Promise.race([
       supabase.from('events').insert(event),
@@ -131,7 +131,7 @@ async function dispatch(event, isOnline) {
         setTimeout(() => reject(new Error('Insert timeout')), 5000)
       ),
     ]);
-    console.log('[dispatch] insert race resolved', { error: result?.error?.message });
+    console.warn('[dispatch] insert race resolved', { error: result?.error?.message });
     if (result?.error) {
       console.warn('Event post failed, queuing for outbox:', result.error.message);
       await queueToOutbox();
@@ -140,12 +140,13 @@ async function dispatch(event, isOnline) {
     console.warn('[dispatch] insert timed out, queuing for outbox:', err.message);
     await queueToOutbox();
   }
-  console.log('[dispatch] returning');
+  console.warn('[dispatch] returning');
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function createTaskEvent(taskData, actor, isOnline = true) {
+  console.warn('[createTaskEvent] entered', { isOnline, hasActor: !!actor });
   const entityId = crypto.randomUUID();
   const event = buildEvent({
     op: 'create',
@@ -154,7 +155,9 @@ export async function createTaskEvent(taskData, actor, isOnline = true) {
     actor,
     deploymentId: taskData.deployment_id ?? null,
   });
+  console.warn('[createTaskEvent] event built, calling dispatch');
   await dispatch(event, isOnline);
+  console.warn('[createTaskEvent] dispatch returned');
   return { id: entityId, ...taskData, created_at: event.ts, updated_at: event.ts };
 }
 

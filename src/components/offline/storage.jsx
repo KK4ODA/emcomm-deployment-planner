@@ -21,11 +21,11 @@ class OfflineStorage {
   // versionchange in another tab, etc.). Opening fresh per op is ~1ms in
   // Chrome and avoids the entire stale-handle class of bugs.
   async _runOp(label, fn) {
-    console.log(`[idb] ${label} start`);
+    console.warn(`[idb] ${label} start`);
     let db;
     try {
       db = await this._openFresh();
-      console.log(`[idb] ${label} db opened`);
+      console.warn(`[idb] ${label} db opened`);
     } catch (err) {
       console.error(`[idb] ${label} open failed`, err);
       throw err;
@@ -37,7 +37,7 @@ class OfflineStorage {
           .then(() => fn(db))
           .then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
       });
-      console.log(`[idb] ${label} ok`);
+      console.warn(`[idb] ${label} ok`);
       return result;
     } catch (err) {
       console.error(`[idb] ${label} failed`, err);
