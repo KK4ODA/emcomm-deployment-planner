@@ -107,23 +107,22 @@ function buildEvent({ op, entityId, patch, actor, deploymentId }) {
 }
 
 async function dispatch(event, isOnline) {
-  console.warn('[dispatch] start', { op: event.op, id: event.id, isOnline });
+  // Apply optimistically to local store first
   await applyTaskEvent(event);
-  console.warn('[dispatch] applyTaskEvent done');
   await offlineStorage.saveEntity('events', event);
-  console.warn('[dispatch] saved to events store');
 
   const queueToOutbox = () =>
     offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
 
   if (!isOnline) {
-    console.warn('[dispatch] offline path, queueing to outbox');
     await queueToOutbox();
-    console.warn('[dispatch] queued, returning');
     return;
   }
 
-  console.warn('[dispatch] online path, posting to Supabase with 5s race');
+  // Race the Supabase insert against a 5s timeout. If our isOnline flag is
+  // stale (e.g., DevTools throttle hasn't been detected yet by the sync
+  // engine probe), the network request silently hangs — without this race
+  // the UI looks frozen.
   try {
     const result = await Promise.race([
       supabase.from('events').insert(event),
@@ -131,22 +130,19 @@ async function dispatch(event, isOnline) {
         setTimeout(() => reject(new Error('Insert timeout')), 5000)
       ),
     ]);
-    console.warn('[dispatch] insert race resolved', { error: result?.error?.message });
     if (result?.error) {
       console.warn('Event post failed, queuing for outbox:', result.error.message);
       await queueToOutbox();
     }
   } catch (err) {
-    console.warn('[dispatch] insert timed out, queuing for outbox:', err.message);
+    console.warn('Event post timed out, queuing for outbox:', err.message);
     await queueToOutbox();
   }
-  console.warn('[dispatch] returning');
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function createTaskEvent(taskData, actor, isOnline = true) {
-  console.warn('[createTaskEvent] entered', { isOnline, hasActor: !!actor });
   const entityId = crypto.randomUUID();
   const event = buildEvent({
     op: 'create',
@@ -155,9 +151,7 @@ export async function createTaskEvent(taskData, actor, isOnline = true) {
     actor,
     deploymentId: taskData.deployment_id ?? null,
   });
-  console.warn('[createTaskEvent] event built, calling dispatch');
   await dispatch(event, isOnline);
-  console.warn('[createTaskEvent] dispatch returned');
   return { id: entityId, ...taskData, created_at: event.ts, updated_at: event.ts };
 }
 

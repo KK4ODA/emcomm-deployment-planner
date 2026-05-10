@@ -101,19 +101,11 @@ export default function LocationTasksPage() {
   });
 
   const handleSubmit = (data) => {
-    console.warn('[LocationTasks.handleSubmit] called', {
-      editingTask: !!editingTask,
-      createPending: createTask.isPending,
-      updatePending: updateTask.isPending,
-      isOnline,
-      hasUser: !!user,
-    });
     if (editingTask) {
       updateTask.mutate({ id: editingTask.id, data });
     } else {
       createTask.mutate(data);
     }
-    console.warn('[LocationTasks.handleSubmit] mutate() returned');
   };
 
   const handleStatusChange = (task) => {
