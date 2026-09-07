@@ -186,6 +186,7 @@ certificate). P2 1 partial, 10 not started. P3 0/6.
   completion. Both RPCs verified with rollback probes (state machine,
   custody rows, operator ladder, planner-only moves, unknown caller
   denied). Tests: assets (6), objectives (5). 239 tests total.
+- 2026-09-07 **Release v2.3.0** (P1 sweep, parts 1-4).
 - 2026-09-07 **P1 sweep, part 4** (migration `019`, applied;
   `deliver-notification` deployed): notification preferences and delivery.
   Verified live: GET returns the generated VAPID key, POST without the hook

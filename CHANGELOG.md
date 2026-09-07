@@ -9,6 +9,13 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-09-07
+
+The P1 sweep: every high-value row of the design document except Windows
+code signing. Readiness as a worklist, notify qualified operators, roster
+import, a map on the packet, text size, backoff, assets with custody,
+objectives, and notifications that reach your phone.
+
 ### Added
 - **Readiness** page: every problem that still stands between the plan and
   go time, grouped and worst first, each line linking to where it is fixed.
