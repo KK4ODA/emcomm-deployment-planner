@@ -18,6 +18,7 @@ import { describeError } from '@/components/common/ErrorState';
 import { AvatarUploader } from '@/features/profile/AvatarUploader';
 import { AddMemberPanel } from '@/features/profile/AddMemberPanel';
 import { AboutPanel } from '@/features/about/AboutPanel';
+import { CapabilitiesCard } from '@/features/profile/CapabilitiesCard';
 
 const TABS = ['profile', 'security', 'add-member', 'about'];
 
@@ -49,7 +50,10 @@ export default function Profile() {
 
         <TabsContent value="profile">
           <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-            <ProfileForm user={user} onSaved={refreshProfile} />
+            <div className="space-y-4">
+              <ProfileForm user={user} onSaved={refreshProfile} />
+              <CapabilitiesCard user={user} onSaved={refreshProfile} />
+            </div>
             <Card className="self-start">
               <CardHeader><CardTitle>Photo</CardTitle></CardHeader>
               <CardContent><AvatarUploader user={user} onChanged={refreshProfile} /></CardContent>

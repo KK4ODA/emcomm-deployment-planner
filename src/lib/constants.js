@@ -7,6 +7,16 @@ export const DEPLOYMENT_STATUS = Object.freeze({
   archived: { label: 'Archived', tone: 'muted' },
 });
 
+/** What kind of deployment this is; drives defaults and, later, hour categories. */
+export const DEPLOYMENT_PROFILES = Object.freeze({
+  public_service: { label: 'Public service event', activity: 'public_service' },
+  activation: { label: 'Emergency activation', activity: 'emergency' },
+  exercise: { label: 'Drill / exercise', activity: 'training' },
+  field_day: { label: 'Field Day / Winter Field Day', activity: 'training' },
+  net: { label: 'Net', activity: 'net' },
+  training: { label: 'Training', activity: 'training' },
+});
+
 /** Display order for deployment lists: what needs attention first. */
 export const DEPLOYMENT_STATUS_ORDER = Object.freeze(['active', 'planning', 'completed', 'archived']);
 

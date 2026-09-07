@@ -28,21 +28,27 @@ SQL editor or the Supabase CLI (`supabase db push`).
 
 | Table | Purpose |
 |-------|---------|
-| `users` | Profile per auth user: name, call sign (unique, format-checked), phone, APRS call sign, `app_role`, `ares_group_ids[]` (server-maintained mirror of active memberships; read-only), `profile_image_url` |
+| `users` | Profile per auth user: name, call sign (unique, format-checked), phone, APRS call sign, `app_role`, `ares_group_ids[]` (server-maintained mirror of active memberships; read-only), `profile_image_url`; capability profile `license_class`, `capabilities[]`, `station_types[]`, `power_hours`, `locality`, `equipment_notes` (vocabularies in `src/lib/capabilities.js`) |
 | `ares_groups` | Groups (organisations) that scope deployments; `admin_user_ids[]` |
 | `memberships` | `(ares_group_id, user_id, status pending/active)`; members request, admins approve; the source of truth for group access (008) |
-| `deployments` | Name, status (`planning/active/completed/archived`), dates, region, `ares_group_id`, `created_by` |
-| `deployment_locations` | Sites within a deployment; address/coordinates, contact, `assigned_call_signs[]`, `sort_order` |
+| `deployments` | Name, status (`planning/active/completed/archived`), `profile` (public_service/activation/exercise/field_day/net/training), `starts_at`/`ends_at` (timestamptz; legacy `start_date`/`end_date` kept in sync by the client), region, `ares_group_id`, `created_by`, served agency / requesting official / tasking reference / `authorized_at`, `plan_version` + `plan_published_at` + `plan_change_note` (packet versioning) |
+| `deployment_locations` | Sites within a deployment; address/coordinates (`lat`/`lon` derived from the address when it parses), `site_type`, contact, `assigned_call_signs[]` (legacy roster; positions supersede it), `parking_notes`, `arrival_notes`, `access_notes`, `sort_order` |
 | `categories` | Equipment categories per deployment (colour, `sort_order`) |
 | `deployment_items` | Equipment per site/category; `assigned_to[]` call signs, quantity, priority |
 | `tasks` | Setup tasks per site; materialised from `events` |
 | `events` | Append-only event log (ULID ids) for offline sync; trigger materialises `task` events |
 | `event_acks` | Reserved for multi-peer sync |
 | `deployment_templates` | Saved structure (JSONB) with counts; `ares_group_id` scopes visibility |
+| `operational_periods` | Time windows of a deployment (`sequence`, `label`, `starts_at`, `ends_at`) that shifts and the comms plan can be scoped to (009) |
+| `positions` | A job to staff: `deployment_id`, optional `site_id`, `name`, `tactical_callsign`, `position_type`, `net`, `headcount`, `requirements` JSONB (`[{kind,value,mandatory,notes}]`), `briefing_notes`, `supervisor_position_id` (009) |
+| `shifts` | A time window on a position: `starts_at`, `ends_at`, optional `muster_at`, optional `headcount` override, optional `operational_period_id` (009) |
+| `assignments` | One operator on one shift: `status` ladder `offered → accepted/declined → checked_in → on_position → released` (+ `no_show`, `cancelled`), transition timestamps, `decline_reason`, `packet_version_seen`, `notes`. Unique per (shift, user). Trigger `assignments_before_write` lets operators move only their own row along the ladder; planners may do anything; timestamps are stamped server-side (009) |
 | `ics205_forms` | One radio plan per site; `radio_channels` JSONB |
 | `notifications` | Per-user notifications produced by triggers |
 
 Triggers: `handle_new_user` creates the `users` row on sign-up;
+`assignments_notify` writes a notification to the operator on offer and to
+the deployment creator on accept/decline;
 `materialize_task_event` applies task events with a forward-only status
 machine (`006_task_status_state_machine.sql`); notification triggers fire on
 task assignment/completion and essential-item shortages (`005`).

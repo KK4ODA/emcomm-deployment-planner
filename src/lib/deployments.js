@@ -1,5 +1,6 @@
 import { assigneesOf, isUnassigned } from './assignments';
 import { DEPLOYMENT_STATUS_ORDER } from './constants';
+import { coverageSummary } from './staffing';
 
 /** Locations belonging to a deployment. */
 export function locationsOf(locations, deploymentId) {
@@ -30,19 +31,32 @@ export function deploymentStats({ deploymentId, categories, locations, items, us
  * Readiness of a deployment at a glance: the stats above plus task progress
  * and how many sites have an ICS 205 radio plan.
  */
-export function deploymentReadiness({ deploymentId, categories, locations, items, users, tasks = [], forms = [] }) {
+export function deploymentReadiness({ deploymentId, categories, locations, items, users, tasks = [], forms = [], positions = [], shifts = [], assignments = [] }) {
   const stats = deploymentStats({ deploymentId, categories, locations, items, users });
   const siteIds = new Set(locationsOf(locations, deploymentId).map(l => l.id));
   const deploymentTasks = tasks.filter(t => siteIds.has(t.deployment_location_id));
   const sitesWithIcs205 = new Set(forms.filter(f => siteIds.has(f.deployment_location_id)).map(f => f.deployment_location_id)).size;
   const tasksCompleted = deploymentTasks.filter(t => t.status === 'completed').length;
+  const usersById = new Map(users.map(u => [u.id, u]));
+  const staffing = coverageSummary(
+    positions.filter(p => p.deployment_id === deploymentId),
+    shifts.filter(s => s.deployment_id === deploymentId),
+    assignments.filter(a => a.deployment_id === deploymentId),
+    usersById,
+  );
   return {
     ...stats,
     tasksTotal: deploymentTasks.length,
     tasksCompleted,
     sitesWithIcs205,
+    slots: staffing.slots,
+    slotsCovered: staffing.covered,
+    slotsOpen: staffing.open,
+    slotsPending: staffing.pending,
+    positions: staffing.positions,
     /** Everything a leader checks before go time is green. */
-    ready: stats.sites > 0 && stats.unassigned === 0 && deploymentTasks.length === tasksCompleted && sitesWithIcs205 === stats.sites,
+    ready: stats.sites > 0 && stats.unassigned === 0 && deploymentTasks.length === tasksCompleted && sitesWithIcs205 === stats.sites
+      && staffing.open === 0 && staffing.pending === 0 && staffing.atRisk === 0,
   };
 }
 

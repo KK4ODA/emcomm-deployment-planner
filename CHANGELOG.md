@@ -23,6 +23,30 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   anonymous clients.
 
 ### Added
+- **Staffing**: positions (a job at a site or mobile, with tactical call,
+  type, headcount, net, supervisor and requirements), shifts with muster
+  times, and assignments with an offer / accept / decline flow. The Staffing
+  page shows "X of Y slots covered", what is open, awaiting reply or at
+  risk, and lets you create numbered positions in one go ("AID MILE 2, 4,
+  6…").
+- **Assign dialog with ranked candidates**: operators who meet every
+  requirement and are free at that time come first; missing capabilities,
+  incomplete profiles and overlapping shifts are shown inline. Offer (waits
+  for acceptance) or assign as confirmed.
+- **Operator capability profile** ("What I can do" on the profile page):
+  licence class, modes and services, station and mobility, hours of
+  independent power, home area, equipment notes. Positions are matched
+  against it.
+- **My positions** on My Assignments: offers with two large buttons ("I will
+  be there" / "I cannot" with a reason), confirmed positions, and a way to
+  withdraw. The coordinator is notified either way.
+- Operational periods per deployment; deployments now have real start and
+  end times, a kind (public service, activation, exercise, Field Day, net,
+  training) and served agency / requesting official / tasking fields.
+- Sites carry parking, arrival and access notes and a site type for the
+  operator packet.
+- Dashboard "Staffed" card and deployment card "Staffed" count; readiness
+  now requires every slot to be confirmed.
 - **Planner** role for coordinators who build deployments without being
   admins. Operators keep field actions (own profile, items, tasks) and lose
   deployment editing.

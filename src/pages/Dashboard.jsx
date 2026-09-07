@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Package, Users, Layers, PackageX, ListTodo, FolderPlus, MapPin, UserCheck } from 'lucide-react';
+import { Plus, Package, Users, Layers, PackageX, ListTodo, FolderPlus, MapPin, UserCheck, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
@@ -13,7 +13,8 @@ import { DeploymentStatusBadge } from '@/components/common/Badges';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, usePositions, useShifts, useAssignments, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { coverageSummary } from '@/lib/staffing';
 import { queryKeys } from '@/lib/queryKeys';
 import { canCreate, canEdit, canDelete, hasPermission } from '@/lib/permissions';
 import { assigneesOf, isUnassigned, toggleAssignee } from '@/lib/assignments';
@@ -48,6 +49,10 @@ function DashboardContent() {
   const locationsQ = useLocations();
   const usersQ = useUsers();
   const tasksQ = useTasks();
+  const positionsQ = usePositions();
+  const shiftsQ = useShifts();
+  const assignmentsQ = useAssignments();
+  useRealtimeInvalidation('assignments', queryKeys.assignments);
   useRealtimeInvalidation('categories', queryKeys.categories);
   useRealtimeInvalidation('items', queryKeys.items);
   useRealtimeInvalidation('locations', queryKeys.locations);
@@ -83,6 +88,12 @@ function DashboardContent() {
   const siteNameById = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const tasks = useMemo(() => tasksInDeployment(tasksQ.data ?? [], locations, siteFilter), [tasksQ.data, locations, siteFilter]);
   const taskSummary = summarizeTasks(tasks);
+  const staffing = useMemo(() => {
+    const positions = (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId && (!siteFilter || p.site_id === siteFilter));
+    const ids = new Set(positions.map(p => p.id));
+    const usersById = new Map((usersQ.data ?? []).map(u => [u.id, u]));
+    return coverageSummary(positions, (shiftsQ.data ?? []).filter(s => ids.has(s.position_id)), assignmentsQ.data ?? [], usersById);
+  }, [positionsQ.data, shiftsQ.data, assignmentsQ.data, usersQ.data, deploymentId, siteFilter]);
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -174,7 +185,15 @@ function DashboardContent() {
         <>
           <SiteFilterBanner location={filteredLocation} onClear={() => setSiteFilter(null)} />
 
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard
+              label="Staffed"
+              value={<>{staffing.covered}<span className="text-sm font-normal text-muted-foreground">/{staffing.slots}</span></>}
+              icon={ClipboardList}
+              tone={staffing.slots === 0 ? 'neutral' : staffing.open ? 'critical' : staffing.pending ? 'warning' : 'success'}
+              onClick={() => navigate(ROUTES.staffing)}
+              hint={staffing.slots === 0 ? 'No positions yet' : staffing.open ? `${staffing.open} open` : staffing.pending ? `${staffing.pending} awaiting reply` : 'All slots confirmed'}
+            />
             <StatCard label="Items" value={items.length} icon={Package} tone="info" />
             <StatCard label="Unassigned" value={unassignedCount} icon={PackageX} tone={unassignedCount ? 'critical' : 'success'} onClick={unassignedCount ? () => jumpToUnassigned() : undefined} hint={unassignedCount ? 'Click to locate' : 'All items covered'} />
             <StatCard label="Tasks done" value={<>{taskSummary.completed}<span className="text-sm font-normal text-muted-foreground">/{taskSummary.total}</span></>} icon={ListTodo} tone={taskSummary.total && taskSummary.completed === taskSummary.total ? 'success' : 'accent'} onClick={openTasks} hint={siteFilter ? 'Open site tasks' : 'Open sites'} />

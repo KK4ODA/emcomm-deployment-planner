@@ -17,6 +17,7 @@ import Deployments from '@/pages/Deployments';
 import Templates from '@/pages/Templates';
 import Sites from '@/pages/Sites';
 import SiteTasks from '@/pages/SiteTasks';
+import Staffing from '@/pages/Staffing';
 import MyAssignments from '@/pages/MyAssignments';
 import Members from '@/pages/Members';
 import AresGroups from '@/pages/AresGroups';
@@ -56,6 +57,7 @@ function AuthenticatedApp() {
                 <Route path={ROUTES.templates} element={<Templates />} />
                 <Route path={ROUTES.sites} element={<Sites />} />
                 <Route path="/sites/:siteId/tasks" element={<SiteTasks />} />
+                <Route path={ROUTES.staffing} element={<Staffing />} />
                 <Route path={ROUTES.myAssignments} element={<MyAssignments />} />
                 <Route path={ROUTES.members} element={<Members />} />
                 <Route path={ROUTES.aresGroups} element={<AresGroups />} />

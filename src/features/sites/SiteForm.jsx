@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormField } from '@/components/common/FormField';
 import { CallSign } from '@/components/common/CallSign';
 import { ensureLeafletIcons, TILE_LAYERS } from './leafletSetup';
@@ -14,7 +15,22 @@ import { parseCoordinates, formatCoordinates, DEFAULT_MAP_CENTER } from '@/lib/c
 
 ensureLeafletIcons();
 
-const EMPTY = { name: '', description: '', address: '', contact_person: '', assigned_call_signs: [], sort_order: 1 };
+const EMPTY = { name: '', description: '', address: '', contact_person: '', assigned_call_signs: [], sort_order: 1, site_type: '', parking_notes: '', arrival_notes: '', access_notes: '' };
+
+export const SITE_TYPES = [
+  { id: 'aid_station', label: 'Aid / hydration station' },
+  { id: 'start_finish', label: 'Start / finish area' },
+  { id: 'medical', label: 'Medical tent' },
+  { id: 'eoc', label: 'EOC / command post' },
+  { id: 'net_control', label: 'Net control location' },
+  { id: 'staging', label: 'Staging / muster point' },
+  { id: 'shelter', label: 'Shelter' },
+  { id: 'hospital', label: 'Hospital' },
+  { id: 'relay', label: 'Relay / repeater site' },
+  { id: 'checkpoint', label: 'Checkpoint' },
+  { id: 'other', label: 'Other' },
+];
+const NONE = '__none__';
 
 function ClickToSet({ onPick }) {
   useMapEvents({ click(e) { onPick([e.latlng.lat, e.latlng.lng]); } });
@@ -63,8 +79,23 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
       name: location.name || '', description: location.description || '', address: location.address || '',
       contact_person: location.contact_person || '', assigned_call_signs: location.assigned_call_signs || [],
       sort_order: location.sort_order ?? allLocations.length + 1,
+      site_type: location.site_type || '', parking_notes: location.parking_notes || '', arrival_notes: location.arrival_notes || '', access_notes: location.access_notes || '',
     } : { ...EMPTY, sort_order: allLocations.length + 1 });
   }, [location, open, allLocations.length]);
+
+  const submit = (e) => {
+    e.preventDefault();
+    const c = parseCoordinates(form.address);
+    onSubmit({
+      ...form,
+      site_type: form.site_type || null,
+      parking_notes: form.parking_notes.trim() || null,
+      arrival_notes: form.arrival_notes.trim() || null,
+      access_notes: form.access_notes.trim() || null,
+      lat: c ? c[0] : null,
+      lon: c ? c[1] : null,
+    });
+  };
 
   const coords = parseCoordinates(form.address);
   const assignedElsewhere = new Set(allLocations.filter(l => l.id !== location?.id).flatMap(l => l.assigned_call_signs || []));
@@ -79,10 +110,21 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader><DialogTitle>{location ? 'Edit site' : 'New site'}</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_6rem]">
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-[1fr_11rem_5rem]">
             <FormField label="Site name" required>
               {({ id }) => <Input id={id} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., County EOC" required autoFocus />}
+            </FormField>
+            <FormField label="Type">
+              {({ id }) => (
+                <Select value={form.site_type || NONE} onValueChange={(v) => setForm({ ...form, site_type: v === NONE ? '' : v })}>
+                  <SelectTrigger id={id}><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Not set</SelectItem>
+                    {SITE_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
             <FormField label="Order">
               {({ id }) => <Input id={id} type="number" inputMode="numeric" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value, 10) || 0 })} />}
@@ -118,6 +160,21 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
           <FormField label="Site contact (call sign)">
             {({ id }) => <Input id={id} value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value.toUpperCase() })} className="font-mono uppercase" placeholder="e.g., KK4ODA" />}
           </FormField>
+
+          <fieldset className="space-y-3 rounded-md border p-3">
+            <legend className="px-1 text-sm font-medium">For operators arriving <span className="text-xs font-normal text-muted-foreground">(goes into their packet)</span></legend>
+            <FormField label="Parking">
+              {({ id }) => <Textarea id={id} rows={2} value={form.parking_notes} onChange={(e) => setForm({ ...form, parking_notes: e.target.value })} placeholder="Where to park, permits, whether you may need to move" />}
+            </FormField>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Arrival / where to report">
+                {({ id }) => <Textarea id={id} rows={2} value={form.arrival_notes} onChange={(e) => setForm({ ...form, arrival_notes: e.target.value })} placeholder="Who to find, which tent, entrance to use" />}
+              </FormField>
+              <FormField label="Access / credentials">
+                {({ id }) => <Textarea id={id} rows={2} value={form.access_notes} onChange={(e) => setForm({ ...form, access_notes: e.target.value })} placeholder="Badges, gate codes, road closures" />}
+              </FormField>
+            </div>
+          </fieldset>
 
           <div className="space-y-1.5">
             <Label>Operators assigned to this site</Label>

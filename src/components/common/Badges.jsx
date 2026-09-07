@@ -3,6 +3,7 @@ import { Shield, Settings2, Eye, Clock, CheckCircle2, Play, Circle } from 'lucid
 import { Badge } from '@/components/ui/badge';
 import { DEPLOYMENT_STATUS, TASK_STATUS, TASK_PRIORITY, ITEM_PRIORITY } from '@/lib/constants';
 import { ROLES, getRoleLabel } from '@/lib/permissions';
+import { ASSIGNMENT_STATUS } from '@/lib/staffing';
 
 const toneToVariant = { info: 'info', success: 'success', warning: 'warning', critical: 'critical', neutral: 'secondary', muted: 'muted' };
 
@@ -19,6 +20,8 @@ export const DeploymentStatusBadge = ({ status, className }) => toneBadge(DEPLOY
 export const TaskPriorityBadge = ({ priority, className }) => toneBadge(TASK_PRIORITY, priority, className);
 /** @param {{ priority?: string, className?: string }} props */
 export const ItemPriorityBadge = ({ priority, className }) => toneBadge(ITEM_PRIORITY, priority, className);
+/** @param {{ status?: string, className?: string }} props */
+export const AssignmentStatusBadge = ({ status, className }) => toneBadge(ASSIGNMENT_STATUS, status, className);
 
 const TASK_ICONS = { pending: Circle, in_progress: Play, completed: CheckCircle2 };
 

@@ -14,5 +14,9 @@ export const queryKeys = Object.freeze({
   ics205Forms: ['ics205forms'],
   aresGroups: ['ares-groups'],
   memberships: ['memberships'],
+  operationalPeriods: ['operational-periods'],
+  positions: ['positions'],
+  shifts: ['shifts'],
+  assignments: ['assignments'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });

@@ -11,7 +11,7 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useIcs205Forms, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useIcs205Forms, usePositions, useShifts, useAssignments, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { db } from '@/api/db';
 import { exportDeployment } from '@/api/functions';
@@ -30,9 +30,27 @@ import { DuplicateDeploymentDialog } from '@/features/deployments/DuplicateDeplo
 import { TemplateForm } from '@/features/templates/TemplateForm';
 import { ROUTES } from '@/app/routes';
 
+/** Local calendar date (YYYY-MM-DD) of an ISO timestamp, for the legacy DATE columns. */
+function localDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function normalizeDeployment(data) {
-  const { template_id: _template, start_date, end_date, ...rest } = data;
-  return { ...rest, start_date: start_date || null, end_date: end_date || null };
+  const { template_id: _template, starts_at, ends_at, served_agency, requesting_official, tasking_reference, ...rest } = data;
+  return {
+    ...rest,
+    starts_at: starts_at || null,
+    ends_at: ends_at || null,
+    start_date: localDate(starts_at),
+    end_date: localDate(ends_at),
+    served_agency: served_agency?.trim() || null,
+    requesting_official: requesting_official?.trim() || null,
+    tasking_reference: tasking_reference?.trim() || null,
+  };
 }
 
 const ALL_KEYS = [queryKeys.deployments, queryKeys.categories, queryKeys.items, queryKeys.locations, queryKeys.tasks];
@@ -49,6 +67,9 @@ export default function Deployments() {
   const usersQ = useUsers();
   const tasksQ = useTasks();
   const formsQ = useIcs205Forms();
+  const positionsQ = usePositions();
+  const shiftsQ = useShifts();
+  const assignmentsQ = useAssignments();
 
   const [form, setForm] = useState({ open: false, deployment: null });
   const [templateFor, setTemplateFor] = useState(null);
@@ -233,6 +254,7 @@ export default function Deployments() {
                 readiness={deploymentReadiness({
                   deploymentId: d.id, categories: categoriesQ.data ?? [], locations: locationsQ.data ?? [], items: itemsQ.data ?? [],
                   users: usersQ.data ?? [], tasks: tasksQ.data ?? [], forms: formsQ.data ?? [],
+                  positions: positionsQ.data ?? [], shifts: shiftsQ.data ?? [], assignments: assignmentsQ.data ?? [],
                 })}
                 permissions={perms}
                 exporting={exportingId === d.id}

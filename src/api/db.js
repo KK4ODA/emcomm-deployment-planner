@@ -15,6 +15,10 @@ export const TABLES = Object.freeze({
   notifications: 'notifications',
   aresGroups: 'ares_groups',
   memberships: 'memberships',
+  operationalPeriods: 'operational_periods',
+  positions: 'positions',
+  shifts: 'shifts',
+  assignments: 'assignments',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -130,4 +134,8 @@ export const db = Object.freeze({
   aresGroups: createRepository(TABLES.aresGroups),
   // Composite key (ares_group_id, user_id): use src/api/memberships.js for writes.
   memberships: createRepository(TABLES.memberships),
+  operationalPeriods: createRepository(TABLES.operationalPeriods),
+  positions: createRepository(TABLES.positions),
+  shifts: createRepository(TABLES.shifts),
+  assignments: createRepository(TABLES.assignments),
 });

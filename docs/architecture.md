@@ -71,6 +71,38 @@ Storage, Edge Functions). There is no other server.
 | UI preferences | localStorage (`sidebar`, `sites view`, theme, show archived) | Per device |
 | Go-kit ticks | localStorage `emcomm_gokit:<deployment>:<call sign>` | Personal packing state, not shared |
 
+## Staffing model (positions, shifts, assignments)
+
+```
+Deployment ─┬─ OperationalPeriod[]      time windows (ICS scope)
+            ├─ Site[]                   places, with parking/arrival/access notes
+            └─ Position[]               a job: name, TAC call, type, headcount, requirements[]
+                 └─ Shift[]             when: starts/ends, muster, optional period
+                      └─ Assignment[]   who: operator + status ladder + timestamps
+```
+
+- **Requirements** are JSONB rows `{ kind, value, mandatory }` with kinds
+  `capability`, `station_type`, `power_hours`, `license_class`, `other`
+  (`src/lib/capabilities.js` holds the vocabularies and labels).
+- **Matching** is pure and client-side (`src/lib/staffing.js`):
+  `matchRequirements(position, shift, user)` distinguishes *unmet* (profile
+  says no) from *unknown* (profile empty), `shiftCoverage()` yields
+  covered/pending/open/at-risk per shift, `coverageSummary()` the headline
+  "X of Y covered", and `rankCandidates()` orders operators for the assign
+  dialog without ever excluding anyone.
+- **Status ladder** on `assignments`: `offered → accepted | declined`,
+  `accepted → checked_in → on_position → released`; `no_show`, `cancelled`
+  are planner-set. The database trigger enforces the operator-side rules
+  and stamps timestamps; planners may set any status.
+- **Screens**: Staffing page (`/staffing`: coverage stats, filters, position
+  cards with shift chips, position form with requirements and shifts, bulk
+  create "AID MILE {n}", assign dialog with ranked candidates, operational
+  periods), Profile › "What I can do" (capability chips), My Assignments ›
+  "My positions" (Accept / Decline with reason, withdraw).
+- **Legacy**: `deployment_locations.assigned_call_signs` remains for the
+  equipment/task views; migration 009 created one position per site that had
+  a roster so nothing was lost. New staffing goes through positions.
+
 ## Deployment lifecycle
 
 `planning → active → completed → archived`, with "back to planning",

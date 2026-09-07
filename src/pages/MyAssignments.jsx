@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Package, ListTodo, Printer, Radio, MapPin, Play, Check } from 'lucide-react';
@@ -14,15 +14,20 @@ import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useTasks } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useTasks, usePositions, useShifts, useAssignments, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useQueryClient } from '@tanstack/react-query';
 import { locationsOf, itemsOf } from '@/lib/deployments';
 import { itemsAssignedTo } from '@/lib/assignments';
 import { tasksInDeployment, compareOpenTasks } from '@/lib/tasks';
 import { canEdit } from '@/lib/permissions';
 import { NEXT_TASK_STATUS } from '@/lib/constants';
+import { queryKeys } from '@/lib/queryKeys';
+import { compareAssignments } from '@/lib/staffing';
 import { formatDate } from '@/lib/time';
 import { updateTaskEvent } from '@/api/taskEvents';
+import { setAssignmentStatus } from '@/api/assignments';
 import { GoKitList, goKitStorageKey } from '@/features/assignments/GoKitList';
+import { OfferList } from '@/features/assignments/OfferList';
 import { ROUTES } from '@/app/routes';
 
 export default function MyAssignments() {
@@ -37,9 +42,42 @@ function MyAssignmentsContent() {
   const itemsQ = useItems();
   const locationsQ = useLocations();
   const tasksQ = useTasks();
+  const positionsQ = usePositions();
+  const shiftsQ = useShifts();
+  const assignmentsQ = useAssignments();
+  useRealtimeInvalidation('assignments', queryKeys.assignments);
+  const queryClient = useQueryClient();
+  const [respondingId, setRespondingId] = useState(/** @type {string|null} */ (null));
   const mayAdvance = canEdit(user?.app_role, 'task');
 
   const locations = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
+  const myPositions = useMemo(() => {
+    const shiftById = new Map((shiftsQ.data ?? []).map(s => [s.id, s]));
+    const positionById = new Map((positionsQ.data ?? []).map(p => [p.id, p]));
+    const siteById = new Map(locations.map(l => [l.id, l]));
+    return (assignmentsQ.data ?? [])
+      .filter(a => a.user_id === user?.id && a.deployment_id === deploymentId)
+      .map(assignment => {
+        const shift = shiftById.get(assignment.shift_id);
+        const position = shift ? positionById.get(shift.position_id) : null;
+        return shift && position ? { assignment, shift, position, site: position.site_id ? siteById.get(position.site_id) ?? null : null } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => compareAssignments(a.assignment, b.assignment) || new Date(a.shift.starts_at).getTime() - new Date(b.shift.starts_at).getTime());
+  }, [assignmentsQ.data, shiftsQ.data, positionsQ.data, locations, user?.id, deploymentId]);
+
+  const respond = async (assignmentId, status, reason) => {
+    setRespondingId(assignmentId);
+    try {
+      await setAssignmentStatus(assignmentId, status, { reason });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments });
+      toast.success(status === 'accepted' ? 'Confirmed. The coordinator has been told.' : 'Declined. The coordinator has been told.');
+    } catch (err) {
+      toast.error(`Could not update: ${err.message || 'unknown error'}`);
+    } finally {
+      setRespondingId(null);
+    }
+  };
   const siteName = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const categoryById = useMemo(() => new Map((categoriesQ.data ?? []).map(c => [c.id, c])), [categoriesQ.data]);
   const myItems = useMemo(() => itemsAssignedTo(itemsOf(itemsQ.data ?? [], locations), user?.call_sign), [itemsQ.data, locations, user?.call_sign]);
@@ -65,10 +103,12 @@ function MyAssignmentsContent() {
   }
 
   const openTasks = myTasks.filter(t => t.status !== 'completed').length;
+  const offers = myPositions.filter(p => p.assignment.status === 'offered').length;
   const storageKey = goKitStorageKey(deploymentId, user.call_sign);
+  const nothing = myItems.length === 0 && myTasks.length === 0 && mySites.length === 0 && myPositions.length === 0;
 
   return (
-    <QueryState queries={[categoriesQ, itemsQ, locationsQ]}>
+    <QueryState queries={[categoriesQ, itemsQ, locationsQ, positionsQ, shiftsQ, assignmentsQ]}>
       <PageHeader
         icon={Package}
         eyebrow={deployment.name}
@@ -77,11 +117,12 @@ function MyAssignmentsContent() {
         actions={(myItems.length > 0 || myTasks.length > 0) && <Button variant="outline" className="no-print" onClick={() => window.print()}><Printer /> Print</Button>}
       />
 
-      {myItems.length === 0 && myTasks.length === 0 && mySites.length === 0 ? (
-        <EmptyState icon={Package} title="Nothing assigned yet" description="When a leader assigns equipment, tasks or a site to your call sign it will show up here." />
+      {nothing ? (
+        <EmptyState icon={Package} title="Nothing assigned yet" description="When a coordinator offers you a position or assigns equipment, tasks or a site to your call sign it will show up here." />
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-3 gap-2">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <StatCard label={offers ? 'Offers to answer' : 'Positions'} value={offers || myPositions.length} icon={Radio} tone={offers ? 'accent' : 'info'} />
             <StatCard label="Items to bring" value={myItems.length} icon={Package} tone="info" />
             <StatCard label="Open tasks" value={openTasks} icon={ListTodo} tone={openTasks ? 'accent' : 'success'} />
             <StatCard label="Sites" value={mySites.length} icon={MapPin} />
@@ -89,6 +130,7 @@ function MyAssignmentsContent() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-4">
+              <OfferList items={myPositions} onRespond={respond} busyId={respondingId} />
               {mySites.length > 0 && (
                 <Section title="My sites" icon={MapPin} bodyClassName="p-0">
                   <ul className="divide-y">

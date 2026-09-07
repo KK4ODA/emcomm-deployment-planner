@@ -5,6 +5,7 @@ export const ROUTES = Object.freeze({
   templates: '/templates',
   sites: '/sites',
   siteTasks: (siteId) => `/sites/${siteId}/tasks`,
+  staffing: '/staffing',
   myAssignments: '/my-assignments',
   members: '/members',
   aresGroups: '/ares-groups',

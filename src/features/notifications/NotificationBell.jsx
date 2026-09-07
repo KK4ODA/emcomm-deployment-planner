@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck, Trash2, AlertCircle, CheckCircle2, Info, PackageX } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, AlertCircle, CheckCircle2, Info, PackageX, Radio, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { db } from '@/api/db';
@@ -14,6 +14,10 @@ const TYPE_META = {
   task_assigned: { icon: AlertCircle, className: 'text-info' },
   task_status: { icon: CheckCircle2, className: 'text-success' },
   equipment_shortage: { icon: PackageX, className: 'text-destructive' },
+  assignment_offered: { icon: Radio, className: 'text-accent' },
+  assignment_accepted: { icon: CheckCircle2, className: 'text-success' },
+  assignment_declined: { icon: XCircle, className: 'text-destructive' },
+  plan_published: { icon: AlertCircle, className: 'text-info' },
   info: { icon: Info, className: 'text-muted-foreground' },
 };
 

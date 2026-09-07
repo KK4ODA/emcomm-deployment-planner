@@ -54,6 +54,21 @@ export function useAresGroups(options = {}) {
   return useQuery({ queryKey: queryKeys.aresGroups, queryFn: () => db.aresGroups.list({ orderBy: 'name' }), ...options });
 }
 
+// ─── Staffing ────────────────────────────────────────────────────────────────
+
+export function useOperationalPeriods() {
+  return useQuery({ queryKey: queryKeys.operationalPeriods, queryFn: () => db.operationalPeriods.list({ orderBy: 'starts_at' }) });
+}
+export function usePositions() {
+  return useQuery({ queryKey: queryKeys.positions, queryFn: () => db.positions.list({ orderBy: 'sort_order' }) });
+}
+export function useShifts() {
+  return useQuery({ queryKey: queryKeys.shifts, queryFn: () => db.shifts.list({ orderBy: 'starts_at' }) });
+}
+export function useAssignments() {
+  return useQuery({ queryKey: queryKeys.assignments, queryFn: () => db.assignments.list({ orderBy: 'offered_at' }) });
+}
+
 /** Group membership rows visible to the caller (own, same-group, or all for admins). */
 export function useMemberships(options = {}) {
   return useQuery({ queryKey: queryKeys.memberships, queryFn: listMemberships, ...options });
