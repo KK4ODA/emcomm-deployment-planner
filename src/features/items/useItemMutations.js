@@ -49,9 +49,20 @@ export function useItemMutations() {
     onSettled: () => queryClient.invalidateQueries({ queryKey }),
   });
 
+  /** Give every listed item to one operator (replaces existing assignees). */
+  const bulkAssign = useMutation({
+    mutationFn: async (/** @type {{ items: Array<{ id: string }>, callSign: string }} */ { items, callSign }) => {
+      await Promise.all(items.map(item => db.items.update(item.id, { assigned_to: [callSign] })));
+      return items.length;
+    },
+    onSuccess: base.invalidate,
+    onError: reportMutationError('Assign items'),
+  });
+
   return {
     ...base,
     duplicate,
+    bulkAssign,
     reorderItems: useReorderMutation('items', queryKeys.items),
     reorderCategories: useReorderMutation('categories', queryKeys.categories),
   };

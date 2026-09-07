@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Package, Users, Layers, PackageX, ListTodo, FolderPlus, MapPin } from 'lucide-react';
+import { Plus, Package, Users, Layers, PackageX, ListTodo, FolderPlus, MapPin, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -14,21 +13,19 @@ import { DeploymentStatusBadge } from '@/components/common/Badges';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useOffline } from '@/contexts/OfflineContext';
 import { useCategories, useItems, useLocations, useUsers, useTasks, useRealtimeInvalidation } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { canCreate, canEdit, canDelete, hasPermission } from '@/lib/permissions';
 import { assigneesOf, isUnassigned, toggleAssignee } from '@/lib/assignments';
-import { openTasksFor, summarizeTasks, tasksInDeployment } from '@/lib/tasks';
+import { summarizeTasks, tasksInDeployment } from '@/lib/tasks';
 import { locationsOf, itemsOf } from '@/lib/deployments';
-import { NEXT_TASK_STATUS } from '@/lib/constants';
-import { updateTaskEvent } from '@/api/taskEvents';
 import { CategoryBoard } from '@/features/items/CategoryBoard';
 import { CategoryForm } from '@/features/items/CategoryForm';
 import { ItemForm } from '@/features/items/ItemForm';
+import { BulkAssignDialog } from '@/features/items/BulkAssignDialog';
 import { useCategoryMutations, useItemMutations } from '@/features/items/useItemMutations';
-import { MyOpenTasks } from '@/features/dashboard/MyOpenTasks';
 import { SiteOverview } from '@/features/dashboard/SiteOverview';
+import { SiteFilter, SiteFilterBanner } from '@/features/dashboard/SiteFilter';
 import { ROUTES } from '@/app/routes';
 
 export default function Dashboard() {
@@ -42,7 +39,7 @@ export default function Dashboard() {
 function DashboardContent() {
   const { user } = useAuth();
   const { deployment, deploymentId } = useCurrentDeployment();
-  const { isOnline } = useOffline();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const siteFilter = searchParams.get('site') || null;
 
@@ -59,6 +56,7 @@ function DashboardContent() {
   const [expanded, setExpanded] = useState({});
   const [categoryDialog, setCategoryDialog] = useState({ open: false, category: null });
   const [itemDialog, setItemDialog] = useState({ open: false, item: null, categoryId: null });
+  const [bulkOpen, setBulkOpen] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirm();
 
   const categoryMut = useCategoryMutations();
@@ -77,6 +75,7 @@ function DashboardContent() {
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const locations = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
+  const filteredLocation = siteFilter ? locations.find(l => l.id === siteFilter) : undefined;
   const categories = useMemo(() => (categoriesQ.data ?? []).filter(c => c.deployment_id === deploymentId), [categoriesQ.data, deploymentId]);
   const deploymentItems = useMemo(() => itemsOf(itemsQ.data ?? [], locations), [itemsQ.data, locations]);
   const items = useMemo(() => (siteFilter ? deploymentItems.filter(i => i.deployment_location_id === siteFilter) : deploymentItems), [deploymentItems, siteFilter]);
@@ -84,7 +83,6 @@ function DashboardContent() {
   const siteNameById = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const tasks = useMemo(() => tasksInDeployment(tasksQ.data ?? [], locations, siteFilter), [tasksQ.data, locations, siteFilter]);
   const taskSummary = summarizeTasks(tasks);
-  const myTasks = useMemo(() => openTasksFor(tasks, user?.call_sign), [tasks, user?.call_sign]);
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -121,16 +119,7 @@ function DashboardContent() {
     }, 150);
   };
 
-  const advanceTask = async (task) => {
-    const next = NEXT_TASK_STATUS[task.status];
-    if (!next) return;
-    try {
-      await updateTaskEvent(task.id, { status: next }, user, deploymentId, isOnline);
-      tasksQ.refetch();
-    } catch (err) {
-      toast.error(`Could not update task: ${err.message || 'unknown error'}`);
-    }
-  };
+  const openTasks = () => navigate(siteFilter ? ROUTES.siteTasks(siteFilter) : ROUTES.sites);
 
   const submitCategory = (data) => {
     const payload = { ...data, deployment_id: deploymentId };
@@ -159,24 +148,19 @@ function DashboardContent() {
     itemMut.update.mutate({ id: item.id, data: { assigned_to: toggleAssignee(item, callSign) } });
   };
 
+  const bulkAssign = ({ items: targets, callSign }) => {
+    itemMut.bulkAssign.mutate({ items: targets, callSign }, {
+      onSuccess: (count) => { setBulkOpen(false); toast.success(`${count} item${count === 1 ? '' : 's'} assigned to ${callSign}`); },
+    });
+  };
+
   return (
     <QueryState queries={[categoriesQ, itemsQ, locationsQ, usersQ]}>
       <PageHeader
-        eyebrow="Deployment"
+        eyebrow="Deployment dashboard"
         title={<span className="flex items-center gap-2">{deployment.name} <DeploymentStatusBadge status={deployment.status} /></span>}
         description={deployment.location || deployment.description || 'Equipment assignments and setup tasks'}
-        actions={locations.length > 0 && (
-          <Select value={siteFilter || 'all'} onValueChange={(v) => setSiteFilter(v === 'all' ? null : v)}>
-            <SelectTrigger className="w-full sm:w-52" aria-label="Filter by site">
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sites</SelectItem>
-              {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
+        actions={<SiteFilter locations={locations} value={siteFilter} onChange={setSiteFilter} />}
       />
 
       {locations.length === 0 ? (
@@ -188,20 +172,25 @@ function DashboardContent() {
         />
       ) : (
         <>
+          <SiteFilterBanner location={filteredLocation} onClear={() => setSiteFilter(null)} />
+
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             <StatCard label="Items" value={items.length} icon={Package} tone="info" />
             <StatCard label="Unassigned" value={unassignedCount} icon={PackageX} tone={unassignedCount ? 'critical' : 'success'} onClick={unassignedCount ? () => jumpToUnassigned() : undefined} hint={unassignedCount ? 'Click to locate' : 'All items covered'} />
-            <StatCard label="Tasks done" value={<>{taskSummary.completed}<span className="text-sm font-normal text-muted-foreground">/{taskSummary.total}</span></>} icon={ListTodo} tone={taskSummary.total && taskSummary.completed === taskSummary.total ? 'success' : 'accent'} onClick={myTasks.length ? () => document.getElementById('my-open-tasks')?.scrollIntoView({ behavior: 'smooth' }) : undefined} />
+            <StatCard label="Tasks done" value={<>{taskSummary.completed}<span className="text-sm font-normal text-muted-foreground">/{taskSummary.total}</span></>} icon={ListTodo} tone={taskSummary.total && taskSummary.completed === taskSummary.total ? 'success' : 'accent'} onClick={openTasks} hint={siteFilter ? 'Open site tasks' : 'Open sites'} />
             <StatCard label="Categories" value={categories.length} icon={Layers} />
-            <StatCard label="Members with call sign" value={usersWithCallSign.length} icon={Users} />
+            <StatCard label="Operators" value={usersWithCallSign.length} icon={Users} hint="Members with a call sign" />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="space-y-3 lg:col-span-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <SearchInput value={search} onChange={setSearch} placeholder="Search items or call signs…" className="flex-1" />
-                {(permissions.canCreateCategory || permissions.canCreateItem) && (
-                  <div className="flex gap-2">
+                {(permissions.canCreateCategory || permissions.canCreateItem || permissions.canAssignItem) && (
+                  <div className="flex flex-wrap gap-2">
+                    {permissions.canAssignItem && unassignedCount > 0 && (
+                      <Button variant="outline" onClick={() => setBulkOpen(true)}><UserCheck /> Assign {unassignedCount} unassigned</Button>
+                    )}
                     {permissions.canCreateCategory && (
                       <Button variant="outline" onClick={() => setCategoryDialog({ open: true, category: null })}><FolderPlus /> Category</Button>
                     )}
@@ -243,7 +232,6 @@ function DashboardContent() {
             </div>
 
             <div className="space-y-4">
-              {user?.call_sign && <MyOpenTasks tasks={myTasks} callSign={user.call_sign} siteNameById={siteNameById} onAdvance={advanceTask} />}
               <SiteOverview locations={siteFilter ? locations.filter(l => l.id === siteFilter) : locations} tasks={tasks} items={deploymentItems} onJumpToUnassigned={jumpToUnassigned} />
             </div>
           </div>
@@ -269,6 +257,17 @@ function DashboardContent() {
         onClose={() => setItemDialog({ open: false, item: null, categoryId: null })}
         onSubmit={submitItem}
         submitting={itemMut.create.isPending || itemMut.update.isPending}
+      />
+      <BulkAssignDialog
+        open={bulkOpen}
+        items={deploymentItems}
+        locations={locations}
+        users={usersWithCallSign}
+        defaultLocationId={siteFilter}
+        currentCallSign={user?.call_sign || null}
+        onClose={() => setBulkOpen(false)}
+        onSubmit={bulkAssign}
+        submitting={itemMut.bulkAssign.isPending}
       />
       {confirmDialog}
     </QueryState>
