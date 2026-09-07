@@ -11,7 +11,8 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useMapLayers, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useMapLayers, useObjectives, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { objectivesToCopy } from '@/lib/objectives';
 import { lessonsToCarry } from '@/lib/aar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { db } from '@/api/db';
@@ -78,6 +79,7 @@ export default function Deployments() {
   const assignmentsQ = useAssignments();
   const lessonsQ = useLessons();
   const layersQ = useMapLayers();
+  const objectivesQ = useObjectives();
 
   const [form, setForm] = useState({ open: false, deployment: null });
   const [templateFor, setTemplateFor] = useState(null);
@@ -164,11 +166,14 @@ export default function Deployments() {
       const sourceLessons = (lessonsQ.data ?? []).filter(l => l.deployment_id === source.id);
       const carry = lessonsToCarry(sourceLessons, result.deployment.id, result.positionIds).map(l => ({ ...l, created_by: user?.id ?? null }));
       for (const l of carry) await db.lessons.create(l);
-      return { ...result, lessons: carry.length };
+      const objectives = objectivesToCopy((objectivesQ.data ?? []).filter(o => o.deployment_id === source.id), result.deployment.id).map(o => ({ ...o, created_by: user?.id ?? null }));
+      for (const o of objectives) await db.objectives.create(o);
+      return { ...result, lessons: carry.length, objectives: objectives.length };
     },
     onSuccess: ({ deployment, counts, shiftedDays, lessons }) => {
       invalidateAll();
       queryClient.invalidateQueries({ queryKey: queryKeys.lessons });
+      queryClient.invalidateQueries({ queryKey: queryKeys.objectives });
       setDuplicateFor(null);
       toast.success(`“${deployment.name}” created`, {
         description: `${counts.locations} sites, ${counts.positions} positions, ${counts.channels} channels${counts.assignments ? `, ${counts.assignments} people re-offered` : ''}${lessons ? `, ${lessons} lesson${lessons === 1 ? '' : 's'} carried forward` : ''}${shiftedDays ? `, dates moved ${shiftedDays} days` : ''}.`,

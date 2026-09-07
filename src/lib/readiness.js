@@ -6,6 +6,7 @@
 import { coverageSummary, overlappingAssignments, occupies } from './staffing';
 import { planWarnings, channelsForNet, snapshotStale } from './comms';
 import { isUnassigned } from './assignments';
+import { outstandingAssets } from './assets';
 import { ROUTES } from '@/app/routes';
 
 /** @typedef {{ id: string, group: string, label: string, state: 'todo'|'warn'|'ok', detail?: string, to?: string, cta?: string }} ReadinessItem */
@@ -17,11 +18,11 @@ const n = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many
  * @param {{
  *   deployment: Object, positions?: Object[], shifts?: Object[], assignments?: Object[], users?: Object[],
  *   locations?: Object[], items?: Object[], tasks?: Object[], periods?: Object[], planRows?: Object[],
- *   channels?: Object[], unpublishedChanges?: number|null, now?: Date
+ *   channels?: Object[], assets?: Object[], objectives?: Object[], unpublishedChanges?: number|null, now?: Date
  * }} ctx everything already scoped to the deployment except channels and users
  * @returns {{ items: ReadinessItem[], groups: { name: string, items: ReadinessItem[] }[], todo: number, warn: number, ok: number, ready: boolean }}
  */
-export function readinessChecklist({ deployment, positions = [], shifts = [], assignments = [], users = [], locations = [], items = [], tasks = [], periods = [], planRows = [], channels = [], unpublishedChanges = null, now = new Date() }) {
+export function readinessChecklist({ deployment, positions = [], shifts = [], assignments = [], users = [], locations = [], items = [], tasks = [], periods = [], planRows = [], channels = [], assets = [], objectives = [], unpublishedChanges = null, now = new Date() }) {
   /** @type {ReadinessItem[]} */
   const out = [];
   const add = (group, id, state, label, detail, to, cta) => out.push({ id, group, state, label, detail, to, cta });
@@ -107,6 +108,12 @@ export function readinessChecklist({ deployment, positions = [], shifts = [], as
   if (overdue.length) add('Logistics', 'overdue', 'todo', `${n(overdue.length, 'task')} overdue`, undefined, ROUTES.sites, 'Sites');
   if (openTasks.length - overdue.length > 0) add('Logistics', 'tasks', 'warn', `${n(openTasks.length - overdue.length, 'task')} open`, undefined, ROUTES.sites, 'Sites');
   if (tasks.length && !openTasks.length) add('Logistics', 'tasks', 'ok', 'All tasks done');
+  const stillOut = outstandingAssets(assets, deployment.id);
+  const ended = deployment.ends_at && new Date(deployment.ends_at).getTime() < now.getTime();
+  if (stillOut.length && (ended || deployment.status === 'completed')) add('Logistics', 'assets', 'todo', `${n(stillOut.length, 'asset')} not back in storage`, stillOut.slice(0, 4).map(a => a.name).join(', '), ROUTES.assets, 'Assets');
+  else if (stillOut.length) add('Logistics', 'assets', 'ok', `${n(stillOut.length, 'group asset')} pledged to this deployment`);
+  const openObjectives = objectives.filter(o => o.status === 'open');
+  if (openObjectives.length && (ended || deployment.status === 'completed')) add('Logistics', 'objectives', 'warn', `${n(openObjectives.length, 'objective')} never taken`, 'Mark done or drop them so the AAR is honest.', ROUTES.objectives, 'Objectives');
 
   const rank = { todo: 0, warn: 1, ok: 2 };
   out.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || rank[a.state] - rank[b.state]);

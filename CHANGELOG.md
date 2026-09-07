@@ -31,6 +31,13 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   prints with the packet.
 - **Text size**: Compact, Default, Large or Larger from the user menu,
   remembered on the device.
+- **Assets**: the group's shared equipment with owner, home location and
+  who has it right now. "I have it", "On site at…", "Returned" record
+  every move with a name and time; a teardown checklist shows what is
+  still out for the deployment and marks it all returned in one click.
+- **Objectives**: a list per deployment that people can take, do and tick
+  off, with optional points. Shown on My assignments, counted in the
+  after-action review, copied fresh when the deployment is duplicated.
 
 ### Changed
 - **Offline queue** retries with exponential backoff (30 s doubling to

@@ -221,6 +221,19 @@ role) and classifies it new / existing / invalid. `RosterImportDialog`
 previews, then calls `invite-user` once per row, sequentially, with
 progress; nothing is sent before the preview is confirmed.
 
+## Assets and objectives
+
+- **Assets** (`/assets`, `src/lib/assets.js`): the ARES group's shared
+  equipment with owner, home location and custody state. `assetActions()`
+  lists what the signed-in person may do (mirrors the `move_asset` RPC);
+  `outstandingAssets()` is the teardown checklist for a deployment, also
+  surfaced by the readiness checklist once the deployment has ended.
+- **Objectives** (`/objectives`, `src/lib/objectives.js`): per-deployment
+  list with points; `objectiveActions()` mirrors the RPC ladder for
+  operators and planners; `ObjectiveList` is shared with My assignments;
+  `objectiveSummary()` feeds the AAR; `objectivesToCopy()` runs on
+  duplicate.
+
 ## Map layers
 
 - `src/lib/geo.js` parses KML (Placemark Point / LineString / Polygon /

@@ -93,6 +93,16 @@ export function useFeedback(deploymentId) {
     enabled: !!deploymentId,
   });
 }
+export function useAssets() {
+  return useQuery({ queryKey: queryKeys.assets, queryFn: () => db.assets.list({ orderBy: 'name' }) });
+}
+/** Custody history of one asset, newest first. */
+export function useAssetCustody(assetId) {
+  return useQuery({ queryKey: [...queryKeys.assetCustody, assetId], queryFn: () => db.assetCustody.where({ asset_id: assetId }, { orderBy: 'at', ascending: false }), enabled: !!assetId });
+}
+export function useObjectives() {
+  return useQuery({ queryKey: queryKeys.objectives, queryFn: () => db.objectives.list({ orderBy: 'sort_order' }) });
+}
 export function useMapLayers() {
   return useQuery({ queryKey: queryKeys.mapLayers, queryFn: () => db.mapLayers.list({ orderBy: 'sort_order' }) });
 }

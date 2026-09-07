@@ -25,6 +25,8 @@ import NcsBoard from '@/pages/NcsBoard';
 import Hours from '@/pages/Hours';
 import AfterAction from '@/pages/AfterAction';
 import Readiness from '@/pages/Readiness';
+import Objectives from '@/pages/Objectives';
+import Assets from '@/pages/Assets';
 import MyAssignments from '@/pages/MyAssignments';
 import Members from '@/pages/Members';
 import AresGroups from '@/pages/AresGroups';
@@ -73,6 +75,8 @@ function AuthenticatedApp() {
                 <Route path={ROUTES.hours} element={<Hours />} />
                 <Route path={ROUTES.aar} element={<AfterAction />} />
                 <Route path={ROUTES.readiness} element={<Readiness />} />
+                <Route path={ROUTES.objectives} element={<Objectives />} />
+                <Route path={ROUTES.assets} element={<Assets />} />
                 <Route path={ROUTES.myAssignments} element={<MyAssignments />} />
                 <Route path={ROUTES.members} element={<Members />} />
                 <Route path={ROUTES.aresGroups} element={<AresGroups />} />

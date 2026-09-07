@@ -43,10 +43,10 @@ started**. The version is the release the row first shipped in.
 | Hours rollup + ARRL Form 2 / FSD-212 figures | Shipped v2.1.0 | `/hours`: per operator and month in the report's activity buckets, CSV. Figures, not the form layout. |
 | ICS-214 (per person and unit) and ICS-205A | Shipped v2.1.0 | Both PDFs from the Net control board. |
 | Map view with layers, GPX/KML import, static map in the packet | Shipped v2.3.0 | Layers and KML / GPX / GeoJSON import (v2.2.0); the packet now carries a small non-interactive map of the site pin over the course layers, tiles cached by the service worker once seen, tap for directions, prints. |
-| Shared asset registry with custody state | Not started | Equipment lists per site as before. |
-| Objectives (claimable, with completion) | Not started | |
+| Shared asset registry with custody state | Shipped v2.3.0 | `/assets` per ARES group: owner, home location, kind, serial; custody state storage / with a person / on site / retired; every move recorded by the `move_asset` RPC (any active member; planners retire); pledges against a deployment; teardown checklist with "mark all returned"; readiness flags assets not back after the event; CSV. |
+| Objectives (claimable, with completion) | Shipped v2.3.0 | `/objectives` per deployment with points and categories; operators claim, release, complete and undo their own through `set_objective_status`; shown on My assignments; counts and points feed the AAR summary and Markdown; copied fresh on duplicate; readiness flags objectives never taken after the event. |
 | Open-shift board + notify qualified operators | Shipped v2.3.0 | Board (v2.2.0) plus "Notify N qualified" in the assign dialog: `notify_open_shift` RPC restricts to group members, skips people already on the shift and anyone told in the last 24 hours. |
-| Notification preferences (email / SMS / push) | Not started | In-app notifications only. |
+| Notification preferences (email / SMS / push) | Not started | In-app notifications only. Email and SMS need a provider account and secrets the owner must create; see the plan in the Next section. |
 | CHIRP CSV export from the comms plan | Shipped v2.0.0 | |
 | Served agency / tasking / authorization fields | Shipped v2.0.0 | Deployment form and packet header. |
 | Roster CSV import | Shipped v2.3.0 | Members > Import roster: tolerant headers (email, call sign, name or first/last, phone, licence class, role), per-row validation and preview, sequential invitations with progress; existing members are added to the groups instead of failing; profile fields fill empty columns only (`invite-user` v3). |
@@ -82,9 +82,10 @@ Followed as written: event sourcing limited to tasks, no Ed25519 / OR-set
 work, What3Words and `export-ics205` removed from the repo (the two Edge
 Functions still need deleting in the Supabase dashboard).
 
-**Count (2026-09-07, after P1 part 2):** P0 12/12 shipped. P1 16 shipped,
-0 partial, 2 not started (asset registry, objectives), 1 not done by
-instruction (code signing). P2 1 partial, 10 not started. P3 0/6.
+**Count (2026-09-07, after P1 part 3):** P0 12/12 shipped. P1 18 of 19
+shipped; the one exception is Windows code signing, not done by
+instruction (no certificate). Notification preferences ships as in-app
+plus web push only (see its row). P2 1 partial, 10 not started. P3 0/6.
 
 ## Completed
 
@@ -180,6 +181,11 @@ instruction (code signing). P2 1 partial, 10 not started. P3 0/6.
   offline once seen); text-size control; exponential backoff with
   order-preserving hold on both outboxes, manual sync forces through.
   Tests: backoff (2). 228 tests total.
+- 2026-09-07 **P1 sweep, part 3** (migration `018`, applied): asset
+  registry with custody and teardown; objectives, claimable with
+  completion. Both RPCs verified with rollback probes (state machine,
+  custody rows, operator ladder, planner-only moves, unknown caller
+  denied). Tests: assets (6), objectives (5). 239 tests total.
 
 ## In Progress
 

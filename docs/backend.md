@@ -53,6 +53,9 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `feedback` | Post-event feedback, one per user per deployment, or anonymous (`user_id` NULL): rating 1–5, went well, problems, comms worked yes/partly/no, comms and equipment notes, one change (012) |
 | `lessons` | Lessons learned per group and deployment, optional position/site, category staffing/comms/equipment/logistics/safety/process, finding, recommendation, status open/carried_forward/addressed/wont_fix, `carried_from_lesson_id` (012) |
 | `map_layers` | Imported course routes, boundaries and waypoints per deployment: `name`, `kind` route/area/points/mixed, `color`, `geojson` (FeatureCollection, < 4 MB), `source_file`, `sort_order` (016). Planners write, group reads |
+| `assets` | Group equipment: `ares_group_id`, name, kind, serial, `owner_user_id` (NULL = group), `home_location`, notes, `status` storage/with_person/on_site/retired, `custodian_user_id`, `deployment_id`, `site_id`, `status_changed_at` (018). Planners write; custody changes only through `move_asset` |
+| `asset_custody` | Append-only custody moves: action, from/to user, deployment, site, note, recorded_by, at (018) |
+| `objectives` | Per-deployment objectives: title, description, category, points, `status` open/claimed/done/dropped, claimed_by/at, completed_by/at, evidence, sort_order (018). Planners write; operators move status through `set_objective_status` |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
 
@@ -89,6 +92,15 @@ RPC `notify_open_shift(shift, user_ids)` (017): planner-only; inserts an
 `open_shift` notification for each listed user who is an active member of
 the deployment's group, not already on the shift, and not notified for it
 in the last 24 hours. Returns `{ notified, skipped_recent }`.
+
+RPC `move_asset(asset, action, to_user, deployment, site, note)` (018): any
+active member of the asset's group records a move (checked_out, on_site,
+returned, transferred; planners also retired / restored); appends to
+`asset_custody` and updates status, custodian, deployment and site.
+
+RPC `set_objective_status(objective, status, evidence)` (018): operators
+may go open -> claimed (theirs), claimed -> open | done, done -> claimed;
+planners may set anything.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a

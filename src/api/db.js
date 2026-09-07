@@ -26,6 +26,9 @@ export const TABLES = Object.freeze({
   feedback: 'feedback',
   lessons: 'lessons',
   mapLayers: 'map_layers',
+  assets: 'assets',
+  assetCustody: 'asset_custody',
+  objectives: 'objectives',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -152,4 +155,7 @@ export const db = Object.freeze({
   feedback: createRepository(TABLES.feedback),
   lessons: createRepository(TABLES.lessons),
   mapLayers: createRepository(TABLES.mapLayers),
+  assets: createRepository(TABLES.assets),
+  assetCustody: createRepository(TABLES.assetCustody),
+  objectives: createRepository(TABLES.objectives),
 });

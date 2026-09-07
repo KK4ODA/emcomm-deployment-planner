@@ -14,7 +14,11 @@ import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useTasks, usePositions, useShifts, useAssignments, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useTasks, usePositions, useShifts, useAssignments, useObjectives, useUsers, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
+import { useMutation } from '@tanstack/react-query';
+import { setObjectiveStatus } from '@/api/assets';
+import { hasPermission } from '@/lib/permissions';
+import { ObjectiveList } from '@/features/objectives/ObjectiveList';
 import { useQueryClient } from '@tanstack/react-query';
 import { locationsOf, itemsOf } from '@/lib/deployments';
 import { itemsAssignedTo } from '@/lib/assignments';
@@ -46,6 +50,8 @@ function MyAssignmentsContent() {
   const positionsQ = usePositions();
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
+  const objectivesQ = useObjectives();
+  const usersQ = useUsers();
   useRealtimeInvalidation('assignments', queryKeys.assignments);
   const queryClient = useQueryClient();
   const [respondingId, setRespondingId] = useState(/** @type {string|null} */ (null));
@@ -103,6 +109,15 @@ function MyAssignmentsContent() {
       setTakingId(null);
     }
   };
+  const objectives = useMemo(() => (objectivesQ.data ?? []).filter(o => o.deployment_id === deploymentId && o.status !== 'dropped'), [objectivesQ.data, deploymentId]);
+  const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
+  const [objectiveBusy, setObjectiveBusy] = useState(/** @type {string|null} */ (null));
+  const objectiveStatus = useMutation({
+    mutationFn: (/** @type {{ id: string, status: string }} */ { id, status }) => { setObjectiveBusy(id); return setObjectiveStatus(id, status); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.objectives }),
+    onError: reportMutationError('Update objective'),
+    onSettled: () => setObjectiveBusy(null),
+  });
   const siteName = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const categoryById = useMemo(() => new Map((categoriesQ.data ?? []).map(c => [c.id, c])), [categoriesQ.data]);
   const myItems = useMemo(() => itemsAssignedTo(itemsOf(itemsQ.data ?? [], locations), user?.call_sign), [itemsQ.data, locations, user?.call_sign]);
@@ -130,7 +145,7 @@ function MyAssignmentsContent() {
   const openTasks = myTasks.filter(t => t.status !== 'completed').length;
   const offers = myPositions.filter(p => p.assignment.status === 'offered').length;
   const storageKey = goKitStorageKey(deploymentId, user.call_sign);
-  const nothing = myItems.length === 0 && myTasks.length === 0 && mySites.length === 0 && myPositions.length === 0 && open.length === 0;
+  const nothing = myItems.length === 0 && myTasks.length === 0 && mySites.length === 0 && myPositions.length === 0 && open.length === 0 && objectives.length === 0;
 
   return (
     <QueryState queries={[categoriesQ, itemsQ, locationsQ, positionsQ, shiftsQ, assignmentsQ]}>
@@ -157,6 +172,7 @@ function MyAssignmentsContent() {
             <div className="space-y-4">
               <OfferList items={myPositions} onRespond={respond} busyId={respondingId} />
               <OpenShiftBoard items={open} siteName={siteName} positionName={shiftPositionName} onTake={take} busyId={takingId} />
+              <ObjectiveList objectives={objectives} user={user} isPlanner={false} usersById={usersById} onStatus={hasPermission(user?.app_role, 'CLAIM_OBJECTIVES') ? (id, s) => objectiveStatus.mutate({ id, status: s }) : () => {}} busyId={objectiveBusy} compact title="Objectives" />
               {mySites.length > 0 && (
                 <Section title="My sites" icon={MapPin} bodyClassName="p-0">
                   <ul className="divide-y">

@@ -12,7 +12,7 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useHourEntries, useFeedback, useLessons, reportMutationError } from '@/hooks/useEntities';
+import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useHourEntries, useFeedback, useLessons, useObjectives, reportMutationError } from '@/hooks/useEntities';
 import { db } from '@/api/db';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
@@ -42,6 +42,7 @@ function AfterActionContent() {
   const hoursQ = useHourEntries();
   const feedbackQ = useFeedback(deploymentId);
   const lessonsQ = useLessons();
+  const objectivesQ = useObjectives();
   const isPlanner = hasPermission(user?.app_role, 'MANAGE_ASSIGNMENTS');
 
   const byDep = (rows) => (rows ?? []).filter(r => r.deployment_id === deploymentId);
@@ -51,8 +52,9 @@ function AfterActionContent() {
   const hours = useMemo(() => byDep(hoursQ.data), [hoursQ.data, deploymentId]); // eslint-disable-line react-hooks/exhaustive-deps
   const lessons = useMemo(() => byDep(lessonsQ.data), [lessonsQ.data, deploymentId]); // eslint-disable-line react-hooks/exhaustive-deps
   const feedback = useMemo(() => feedbackQ.data ?? [], [feedbackQ.data]);
+  const objectives = useMemo(() => byDep(objectivesQ.data), [objectivesQ.data, deploymentId]); // eslint-disable-line react-hooks/exhaustive-deps
   const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
-  const summary = useMemo(() => aarSummary({ assignments, positions, shifts, log: logQ.data ?? [], hours, feedback, usersById }), [assignments, positions, shifts, logQ.data, hours, feedback, usersById]);
+  const summary = useMemo(() => aarSummary({ assignments, positions, shifts, log: logQ.data ?? [], hours, feedback, usersById, objectives }), [assignments, positions, shifts, logQ.data, hours, feedback, usersById, objectives]);
   const myAssignment = assignments.find(a => a.user_id === user?.id && ['checked_in', 'on_position', 'released', 'accepted'].includes(a.status)) ?? null;
   const myFeedback = feedback.find(f => f.user_id === user?.id) ?? null;
 
@@ -65,7 +67,7 @@ function AfterActionContent() {
   const deleteLesson = useMutation({ mutationFn: (/** @type {string} */ id) => db.lessons.remove(id), onSuccess: invalidateLessons, onError: reportMutationError('Delete lesson') });
 
   const planChanges = deployment.plan_published_at ? [{ version: deployment.plan_version, at: deployment.plan_published_at, note: deployment.plan_change_note }] : [];
-  const markdown = () => aarMarkdown({ deployment, summary, feedback, lessons, usersById, planChanges });
+  const markdown = () => aarMarkdown({ deployment, summary, feedback, lessons, usersById, planChanges, objectives });
   const copy = async () => { try { await navigator.clipboard.writeText(markdown()); toast.success('AAR draft copied'); } catch { toast.error('Clipboard unavailable; use Download.'); } };
 
   return (

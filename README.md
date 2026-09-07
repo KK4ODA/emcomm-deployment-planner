@@ -46,6 +46,8 @@ It is opinionated about a few things:
 | Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, course routes / boundaries / waypoints imported from KML, GPX or GeoJSON as map layers (waypoints become sites in one click), parking / arrival / access notes, contact, operator roster consistency check |
 | Equipment | Categories and items per site, drag-and-drop ordering, priorities, assignment to one or more operators, bulk "assign all unassigned" |
 | Tasks | Setup/teardown tasks per site with forward-only status, assignees, due times; work offline and sync via an event log |
+| Assets | The group's shared equipment with owner, home location and custody (in storage, with a person, on site); every move recorded; teardown checklist per deployment; CSV |
+| Objectives | Per-deployment objectives with points that operators take, do and tick off; feeds the after-action review |
 | Members | Roles (admin, planner, operator, viewer, pending), group membership by request and approval, invitations one at a time or from a roster CSV with preview, capability profiles, profile photos, call sign validation |
 | My assignments | Offers to answer, confirmed positions, items, tasks and sites for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
 | Notifications | In-app notifications for assignments and changes |

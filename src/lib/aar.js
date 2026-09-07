@@ -24,9 +24,9 @@ const round = (n) => Math.round(n * 100) / 100;
 
 /**
  * Attendance and record summary for one deployment.
- * @param {{ assignments: Object[], positions: Object[], shifts: Object[], log: Object[], hours: Object[], feedback: Object[], usersById: Map<string, Object> }} args
+ * @param {{ assignments: Object[], positions: Object[], shifts: Object[], log: Object[], hours: Object[], feedback: Object[], usersById: Map<string, Object>, objectives?: Object[] }} args
  */
-export function aarSummary({ assignments, positions, shifts, log, hours, feedback, usersById }) {
+export function aarSummary({ assignments, positions, shifts, log, hours, feedback, usersById, objectives = [] }) {
   const shiftById = new Map(shifts.map(s => [s.id, s]));
   const positionById = new Map(positions.map(p => [p.id, p]));
   const byStatus = {};
@@ -62,6 +62,7 @@ export function aarSummary({ assignments, positions, shifts, log, hours, feedbac
     firstCheckIn,
     lastCheckOut,
     feedbackCount: feedback.length,
+    objectives: { total: objectives.filter(o => o.status !== 'dropped').length, done: objectives.filter(o => o.status === 'done').length, open: objectives.filter(o => o.status === 'open').length, points: objectives.filter(o => o.status === 'done').reduce((s, o) => s + (o.points || 0), 0) },
     averageRating: ratings.length ? round(ratings.reduce((s, r) => s + r, 0) / ratings.length) : null,
     commsVotes,
   };
@@ -71,7 +72,7 @@ export function aarSummary({ assignments, positions, shifts, log, hours, feedbac
  * Plain-text AAR draft (Markdown) the coordinator can paste into an email or
  * a document. Never invents content; empty sections say so.
  */
-export function aarMarkdown({ deployment, summary, feedback, lessons, usersById, planChanges = [] }) {
+export function aarMarkdown({ deployment, summary, feedback, lessons, usersById, planChanges = [], objectives = [] }) {
   const lines = [];
   const who = (f) => (f.anonymous || !f.user_id ? 'Anonymous' : usersById.get(f.user_id)?.call_sign || usersById.get(f.user_id)?.full_name || 'Member');
   lines.push(`# After-action review: ${deployment.name}`);
@@ -110,6 +111,12 @@ export function aarMarkdown({ deployment, summary, feedback, lessons, usersById,
     lines.push('- No responses yet');
   }
   lines.push('');
+  if (summary.objectives?.total) {
+    lines.push('## Objectives');
+    lines.push(`- ${summary.objectives.done} of ${summary.objectives.total} done${summary.objectives.points ? ` (${summary.objectives.points} points)` : ''}${summary.objectives.open ? `, ${summary.objectives.open} never taken` : ''}`);
+    for (const o of (objectives || [])) if (o.status !== 'dropped') lines.push(`  - [${o.status === 'done' ? 'x' : ' '}] ${o.title}${o.status === 'done' && o.evidence ? ` (${o.evidence})` : ''}`);
+    lines.push('');
+  }
   lines.push('## Lessons');
   if (lessons.length) for (const l of lessons) lines.push(`- [${LESSON_CATEGORIES[l.category] || l.category}] ${l.finding}${l.recommendation ? ` → ${l.recommendation}` : ''} (${LESSON_STATUS[l.status]?.label || l.status})`);
   else lines.push('- None recorded yet');
