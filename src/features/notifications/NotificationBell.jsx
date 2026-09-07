@@ -18,6 +18,7 @@ const TYPE_META = {
   assignment_accepted: { icon: CheckCircle2, className: 'text-success' },
   assignment_declined: { icon: XCircle, className: 'text-destructive' },
   plan_published: { icon: AlertCircle, className: 'text-info' },
+  open_shift: { icon: Radio, className: 'text-warning' },
   info: { icon: Info, className: 'text-muted-foreground' },
 };
 

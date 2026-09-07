@@ -221,6 +221,17 @@ role) and classifies it new / existing / invalid. `RosterImportDialog`
 previews, then calls `invite-user` once per row, sequentially, with
 progress; nothing is sent before the preview is confirmed.
 
+## Notification delivery
+
+The bell reads `notifications` rows as before. Delivery beyond the app:
+`src/lib/notificationPrefs.js` (channels, defaults, availability reasons),
+`src/lib/push.js` (subscribe this device with the server's VAPID public
+key, unsubscribe), `public/push-sw.js` (push and click handlers imported
+into the generated service worker), `NotificationsCard` on Profile >
+Notifications. The server side is a trigger + pg_net + the
+`deliver-notification` Edge Function (see backend.md). The desktop app's
+webview has no push; the card says so and points to the web app.
+
 ## Assets and objectives
 
 - **Assets** (`/assets`, `src/lib/assets.js`): the ARES group's shared

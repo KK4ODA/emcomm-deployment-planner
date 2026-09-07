@@ -50,7 +50,7 @@ It is opinionated about a few things:
 | Objectives | Per-deployment objectives with points that operators take, do and tick off; feeds the after-action review |
 | Members | Roles (admin, planner, operator, viewer, pending), group membership by request and approval, invitations one at a time or from a roster CSV with preview, capability profiles, profile photos, call sign validation |
 | My assignments | Offers to answer, confirmed positions, items, tasks and sites for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
-| Notifications | In-app notifications for assignments and changes |
+| Notifications | In-app bell plus per-operator push, email and SMS preferences for offers, packet changes, open shifts and coordinator replies (push works out of the box; email and SMS once a provider is connected) |
 | Exports | Deployment summary text, ICS 205 (comms plan), ICS 205A (communications list), ICS 214 (activity log), CHIRP CSV, hours CSV, AAR draft in Markdown |
 | Platforms | Web, installable PWA (desktop and mobile), Windows desktop app with signed auto-updates |
 | Design | Dense operational layout, light and dark themes, keyboard navigation, screen-reader labels, works from phone to widescreen |

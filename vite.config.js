@@ -79,6 +79,8 @@ export default defineConfig({
         // .htaccess is server configuration, not an asset (Apache 403s it).
         globIgnores: ['**/.htaccess'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Web push handlers (public/push-sw.js) run inside the generated worker.
+        importScripts: ['push-sw.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/storage/, /^\/auth/, /supabase\.co/],
         runtimeCaching: [

@@ -13,6 +13,7 @@ import { TABLES } from './db';
  * @property {string[]} ares_group_ids server-maintained mirror of active memberships (read-only)
  * @property {string|null} [profile_image_url]
  * @property {string|null} [license_class]
+ * @property {{ push?: boolean, email?: boolean, sms?: boolean }} [notification_prefs]
  * @property {string[]} [capabilities]
  * @property {string[]} [station_types]
  * @property {number|null} [power_hours]
@@ -25,6 +26,7 @@ import { TABLES } from './db';
 const PROFILE_FIELDS = [
   'call_sign', 'phone', 'aprs_call_sign', 'full_name', 'profile_image_url',
   'license_class', 'capabilities', 'station_types', 'power_hours', 'locality', 'equipment_notes',
+  'notification_prefs',
 ];
 
 function unwrap({ data, error }) {

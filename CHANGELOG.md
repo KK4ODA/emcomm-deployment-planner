@@ -38,6 +38,10 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 - **Objectives**: a list per deployment that people can take, do and tick
   off, with optional points. Shown on My assignments, counted in the
   after-action review, copied fresh when the deployment is duplicated.
+- **Notifications on your phone**: Profile > Notifications. Push works on
+  the web app (add it to your home screen on iPhone); email and text
+  message switch on once the administrator connects a provider. Only for
+  offers, packet changes, open shifts and replies to the coordinator.
 
 ### Changed
 - **Offline queue** retries with exponential backoff (30 s doubling to

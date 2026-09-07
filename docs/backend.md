@@ -56,6 +56,8 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `assets` | Group equipment: `ares_group_id`, name, kind, serial, `owner_user_id` (NULL = group), `home_location`, notes, `status` storage/with_person/on_site/retired, `custodian_user_id`, `deployment_id`, `site_id`, `status_changed_at` (018). Planners write; custody changes only through `move_asset` |
 | `asset_custody` | Append-only custody moves: action, from/to user, deployment, site, note, recorded_by, at (018) |
 | `objectives` | Per-deployment objectives: title, description, category, points, `status` open/claimed/done/dropped, claimed_by/at, completed_by/at, evidence, sort_order (018). Planners write; operators move status through `set_objective_status` |
+| `app_config` | Server-side settings the service role alone can read: `hook_secret`, `deliver_url`, generated `vapid_keys` (019). No policies; RLS on |
+| `push_subscriptions` | Web push subscriptions per device: endpoint (unique), keys, user agent, failures; users manage their own rows (019) |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
 
@@ -101,6 +103,11 @@ returned, transferred; planners also retired / restored); appends to
 RPC `set_objective_status(objective, status, evidence)` (018): operators
 may go open -> claimed (theirs), claimed -> open | done, done -> claimed;
 planners may set anything.
+
+Trigger `notifications_deliver` (019): after every insert of a deliverable
+type (`assignment_offered/accepted/declined`, `plan_published`, `open_shift`,
+`info`), `net.http_post` sends the row to `deliver_url` with the
+`x-emcomm-hook` secret; failures never block the insert.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a
@@ -173,6 +180,7 @@ the caller's JWT and use the service role only after checking the caller.
 
 | Slug | Called from | What it does |
 |------|-------------|--------------|
+| `deliver-notification` | database trigger (POST), Profile > Notifications (GET) | `verify_jwt` off; POST is authenticated by the `x-emcomm-hook` secret from `app_config`. Delivers a notification to the recipient's enabled channels: web push (VAPID keys generated on first use and kept in `app_config`; dead subscriptions removed on 404/410), email via Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set, SMS via Twilio when `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM` are set; `APP_URL` for links. GET returns which channels are configured and the push public key |
 | `invite-user` (v3: optional `call_sign`, `full_name`, `phone`, `license_class` fill empty profile columns; an existing member is added to the groups instead of failing) | Members › Invite | Admin or planner. `auth.admin.inviteUserByEmail`, sets the initial role (planners: pending/viewer/operator only) and inserts active `memberships` (planners: only their own groups) |
 | `create-or-update-user-profile` | Profile › Add member, Members › Edit | Admin-only upsert of a member profile by email; invites if new |
 | `cleanup-deleted-user` | Members › Remove | Admin-only; clears the call sign from items, sites and tasks. Body: `{ "callSign": "W1ABC" }` |

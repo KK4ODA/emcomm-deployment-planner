@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { User, Radio, Phone, Mail, Lock, UserPlus, Save, Info, Clock } from 'lucide-react';
+import { User, Radio, Phone, Mail, Lock, UserPlus, Save, Info, Clock, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,8 +20,9 @@ import { AddMemberPanel } from '@/features/profile/AddMemberPanel';
 import { AboutPanel } from '@/features/about/AboutPanel';
 import { CapabilitiesCard } from '@/features/profile/CapabilitiesCard';
 import { HoursCard } from '@/features/hours/HoursCard';
+import { NotificationsCard } from '@/features/profile/NotificationsCard';
 
-const TABS = ['profile', 'hours', 'security', 'add-member', 'about'];
+const TABS = ['profile', 'hours', 'notifications', 'security', 'add-member', 'about'];
 
 export default function Profile() {
   const { user, refreshProfile, isOfflineSession } = useAuth();
@@ -45,6 +46,7 @@ export default function Profile() {
         <TabsList className="mb-2">
           <TabsTrigger value="profile"><User className="h-4 w-4" /> My profile</TabsTrigger>
           <TabsTrigger value="hours"><Clock className="h-4 w-4" /> My hours</TabsTrigger>
+          <TabsTrigger value="notifications"><Bell className="h-4 w-4" /> Notifications</TabsTrigger>
           <TabsTrigger value="security"><Lock className="h-4 w-4" /> Sign-in</TabsTrigger>
           {isAdmin && <TabsTrigger value="add-member"><UserPlus className="h-4 w-4" /> Add member</TabsTrigger>}
           <TabsTrigger value="about"><Info className="h-4 w-4" /> About</TabsTrigger>
@@ -65,6 +67,10 @@ export default function Profile() {
 
         <TabsContent value="hours">
           <HoursCard user={user} />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <div className="max-w-2xl"><NotificationsCard user={user} onSaved={refreshProfile} /></div>
         </TabsContent>
 
         <TabsContent value="security">

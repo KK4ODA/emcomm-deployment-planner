@@ -29,6 +29,7 @@ export const TABLES = Object.freeze({
   assets: 'assets',
   assetCustody: 'asset_custody',
   objectives: 'objectives',
+  pushSubscriptions: 'push_subscriptions',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -158,4 +159,5 @@ export const db = Object.freeze({
   assets: createRepository(TABLES.assets),
   assetCustody: createRepository(TABLES.assetCustody),
   objectives: createRepository(TABLES.objectives),
+  pushSubscriptions: createRepository(TABLES.pushSubscriptions),
 });
