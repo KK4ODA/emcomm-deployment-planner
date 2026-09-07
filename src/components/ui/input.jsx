@@ -1,19 +1,22 @@
-import * as React from "react"
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
-
-const Input = React.forwardRef(({ className, type, ...props }, ref) => {
-  return (
-    (<input
+export const Input = React.forwardRef(
+  /** @type {React.ForwardRefRenderFunction<HTMLInputElement, React.ComponentPropsWithoutRef<'input'> & { invalid?: boolean }>} */
+  (({ className, type = 'text', invalid, ...props }, ref) => (
+    <input
       type={type}
-      className={cn(
-        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        className
-      )}
       ref={ref}
-      {...props} />)
-  );
-})
-Input.displayName = "Input"
-
-export { Input }
+      aria-invalid={invalid || undefined}
+      className={cn(
+        'flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground shadow-sm transition-colors',
+        'file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/30',
+        className,
+      )}
+      {...props}
+    />
+  )),
+);
+Input.displayName = 'Input';
