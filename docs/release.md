@@ -110,8 +110,12 @@ The key pair was generated on 2026-09-06 with `npx tauri signer generate`.
   PC. **It is not in the repository and must never be committed.** Back it up
   somewhere safe; if it is lost, installed apps can never accept another update
   and a new key must be shipped through a manually installed release.
-- Put the file contents into the `TAURI_SIGNING_PRIVATE_KEY` secret. To sign
-  locally instead: `set TAURI_SIGNING_PRIVATE_KEY_PATH=%USERPROFILE%\.tauri\emcomm-planner.key`.
+- Put the file contents into the `TAURI_SIGNING_PRIVATE_KEY` secret. To sign a
+  local build, export the same variable with the file contents before
+  `npm run desktop:build` (PowerShell:
+  `$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\emcomm-planner.key" -Raw`).
+  The bundler prints "A public key has been found, but no private key" and skips
+  the `.sig` file when the variable is missing; the installer itself is still built.
 
 ## Code signing (Authenticode)
 
