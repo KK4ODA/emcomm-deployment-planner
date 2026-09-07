@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,30 +33,30 @@ export default function MyAssignments() {
 
   const { data: allCategories = [] } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => base44.entities.Category.list('sort_order')
+    queryFn: () => db.categories.list({ orderBy: 'sort_order' })
   });
 
   const { data: allItems = [] } = useQuery({
     queryKey: ['items'],
-    queryFn: () => base44.entities.DeploymentItem.list()
+    queryFn: () => db.items.list()
   });
 
   const { data: allLocations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list('sort_order')
+    queryFn: () => db.locations.list({ orderBy: 'sort_order' })
   });
 
   const { data: allTasks = [] } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list()
+    queryFn: () => db.tasks.list()
   });
 
   // Real-time updates for items and tasks
   useEffect(() => {
-    const unsubscribeItems = base44.entities.DeploymentItem.subscribe((event) => {
+    const unsubscribeItems = db.items.subscribe((event) => {
       queryClient.invalidateQueries(['items']);
     });
-    const unsubscribeTasks = base44.entities.Task.subscribe((event) => {
+    const unsubscribeTasks = db.tasks.subscribe((event) => {
       queryClient.invalidateQueries(['tasks']);
     });
     return () => {
@@ -67,7 +67,7 @@ export default function MyAssignments() {
 
   const { data: currentDeployment } = useQuery({
     queryKey: ['deployment', currentDeploymentId],
-    queryFn: () => currentDeploymentId ? base44.entities.Deployment.filter({ id: currentDeploymentId }).then(d => d[0]) : null,
+    queryFn: () => currentDeploymentId ? db.deployments.findById(currentDeploymentId) : null,
     enabled: !!currentDeploymentId
   });
 

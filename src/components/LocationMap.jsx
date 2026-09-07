@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPin, Package, User } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { lookupWhat3Words } from '@/api/functions';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -60,13 +60,10 @@ export default function LocationMap({ locations, items = [], onLocationClick }) 
       validLocations.forEach(async (loc) => {
         if (what3wordsData[loc.id]) return;
         try {
-          const response = await base44.functions.invoke('get-what3words', {
-            lat: loc.coords[0],
-            lng: loc.coords[1]
-          });
+          const response = await lookupWhat3Words(loc.coords[0], loc.coords[1]);
           setWhat3wordsData(prev => ({
             ...prev,
-            [loc.id]: response.data.words
+            [loc.id]: response.words
           }));
         } catch (error) {
           if (!error.message?.includes('Rate limit')) {

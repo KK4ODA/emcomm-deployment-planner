@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 import { queryClientInstance } from '@/lib/query-client';
 import { offlineStorage } from '@/components/offline/storage';
-import { applyTaskEvent } from './taskEvents';
+import { applyTaskEvent, TASKS_UPDATED_EVENT } from './taskEvents';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -137,7 +137,7 @@ async function fetchAndApplyInbox() {
 // ─── Notification helpers ─────────────────────────────────────────────────────
 
 function notifyTasksUpdated() {
-  window.dispatchEvent(new CustomEvent('emcomm:tasks-updated'));
+  window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
   queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
 }
 

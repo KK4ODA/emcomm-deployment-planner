@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,12 +46,12 @@ export default function LocationTasksPage() {
 
   const { data: allLocations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list('sort_order'),
+    queryFn: () => db.locations.list({ orderBy: 'sort_order' }),
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => db.users.list(),
   });
 
   const location = allLocations.find(l => l.id === locationId);

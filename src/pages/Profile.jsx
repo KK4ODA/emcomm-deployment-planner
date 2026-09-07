@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
+import { updateProfile, updateEmail, updatePassword } from '@/api/auth';
+import { upsertMemberProfile } from '@/api/functions';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -77,7 +79,7 @@ export default function Profile() {
 
   const { data: aresGroups = [] } = useQuery({
     queryKey: ['ares-groups'],
-    queryFn: () => base44.entities.ARESGroup.list('name')
+    queryFn: () => db.aresGroups.list({ orderBy: 'name' })
   });
 
   useEffect(() => {
@@ -187,9 +189,15 @@ export default function Profile() {
     }
     
     setSaving(true);
-    await base44.auth.updateMe(form);
-    toast.success('Profile updated successfully');
-    setSaving(false);
+    try {
+      await updateProfile(user.id, form);
+      await checkAppState();
+      toast.success('Profile updated successfully');
+    } catch (err) {
+      toast.error(`Failed to save profile: ${err.message || 'unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleAresGroup = (groupId) => {
@@ -281,8 +289,8 @@ export default function Profile() {
 
     setAdminSaving(true);
     try {
-      const response = await base44.functions.invoke('create-or-update-user-profile', adminForm);
-      toast.success(response.data.message);
+      const response = await upsertMemberProfile(adminForm);
+      toast.success(response.message);
       resetMemberLookup();
     } catch (error) {
       toast.error('Failed: ' + error.message);
@@ -307,12 +315,10 @@ export default function Profile() {
     
     setEmailSaving(true);
     try {
-      await base44.auth.updateMe({ email: emailForm.newEmail, password: emailForm.password });
-      toast.success('Email updated successfully');
+      await updateEmail(emailForm.newEmail);
+      toast.success('Check your new inbox to confirm the email change');
       setEmailForm({ newEmail: '', password: '' });
-      // Refresh user data
-      const userData = await base44.auth.me();
-      setUser(userData);
+      await checkAppState();
     } catch (error) {
       toast.error('Failed to change email: ' + error.message);
     } finally {
@@ -336,7 +342,7 @@ export default function Profile() {
     }
     setPasswordSaving(true);
     try {
-      await base44.auth.updateMe({ password: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
+      await updatePassword(passwordForm.newPassword);
       toast.success('Password updated successfully');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {

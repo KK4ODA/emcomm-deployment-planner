@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,17 +19,17 @@ export default function ARESGroups() {
 
   const { data: groups = [] } = useQuery({
     queryKey: ['ares-groups'],
-    queryFn: () => base44.entities.ARESGroup.list('name')
+    queryFn: () => db.aresGroups.list({ orderBy: 'name' })
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => db.users.list()
   });
 
   const { data: deployments = [] } = useQuery({
     queryKey: ['deployments'],
-    queryFn: () => base44.entities.Deployment.list()
+    queryFn: () => db.deployments.list()
   });
 
   const isGlobalAdmin = user?.app_role === 'admin';
@@ -40,7 +40,7 @@ export default function ARESGroups() {
   };
 
   const createGroup = useMutation({
-    mutationFn: (data) => base44.entities.ARESGroup.create(data),
+    mutationFn: (data) => db.aresGroups.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['ares-groups']);
       setFormOpen(false);
@@ -50,7 +50,7 @@ export default function ARESGroups() {
   });
 
   const updateGroup = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ARESGroup.update(id, data),
+    mutationFn: ({ id, data }) => db.aresGroups.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['ares-groups']);
       setFormOpen(false);
@@ -61,7 +61,7 @@ export default function ARESGroups() {
   });
 
   const deleteGroup = useMutation({
-    mutationFn: (id) => base44.entities.ARESGroup.delete(id),
+    mutationFn: (id) => db.aresGroups.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['ares-groups']);
       toast.success('ARES group deleted successfully');

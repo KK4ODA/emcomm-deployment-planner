@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,13 +23,13 @@ export default function DeploymentForm({ open, onClose, onSubmit, deployment }) 
 
   const { data: templates = [] } = useQuery({
     queryKey: ['templates'],
-    queryFn: () => base44.entities.DeploymentTemplate.list('-created_date'),
+    queryFn: () => db.templates.list({ orderBy: 'created_at', ascending: false }),
     enabled: open && !deployment
   });
 
   const { data: aresGroups = [] } = useQuery({
     queryKey: ['ares-groups'],
-    queryFn: () => base44.entities.ARESGroup.list('name'),
+    queryFn: () => db.aresGroups.list({ orderBy: 'name' }),
     enabled: open
   });
 

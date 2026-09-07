@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,15 +42,15 @@ export default function Dashboard() {
 
   const { data: allCategories = [] } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => base44.entities.Category.list('sort_order')
+    queryFn: () => db.categories.list({ orderBy: 'sort_order' })
   });
 
   // Real-time updates for categories and items
   useEffect(() => {
-    const unsubscribeCategories = base44.entities.Category.subscribe((event) => {
+    const unsubscribeCategories = db.categories.subscribe((event) => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     });
-    const unsubscribeItems = base44.entities.DeploymentItem.subscribe((event) => {
+    const unsubscribeItems = db.items.subscribe((event) => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
     });
     return () => {
@@ -61,17 +61,17 @@ export default function Dashboard() {
 
   const { data: allItems = [] } = useQuery({
     queryKey: ['items'],
-    queryFn: () => base44.entities.DeploymentItem.list('sort_order')
+    queryFn: () => db.items.list({ orderBy: 'sort_order' })
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => db.users.list()
   });
 
   const { data: allLocations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list('sort_order')
+    queryFn: () => db.locations.list({ orderBy: 'sort_order' })
   });
 
   // Phase 1: tasks come from the IndexedDB materialized view
@@ -90,12 +90,12 @@ export default function Dashboard() {
 
   const { data: allDeployments = [] } = useQuery({
     queryKey: ['deployments'],
-    queryFn: () => base44.entities.Deployment.list()
+    queryFn: () => db.deployments.list()
   });
 
   const { data: currentDeployment } = useQuery({
     queryKey: ['deployment', currentDeploymentId],
-    queryFn: () => currentDeploymentId ? base44.entities.Deployment.filter({ id: currentDeploymentId }).then(d => d[0]) : null,
+    queryFn: () => currentDeploymentId ? db.deployments.findById(currentDeploymentId) : null,
     enabled: !!currentDeploymentId
   });
 
@@ -180,7 +180,7 @@ export default function Dashboard() {
 
   // Category mutations
   const createCategory = useMutation({
-    mutationFn: (data) => base44.entities.Category.create(data),
+    mutationFn: (data) => db.categories.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['categories']);
       setCategoryFormOpen(false);
@@ -189,7 +189,7 @@ export default function Dashboard() {
   });
 
   const updateCategory = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Category.update(id, data),
+    mutationFn: ({ id, data }) => db.categories.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['categories']);
       setCategoryFormOpen(false);
@@ -199,14 +199,14 @@ export default function Dashboard() {
   });
 
   const deleteCategory = useMutation({
-    mutationFn: (id) => base44.entities.Category.delete(id),
+    mutationFn: (id) => db.categories.remove(id),
     onSuccess: () => queryClient.invalidateQueries(['categories']),
     onError: onErrorToast('Delete category'),
   });
 
   // Item mutations
   const createItem = useMutation({
-    mutationFn: (data) => base44.entities.DeploymentItem.create(data),
+    mutationFn: (data) => db.items.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['items']);
       setItemFormOpen(false);
@@ -215,7 +215,7 @@ export default function Dashboard() {
   });
 
   const updateItem = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DeploymentItem.update(id, data),
+    mutationFn: ({ id, data }) => db.items.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['items']);
       setItemFormOpen(false);
@@ -225,7 +225,7 @@ export default function Dashboard() {
   });
 
   const deleteItem = useMutation({
-    mutationFn: (id) => base44.entities.DeploymentItem.delete(id),
+    mutationFn: (id) => db.items.remove(id),
     onSuccess: () => queryClient.invalidateQueries(['items']),
     onError: onErrorToast('Delete item'),
   });
@@ -233,7 +233,7 @@ export default function Dashboard() {
   const duplicateItem = useMutation({
     mutationFn: (item) => {
       const { id, created_date, updated_date, created_by, ...itemData } = item;
-      return base44.entities.DeploymentItem.create({
+      return db.items.create({
         ...itemData,
         name: `${itemData.name} (Copy)`,
         assigned_to: []

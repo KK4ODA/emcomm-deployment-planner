@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
+import { exportDeployment } from '@/api/functions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +46,7 @@ export default function Deployments() {
 
   const { data: allDeployments = [] } = useQuery({
     queryKey: ['deployments'],
-    queryFn: () => base44.entities.Deployment.list('-created_date')
+    queryFn: () => db.deployments.list({ orderBy: 'created_at', ascending: false })
   });
 
   // Filter deployments by user's ARES groups
@@ -57,22 +58,22 @@ export default function Deployments() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => base44.entities.Category.list()
+    queryFn: () => db.categories.list()
   });
 
   const { data: items = [] } = useQuery({
     queryKey: ['items'],
-    queryFn: () => base44.entities.DeploymentItem.list()
+    queryFn: () => db.items.list()
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => db.users.list()
   });
 
   const { data: locations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list()
+    queryFn: () => db.locations.list()
   });
 
   const userRole = user?.app_role;
@@ -92,11 +93,11 @@ export default function Deployments() {
         end_date: end_date || null,
       };
 
-      const deployment = await base44.entities.Deployment.create(deploymentData);
+      const deployment = await db.deployments.create(deploymentData);
 
       // If creating from template, copy structure
       if (template_id) {
-        const template = await base44.entities.DeploymentTemplate.filter({ id: template_id }).then(t => t[0]);
+        const template = await db.templates.findById(template_id);
         if (template?.structure) {
           await applyTemplate(deployment.id, template.structure);
         }
@@ -151,7 +152,7 @@ export default function Deployments() {
         }))
       };
 
-      return base44.entities.DeploymentTemplate.create({
+      return db.templates.create({
         ...templateData,
         structure,
         category_count: deploymentCategories.length,
@@ -171,7 +172,7 @@ export default function Deployments() {
     // Create categories and build mapping
     const categoryMap = {};
     for (const cat of structure.categories || []) {
-      const newCategory = await base44.entities.Category.create({
+      const newCategory = await db.categories.create({
         ...cat,
         deployment_id: deploymentId
       });
@@ -181,7 +182,7 @@ export default function Deployments() {
     // Create locations and build mapping
     const locationMap = {};
     for (const loc of structure.locations || []) {
-      const newLocation = await base44.entities.DeploymentLocation.create({
+      const newLocation = await db.locations.create({
         ...loc,
         deployment_id: deploymentId
       });
@@ -190,7 +191,7 @@ export default function Deployments() {
 
     // Create items
     for (const item of structure.items || []) {
-      await base44.entities.DeploymentItem.create({
+      await db.items.create({
         name: item.name,
         description: item.description,
         category_id: categoryMap[item.category_name],
@@ -204,7 +205,7 @@ export default function Deployments() {
   const updateDeployment = useMutation({
     mutationFn: ({ id, data }) => {
       const { template_id, start_date, end_date, ...rest } = data;
-      return base44.entities.Deployment.update(id, {
+      return db.deployments.update(id, {
         ...rest,
         start_date: start_date || null,
         end_date: end_date || null,
@@ -222,7 +223,7 @@ export default function Deployments() {
   });
 
   const deleteDeployment = useMutation({
-    mutationFn: (id) => base44.entities.Deployment.delete(id),
+    mutationFn: (id) => db.deployments.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['deployments']);
       toast.success('Deployment deleted successfully');
@@ -259,12 +260,12 @@ export default function Deployments() {
   const handleExportDeployment = async (deploymentId, format = 'txt', includeGoKit = true) => {
     try {
       const deployment = deployments.find(d => d.id === deploymentId);
-      const response = await base44.functions.invoke('export-deployment', { deploymentId, format, includeGoKit });
+      const text = await exportDeployment({ deploymentId, includeGoKit });
       
       const mimeType = format === 'pdf' ? 'application/pdf' : 'text/plain';
       const extension = format === 'pdf' ? 'pdf' : 'txt';
       
-      const blob = new Blob([response.data], { type: mimeType });
+      const blob = new Blob([text], { type: mimeType });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

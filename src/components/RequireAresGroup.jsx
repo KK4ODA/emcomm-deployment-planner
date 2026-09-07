@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
+import { updateProfile } from '@/api/auth';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ export default function RequireAresGroup({ user, onComplete }) {
 
   const { data: aresGroups = [] } = useQuery({
     queryKey: ['ares-groups'],
-    queryFn: () => base44.entities.ARESGroup.list('name')
+    queryFn: () => db.aresGroups.list({ orderBy: 'name' })
   });
 
   const toggleGroup = (groupId) => {
@@ -33,7 +34,7 @@ export default function RequireAresGroup({ user, onComplete }) {
 
     setSaving(true);
     try {
-      await base44.auth.updateMe({ ares_group_ids: selectedGroups });
+      await updateProfile(user.id, { ares_group_ids: selectedGroups });
       toast.success('ARES groups saved successfully');
       onComplete();
     } catch (error) {

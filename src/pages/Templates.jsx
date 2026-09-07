@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,13 +19,13 @@ export default function TemplatesPage() {
 
   const { data: templates = [] } = useQuery({
     queryKey: ['templates'],
-    queryFn: () => base44.entities.DeploymentTemplate.list('-created_date')
+    queryFn: () => db.templates.list({ orderBy: 'created_at', ascending: false })
   });
 
   const isAdmin = user?.app_role === 'admin';
 
   const updateTemplate = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DeploymentTemplate.update(id, data),
+    mutationFn: ({ id, data }) => db.templates.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['templates']);
       setEditFormOpen(false);
@@ -39,7 +39,7 @@ export default function TemplatesPage() {
   });
 
   const deleteTemplate = useMutation({
-    mutationFn: (id) => base44.entities.DeploymentTemplate.delete(id),
+    mutationFn: (id) => db.templates.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['templates']);
       toast.success('Template deleted');

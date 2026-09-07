@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient';
 import { offlineStorage } from '@/components/offline/storage';
 
+export const TASKS_UPDATED_EVENT = 'emcomm:tasks-updated';
+
 // ─── ULID ─────────────────────────────────────────────────────────────────────
 // Crockford base-32 alphabet (no I, L, O, U to avoid ambiguity)
 const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';

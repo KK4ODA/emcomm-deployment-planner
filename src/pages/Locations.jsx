@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
+import { lookupWhat3Words } from '@/api/functions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,12 +33,12 @@ export default function LocationsPage() {
 
   const { data: allLocations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list('sort_order')
+    queryFn: () => db.locations.list({ orderBy: 'sort_order' })
   });
 
   // Real-time location updates
   useEffect(() => {
-    const unsubscribe = base44.entities.DeploymentLocation.subscribe((event) => {
+    const unsubscribe = db.locations.subscribe((event) => {
       queryClient.invalidateQueries(['locations']);
     });
     return unsubscribe;
@@ -45,22 +46,22 @@ export default function LocationsPage() {
 
   const { data: allItems = [] } = useQuery({
     queryKey: ['items'],
-    queryFn: () => base44.entities.DeploymentItem.list()
+    queryFn: () => db.items.list()
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list()
+    queryFn: () => db.users.list()
   });
 
   const { data: allIcs205Forms = [] } = useQuery({
     queryKey: ['ics205forms'],
-    queryFn: () => base44.entities.ICS205Form.list()
+    queryFn: () => db.ics205Forms.list()
   });
 
   const { data: currentDeployment } = useQuery({
     queryKey: ['deployment', currentDeploymentId],
-    queryFn: () => currentDeploymentId ? base44.entities.Deployment.filter({ id: currentDeploymentId }).then(d => d[0]) : null,
+    queryFn: () => currentDeploymentId ? db.deployments.findById(currentDeploymentId) : null,
     enabled: !!currentDeploymentId
   });
 
@@ -100,13 +101,10 @@ export default function LocationsPage() {
       const coords = parseCoordinates(location.address);
       if (coords) {
         try {
-          const response = await base44.functions.invoke('get-what3words', {
-            lat: coords[0],
-            lng: coords[1]
-          });
+          const response = await lookupWhat3Words(coords[0], coords[1]);
           setWhat3wordsData(prev => ({
             ...prev,
-            [location.id]: response.data.words
+            [location.id]: response.words
           }));
         } catch (error) {
           if (!error.message?.includes('Rate limit')) {
@@ -122,7 +120,7 @@ export default function LocationsPage() {
   const canDeleteLocation = canDelete(userRole, 'location');
 
   const createLocation = useMutation({
-    mutationFn: (data) => base44.entities.DeploymentLocation.create(data),
+    mutationFn: (data) => db.locations.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['locations']);
       setLocationFormOpen(false);
@@ -134,7 +132,7 @@ export default function LocationsPage() {
   });
 
   const updateLocation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DeploymentLocation.update(id, data),
+    mutationFn: ({ id, data }) => db.locations.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['locations']);
       setLocationFormOpen(false);
@@ -147,12 +145,12 @@ export default function LocationsPage() {
   });
 
   const deleteLocation = useMutation({
-    mutationFn: (id) => base44.entities.DeploymentLocation.delete(id),
+    mutationFn: (id) => db.locations.remove(id),
     onSuccess: () => queryClient.invalidateQueries(['locations'])
   });
 
   const createIcs205 = useMutation({
-    mutationFn: (data) => base44.entities.ICS205Form.create(data),
+    mutationFn: (data) => db.ics205Forms.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['ics205forms']);
       setIcs205FormOpen(false);
@@ -162,7 +160,7 @@ export default function LocationsPage() {
   });
 
   const updateIcs205 = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ICS205Form.update(id, data),
+    mutationFn: ({ id, data }) => db.ics205Forms.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['ics205forms']);
       setIcs205FormOpen(false);

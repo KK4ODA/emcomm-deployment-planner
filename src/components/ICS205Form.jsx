@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fetchIcs205Export } from '@/api/functions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,7 +109,7 @@ export default function ICS205Form({ open, onClose, onSubmit, form: existingForm
 
     try {
       setExporting(true);
-      const { data } = await base44.functions.invoke('export-ics205', { formId: existingForm.id });
+      const data = await fetchIcs205Export(existingForm.id);
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

@@ -29,13 +29,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
     }
 
-    const { event, old_data } = await req.json()
-
-    if (event?.type !== 'delete' || !old_data?.call_sign) {
-      return new Response(JSON.stringify({ message: 'No action needed' }), { headers: jsonHeaders })
+    // Only admins may scrub another member's assignments
+    const { data: callerProfile } = await supabaseAdmin.from('users').select('app_role').eq('id', user.id).single()
+    if (callerProfile?.app_role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: jsonHeaders })
     }
 
-    const callSign = old_data.call_sign
+    const body = await req.json()
+    // Accept the current `{ callSign }` shape and the legacy webhook shape.
+    const callSign: string | undefined = body?.callSign ?? body?.old_data?.call_sign
+
+    if (!callSign) {
+      return new Response(JSON.stringify({ message: 'No action needed' }), { headers: jsonHeaders })
+    }
 
     // 1. Clean up deployment_items assigned_to arrays
     const { data: items } = await supabaseAdmin.from('deployment_items').select('id, assigned_to')

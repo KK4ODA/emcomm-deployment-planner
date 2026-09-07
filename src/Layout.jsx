@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import RequireAresGroup from '@/components/RequireAresGroup';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function Layout({ children, currentPageName }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentDeploymentId, setCurrentDeploymentId] = useState(
     localStorage.getItem('currentDeploymentId') || null
@@ -36,12 +36,12 @@ export default function Layout({ children, currentPageName }) {
 
   const { data: deployments = [] } = useQuery({
     queryKey: ['deployments'],
-    queryFn: () => base44.entities.Deployment.list('-created_date')
+    queryFn: () => db.deployments.list({ orderBy: 'created_at', ascending: false })
   });
 
   const { data: currentDeployment } = useQuery({
     queryKey: ['deployment', currentDeploymentId],
-    queryFn: () => currentDeploymentId ? base44.entities.Deployment.filter({ id: currentDeploymentId }).then(d => d[0]) : null,
+    queryFn: () => currentDeploymentId ? db.deployments.findById(currentDeploymentId) : null,
     enabled: !!currentDeploymentId
   });
 
@@ -148,7 +148,7 @@ export default function Layout({ children, currentPageName }) {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => base44.auth.logout()}
+                    onClick={() => logout()}
                     className="text-rose-600 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4 mr-2" />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
+import { upsertMemberProfile, cleanupDeletedUser, inviteUser as inviteUserFn } from '@/api/functions';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,24 +30,24 @@ export default function Members() {
 
   const { data: users = [], refetch: refetchUsers } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => db.users.list(),
     staleTime: 0,
     gcTime: 0
   });
 
   const { data: items = [] } = useQuery({
     queryKey: ['items'],
-    queryFn: () => base44.entities.DeploymentItem.list()
+    queryFn: () => db.items.list()
   });
 
   const { data: locations = [] } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => base44.entities.DeploymentLocation.list()
+    queryFn: () => db.locations.list()
   });
 
   const { data: deployments = [] } = useQuery({
     queryKey: ['deployments'],
-    queryFn: () => base44.entities.Deployment.list()
+    queryFn: () => db.deployments.list()
   });
 
   const filteredUsers = users.filter(user => 
@@ -59,7 +60,7 @@ export default function Members() {
   const canInviteUsers = hasPermission(user?.app_role || user?.role, 'INVITE_USERS');
 
   const changeRole = useMutation({
-    mutationFn: ({ userId, role }) => base44.entities.User.update(userId, { app_role: role }),
+    mutationFn: ({ userId, role }) => db.users.update(userId, { app_role: role }),
     onSuccess: async () => {
       await refetchUsers();
       toast.success('User role updated successfully');
@@ -76,7 +77,7 @@ export default function Members() {
   };
 
   const updateProfile = useMutation({
-    mutationFn: (profileData) => base44.functions.invoke('create-or-update-user-profile', profileData),
+    mutationFn: (profileData) => upsertMemberProfile(profileData),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
       toast.success('User profile updated successfully');
@@ -84,7 +85,7 @@ export default function Members() {
       setSelectedUser(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to update user profile');
+      toast.error(error.message || 'Failed to update user profile');
     }
   });
 
@@ -96,12 +97,9 @@ export default function Members() {
     mutationFn: async (userId) => {
       const userToDelete = users.find(u => u.id === userId);
       if (userToDelete?.call_sign) {
-        await base44.functions.invoke('cleanup-deleted-user', {
-          event: { type: 'delete' },
-          old_data: { call_sign: userToDelete.call_sign }
-        });
+        await cleanupDeletedUser(userToDelete.call_sign);
       }
-      return base44.entities.User.delete(userId);
+      return db.users.remove(userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
@@ -123,16 +121,7 @@ export default function Members() {
 
   const inviteUser = useMutation({
     mutationFn: async ({ email, role, aresGroupIds }) => {
-      // First invite the user
-      await base44.users.inviteUser(email, role);
-      
-      // Then update their ARES group membership
-      // We need to find the user by email and update them
-      const users = await base44.entities.User.list();
-      const newUser = users.find(u => u.email === email);
-      if (newUser) {
-        await base44.entities.User.update(newUser.id, { ares_group_ids: aresGroupIds });
-      }
+      await inviteUserFn({ email, role, aresGroupIds });
     },
     onSuccess: () => {
       toast.success('Invitation sent successfully');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,14 +31,14 @@ export default function NotificationBell({ user }) {
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications', user?.email],
-    queryFn: () => base44.entities.Notification.filter({ user_email: user?.email }, '-created_date'),
+    queryFn: () => db.notifications.where({ user_email: user?.email }, { orderBy: 'created_at', ascending: false }),
     enabled: !!user?.email
   });
 
   // Real-time notification updates
   useEffect(() => {
     if (!user?.email) return;
-    const unsubscribe = base44.entities.Notification.subscribe((event) => {
+    const unsubscribe = db.notifications.subscribe((event) => {
       queryClient.invalidateQueries(['notifications', user.email]);
     });
     return unsubscribe;
@@ -49,7 +49,7 @@ export default function NotificationBell({ user }) {
   const onErrorLog = (label) => (err) => console.error(`${label} failed:`, err);
 
   const markAsRead = useMutation({
-    mutationFn: (id) => base44.entities.Notification.update(id, { read: true }),
+    mutationFn: (id) => db.notifications.update(id, { read: true }),
     onSuccess: () => queryClient.invalidateQueries(['notifications']),
     onError: onErrorLog('Mark notification as read'),
   });
@@ -58,7 +58,7 @@ export default function NotificationBell({ user }) {
     mutationFn: async () => {
       const unreadNotifications = notifications.filter(n => !n.read);
       await Promise.all(unreadNotifications.map(n =>
-        base44.entities.Notification.update(n.id, { read: true })
+        db.notifications.update(n.id, { read: true })
       ));
     },
     onSuccess: () => queryClient.invalidateQueries(['notifications']),
@@ -66,7 +66,7 @@ export default function NotificationBell({ user }) {
   });
 
   const deleteNotification = useMutation({
-    mutationFn: (id) => base44.entities.Notification.delete(id),
+    mutationFn: (id) => db.notifications.remove(id),
     onSuccess: () => queryClient.invalidateQueries(['notifications']),
     onError: onErrorLog('Delete notification'),
   });

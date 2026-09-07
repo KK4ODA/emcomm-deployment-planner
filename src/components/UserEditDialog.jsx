@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default function UserEditDialog({ open, onClose, user, onSave }) {
 
   const { data: aresGroups = [] } = useQuery({
     queryKey: ['ares-groups'],
-    queryFn: () => base44.entities.ARESGroup.list('name'),
+    queryFn: () => db.aresGroups.list({ orderBy: 'name' }),
     enabled: open
   });
 
