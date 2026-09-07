@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LogIn, MapPinCheck, LogOut, CloudOff, AlertTriangle, X } from 'lucide-react';
+import { LogIn, MapPinCheck, LogOut, CloudOff, AlertTriangle, X, MessageSquareHeart } from 'lucide-react';
+import { ROUTES } from '@/app/routes';
 import { Button } from '@/components/ui/button';
 import { queueStatusIntent, discardIntent } from '@/api/assignmentIntents';
 import { queryKeys } from '@/lib/queryKeys';
@@ -62,6 +64,7 @@ export function PacketActions({ assignment, intents }) {
       {(line || pending.length > 0 || failed.length > 0) && (
         <div className="col-span-2 space-y-1 text-sm">
           {line && <p className="text-muted-foreground">{line}</p>}
+          {status === 'released' && <Link to={ROUTES.aar} className="inline-flex items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><MessageSquareHeart className="h-4 w-4" /> Tell the coordinator how it went (2 minutes)</Link>}
           {pending.length > 0 && <p className="inline-flex items-center gap-1.5 text-warning"><CloudOff className="h-4 w-4" /> {pending.length} change{pending.length === 1 ? '' : 's'} saved on this device, sending when you have signal.</p>}
           {failed.map(f => (
             <p key={f.id} className="inline-flex items-center gap-1.5 text-destructive">

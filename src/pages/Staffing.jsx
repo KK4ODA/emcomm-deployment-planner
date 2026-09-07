@@ -13,7 +13,8 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useOperationalPeriods, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useOperationalPeriods, useLessons, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { CarriedLessons } from '@/features/aar/CarriedLessons';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { locationsOf } from '@/lib/deployments';
@@ -49,6 +50,7 @@ function StaffingContent() {
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
   const periodsQ = useOperationalPeriods();
+  const lessonsQ = useLessons();
   useRealtimeInvalidation('positions', queryKeys.positions);
   useRealtimeInvalidation('shifts', queryKeys.shifts);
   useRealtimeInvalidation('assignments', queryKeys.assignments);
@@ -140,6 +142,8 @@ function StaffingContent() {
           </>
         )}
       />
+
+      <CarriedLessons lessons={(lessonsQ.data ?? []).filter(l => l.deployment_id === deployment.id && l.status === 'carried_forward')} positions={positions} />
 
       {positions.length === 0 ? (
         <EmptyState

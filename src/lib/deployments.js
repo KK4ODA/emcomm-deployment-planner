@@ -279,5 +279,7 @@ export async function duplicateDeployment(
     deployment,
     counts: { categories: categoryIds.size, locations: locationIds.size, items: itemCount, tasks: taskCount, periods: periodIds.size, positions: positionIds.size, shifts: shiftCount, assignments: assignmentCount, channels: channelCount },
     shiftedDays: delta ? Math.round(delta / 86_400_000) : 0,
+    positionIds,
+    locationIds,
   };
 }

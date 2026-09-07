@@ -23,6 +23,7 @@ import Channels from '@/pages/Channels';
 import Packet from '@/pages/Packet';
 import NcsBoard from '@/pages/NcsBoard';
 import Hours from '@/pages/Hours';
+import AfterAction from '@/pages/AfterAction';
 import MyAssignments from '@/pages/MyAssignments';
 import Members from '@/pages/Members';
 import AresGroups from '@/pages/AresGroups';
@@ -69,6 +70,7 @@ function AuthenticatedApp() {
                 <Route path="/packet/:assignmentId" element={<Packet />} />
                 <Route path={ROUTES.ncs} element={<NcsBoard />} />
                 <Route path={ROUTES.hours} element={<Hours />} />
+                <Route path={ROUTES.aar} element={<AfterAction />} />
                 <Route path={ROUTES.myAssignments} element={<MyAssignments />} />
                 <Route path={ROUTES.members} element={<Members />} />
                 <Route path={ROUTES.aresGroups} element={<AresGroups />} />

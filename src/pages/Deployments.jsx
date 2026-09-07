@@ -11,7 +11,8 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { lessonsToCarry } from '@/lib/aar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { db } from '@/api/db';
 import { exportDeployment } from '@/api/functions';
@@ -75,6 +76,7 @@ export default function Deployments() {
   const positionsQ = usePositions();
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
+  const lessonsQ = useLessons();
 
   const [form, setForm] = useState({ open: false, deployment: null });
   const [templateFor, setTemplateFor] = useState(null);
@@ -151,16 +153,23 @@ export default function Deployments() {
   });
 
   const duplicate = useMutation({
-    mutationFn: (/** @type {{ source: Object, name: string, withAssignments: boolean, withTasks: boolean, withPlan: boolean, newStartsAt: string|null }} */ { source, name, withAssignments, withTasks, withPlan, newStartsAt }) =>
-      duplicateDeployment(db, partsOf(source), {
+    mutationFn: async (/** @type {{ source: Object, name: string, withAssignments: boolean, withTasks: boolean, withPlan: boolean, newStartsAt: string|null }} */ { source, name, withAssignments, withTasks, withPlan, newStartsAt }) => {
+      const result = await duplicateDeployment(db, partsOf(source), {
         name, withAssignments, withTasks, withPlan, newStartsAt, createdBy: user?.id ?? null,
         createTask: (task) => createTaskEvent(task, user, isOnline),
-      }),
-    onSuccess: ({ deployment, counts, shiftedDays }) => {
+      });
+      // Institutional memory: open lessons follow the event into its next copy.
+      const sourceLessons = (lessonsQ.data ?? []).filter(l => l.deployment_id === source.id);
+      const carry = lessonsToCarry(sourceLessons, result.deployment.id, result.positionIds).map(l => ({ ...l, created_by: user?.id ?? null }));
+      for (const l of carry) await db.lessons.create(l);
+      return { ...result, lessons: carry.length };
+    },
+    onSuccess: ({ deployment, counts, shiftedDays, lessons }) => {
       invalidateAll();
+      queryClient.invalidateQueries({ queryKey: queryKeys.lessons });
       setDuplicateFor(null);
       toast.success(`“${deployment.name}” created`, {
-        description: `${counts.locations} sites, ${counts.positions} positions, ${counts.channels} channels${counts.assignments ? `, ${counts.assignments} people re-offered` : ''}${shiftedDays ? `, dates moved ${shiftedDays} days` : ''}.`,
+        description: `${counts.locations} sites, ${counts.positions} positions, ${counts.channels} channels${counts.assignments ? `, ${counts.assignments} people re-offered` : ''}${lessons ? `, ${lessons} lesson${lessons === 1 ? '' : 's'} carried forward` : ''}${shiftedDays ? `, dates moved ${shiftedDays} days` : ''}.`,
         action: { label: 'Open', onClick: () => { selectDeployment(deployment.id); navigate(ROUTES.dashboard); } },
       });
     },
