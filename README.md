@@ -114,7 +114,7 @@ More in [docs/development.md](docs/development.md).
 | `TAURI_SIGNING_PRIVATE_KEY` | GitHub secret, local shell | Signs desktop updates |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | GitHub secret | Password of that key (empty if none) |
 | `WINDOWS_CERTIFICATE`, `WINDOWS_CERTIFICATE_PASSWORD` | GitHub secret, optional | Authenticode code signing |
-| `WEB_DEPLOY_HOST`, `WEB_DEPLOY_USER`, `WEB_DEPLOY_PASSWORD`, `WEB_DEPLOY_PATH` | GitHub secret, optional | Automatic upload of the web build to the Apache host |
+| `WEB_DEPLOY_HOST`, `WEB_DEPLOY_USER`, `WEB_DEPLOY_PASSWORD` | GitHub secret, optional | Automatic upload of the web build to the Apache host (`WEB_DEPLOY_PATH` if the login is not the web root) |
 
 `.env.example` lists the client variables with placeholders. Never commit
 `.env.local`, keys or certificates.

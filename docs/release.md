@@ -61,7 +61,7 @@ Secrets:
 | `WEB_DEPLOY_HOST` | `access-1234567890.webspace-host.com` | IONOS › Hosting › SFTP & SSH access |
 | `WEB_DEPLOY_USER` | `u123456789` | same page |
 | `WEB_DEPLOY_PASSWORD` | | same page (set or reset it there) |
-| `WEB_DEPLOY_PATH` | `/` | the domain's web root relative to where the SFTP login lands. For emcommplanner.org the SFTP user logs in directly into the web root, so the value is `/`. If your login lands one level up, use the folder name (e.g. `/emcommplanner`). The run log prints the login directory and the target listing, so a wrong value is visible at once. **Must contain only this app**: the mirror deletes anything else in it, except `.well-known/` and `logs/`. The folder must already exist. |
+| `WEB_DEPLOY_PATH` | *(unset)* | optional; the domain's web root relative to where the SFTP login lands. For emcommplanner.org the SFTP user logs in directly into the web root, so leave it unset. If your login lands one level up, use the folder name (e.g. `emcommplanner`). Never set it to `/` or `.`: GitHub masks every occurrence of a secret's value, which makes the logs unreadable. The run log prints the login directory and the target listing. **The target must contain only this app**: the mirror deletes anything else in it, except `.well-known/` and `logs/`. The folder must already exist. |
 | `WEB_DEPLOY_PROTOCOL` | `sftp` | optional; `ftps` if SFTP is unavailable |
 
 Optional repository *variable* `WEB_PUBLIC_URL` (`https://emcommplanner.org`)
@@ -84,7 +84,7 @@ Settings › Secrets and variables › Actions:
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | if the key has one | Key password |
 | `WINDOWS_CERTIFICATE` | optional | Base64 of a `.pfx` code-signing certificate |
 | `WINDOWS_CERTIFICATE_PASSWORD` | with the above | Certificate password |
-| `WEB_DEPLOY_HOST`, `WEB_DEPLOY_USER`, `WEB_DEPLOY_PASSWORD`, `WEB_DEPLOY_PATH` | for automatic web deploy | See *Web deployment* below |
+| `WEB_DEPLOY_HOST`, `WEB_DEPLOY_USER`, `WEB_DEPLOY_PASSWORD` | for automatic web deploy | See *Web deployment* below (`WEB_DEPLOY_PATH` optional) |
 
 `GITHUB_TOKEN` is provided automatically; the workflow has `contents: write`.
 

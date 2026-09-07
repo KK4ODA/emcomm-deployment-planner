@@ -9,6 +9,8 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-07
+
 ### Added
 - Automatic web deployment: the release pipeline uploads the web build to
   the site over SFTP after publishing; the same workflow can be run by hand

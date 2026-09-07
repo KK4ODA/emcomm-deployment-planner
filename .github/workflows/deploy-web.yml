@@ -9,13 +9,14 @@ name: Deploy web
 #   WEB_DEPLOY_HOST      e.g. access-1234567890.webspace-host.com
 #   WEB_DEPLOY_USER      e.g. u123456789
 #   WEB_DEPLOY_PASSWORD  the SFTP/SSH password for that user
-#   WEB_DEPLOY_PATH      the domain's web root relative to the SFTP login
-#                        directory: "/" when the login lands in the web root
-#                        (IONOS default for emcommplanner.org), otherwise the
-#                        folder name, e.g. /emcommplanner. Everything in it not
-#                        present in the build is DELETED, so it must be
-#                        dedicated to this app.
 # Optional:
+#   WEB_DEPLOY_PATH      the domain's web root relative to the SFTP login
+#                        directory. Leave UNSET when the login lands in the web
+#                        root (IONOS, emcommplanner.org); otherwise the folder
+#                        name, e.g. emcommplanner. Do not use "/" or "." as the
+#                        value: GitHub would mask every slash or dot in the logs.
+#                        Everything in the target not present in the build is
+#                        DELETED, so it must be dedicated to this app.
 #   WEB_DEPLOY_PROTOCOL  sftp (default) or ftps
 # Optional repository variable (Settings › Secrets and variables › Actions › Variables):
 #   WEB_PUBLIC_URL       e.g. https://emcommplanner.org  (enables the post-deploy check)
@@ -57,7 +58,7 @@ jobs:
       - name: Check deployment secrets
         run: |
           missing=""
-          for v in WEB_DEPLOY_HOST WEB_DEPLOY_USER WEB_DEPLOY_PASSWORD WEB_DEPLOY_PATH; do
+          for v in WEB_DEPLOY_HOST WEB_DEPLOY_USER WEB_DEPLOY_PASSWORD; do
             eval "val=\${$v}"
             [ -n "$val" ] || missing="$missing $v"
           done
@@ -103,11 +104,9 @@ jobs:
           LFTP_PASSWORD: ${{ secrets.WEB_DEPLOY_PASSWORD }}
         run: |
           PROTO="${WEB_DEPLOY_PROTOCOL:-sftp}"
-          # The path is taken relative to the directory the SFTP login lands in
-          # (what an SFTP client shows after connecting). On IONOS that is the
-          # webspace root, so "/emcommplanner" and "emcommplanner" mean the same
-          # folder; a leading slash must not be passed to the server verbatim,
-          # otherwise lftp nests it under the login directory.
+          # The path is taken relative to the directory the SFTP login lands in.
+          # Unset (or "/") means the login directory itself. A leading slash is
+          # stripped because lftp would otherwise nest it under the login directory.
           REL="${WEB_DEPLOY_PATH#/}"; REL="${REL%/}"; REL="${REL:-.}"
           # One script file: lftp rejects -f together with -e.
           # --env-password reads LFTP_PASSWORD, so the password is never in argv or in this file.
