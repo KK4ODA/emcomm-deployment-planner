@@ -27,6 +27,10 @@ import { BulkAssignDialog } from '@/features/items/BulkAssignDialog';
 import { useCategoryMutations, useItemMutations } from '@/features/items/useItemMutations';
 import { SiteOverview } from '@/features/dashboard/SiteOverview';
 import { SiteFilter, SiteFilterBanner } from '@/features/dashboard/SiteFilter';
+import { PacketBanner } from '@/features/packet/PacketBanner';
+import { isPlanner } from '@/lib/permissions';
+import { occupies } from '@/lib/staffing';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { ROUTES } from '@/app/routes';
 
 export default function Dashboard() {
@@ -43,6 +47,7 @@ function DashboardContent() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const siteFilter = searchParams.get('site') || null;
+  const isMobile = useIsMobile();
 
   const categoriesQ = useCategories();
   const itemsQ = useItems();
@@ -88,6 +93,12 @@ function DashboardContent() {
   const siteNameById = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const tasks = useMemo(() => tasksInDeployment(tasksQ.data ?? [], locations, siteFilter), [tasksQ.data, locations, siteFilter]);
   const taskSummary = summarizeTasks(tasks);
+  const myAssignment = useMemo(() => (assignmentsQ.data ?? []).find(a => a.deployment_id === deploymentId && a.user_id === user?.id && occupies(a.status)) ?? null, [assignmentsQ.data, deploymentId, user?.id]);
+  // Operators on a phone land on their packet, not on the planning board.
+  React.useEffect(() => {
+    if (isMobile && myAssignment && !isPlanner(user?.app_role) && !siteFilter) navigate(ROUTES.packet, { replace: true });
+  }, [isMobile, myAssignment, user?.app_role, siteFilter, navigate]);
+
   const staffing = useMemo(() => {
     const positions = (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId && (!siteFilter || p.site_id === siteFilter));
     const ids = new Set(positions.map(p => p.id));
@@ -183,6 +194,7 @@ function DashboardContent() {
         />
       ) : (
         <>
+          {myAssignment && <PacketBanner assignment={myAssignment} shifts={shiftsQ.data ?? []} positions={positionsQ.data ?? []} />}
           <SiteFilterBanner location={filteredLocation} onClear={() => setSiteFilter(null)} />
 
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">

@@ -33,7 +33,7 @@ describe('deploymentReadiness', () => {
     locations: [{ id: 'l1', deployment_id: 'dep' }, { id: 'l2', deployment_id: 'dep' }, { id: 'other', deployment_id: 'x' }],
     users: [{ call_sign: 'A' }],
   };
-  it('counts tasks and ICS 205 forms only for the deployment sites', () => {
+  it('counts tasks and comms-plan channels only for this deployment', () => {
     const r = deploymentReadiness({
       ...base,
       items: [{ id: 'i1', deployment_location_id: 'l1', assigned_to: ['A'] }],
@@ -42,18 +42,23 @@ describe('deploymentReadiness', () => {
         { deployment_location_id: 'l2', status: 'pending' },
         { deployment_location_id: 'other', status: 'pending' },
       ],
-      forms: [{ deployment_location_id: 'l1' }, { deployment_location_id: 'l1' }, { deployment_location_id: 'other' }],
+      planRows: [{ deployment_id: 'dep' }, { deployment_id: 'dep' }, { deployment_id: 'x' }],
     });
-    expect(r).toMatchObject({ sites: 2, items: 1, unassigned: 0, tasksTotal: 2, tasksCompleted: 1, sitesWithIcs205: 1, ready: false });
+    expect(r).toMatchObject({ sites: 2, items: 1, unassigned: 0, tasksTotal: 2, tasksCompleted: 1, planChannels: 2, hasCommsPlan: true, ready: false });
   });
-  it('is ready when everything is assigned, done and planned', () => {
-    const r = deploymentReadiness({
+  it('is ready when everything is assigned, staffed, done and planned', () => {
+    const args = {
       ...base,
       items: [{ id: 'i1', deployment_location_id: 'l1', assigned_to: ['A'] }],
       tasks: [{ deployment_location_id: 'l1', status: 'completed' }],
-      forms: [{ deployment_location_id: 'l1' }, { deployment_location_id: 'l2' }],
-    });
-    expect(r.ready).toBe(true);
+      planRows: [{ deployment_id: 'dep' }],
+      positions: [{ id: 'p1', deployment_id: 'dep', headcount: 1, requirements: [] }],
+      shifts: [{ id: 's1', deployment_id: 'dep', position_id: 'p1', starts_at: '2026-03-01T05:00:00Z', ends_at: '2026-03-01T14:00:00Z' }],
+      assignments: [{ shift_id: 's1', deployment_id: 'dep', user_id: 'u1', status: 'accepted' }],
+    };
+    expect(deploymentReadiness(args)).toMatchObject({ slots: 1, slotsCovered: 1, slotsOpen: 0, ready: true });
+    expect(deploymentReadiness({ ...args, assignments: [] })).toMatchObject({ slotsOpen: 1, ready: false });
+    expect(deploymentReadiness({ ...args, planRows: [] }).ready).toBe(false);
   });
   it('is never ready without sites', () => {
     expect(deploymentReadiness({ ...base, locations: [], items: [] }).ready).toBe(false);

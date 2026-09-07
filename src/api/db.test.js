@@ -15,10 +15,10 @@ describe('database repositories', () => {
 
   it('maps repositories to Supabase table names', async () => {
     await db.locations.list();
-    await db.ics205Forms.list();
+    await db.commsPlanChannels.list();
     await db.aresGroups.list();
     expect(mock.supabase.from).toHaveBeenCalledWith('deployment_locations');
-    expect(mock.supabase.from).toHaveBeenCalledWith('ics205_forms');
+    expect(mock.supabase.from).toHaveBeenCalledWith('comms_plan_channels');
     expect(mock.supabase.from).toHaveBeenCalledWith('ares_groups');
     expect(Object.keys(db).sort()).toEqual(Object.keys(TABLES).sort());
   });

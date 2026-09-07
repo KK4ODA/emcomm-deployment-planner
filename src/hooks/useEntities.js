@@ -46,10 +46,6 @@ export function useTemplates() {
   });
 }
 
-export function useIcs205Forms() {
-  return useQuery({ queryKey: queryKeys.ics205Forms, queryFn: () => db.ics205Forms.list() });
-}
-
 export function useAresGroups(options = {}) {
   return useQuery({ queryKey: queryKeys.aresGroups, queryFn: () => db.aresGroups.list({ orderBy: 'name' }), ...options });
 }
@@ -67,6 +63,18 @@ export function useShifts() {
 }
 export function useAssignments() {
   return useQuery({ queryKey: queryKeys.assignments, queryFn: () => db.assignments.list({ orderBy: 'offered_at' }) });
+}
+
+// ─── Communications ───────────────────────────────────────────────────────────
+
+export function useChannels() {
+  return useQuery({ queryKey: queryKeys.channels, queryFn: () => db.channels.list({ orderBy: 'sort_order' }) });
+}
+export function useCommsPlans() {
+  return useQuery({ queryKey: queryKeys.commsPlans, queryFn: () => db.commsPlans.list({ orderBy: 'created_at' }) });
+}
+export function useCommsPlanChannels() {
+  return useQuery({ queryKey: queryKeys.commsPlanChannels, queryFn: () => db.commsPlanChannels.list({ orderBy: 'sort_order' }) });
 }
 
 /** Group membership rows visible to the caller (own, same-group, or all for admins). */

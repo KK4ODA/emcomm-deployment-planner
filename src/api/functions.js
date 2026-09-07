@@ -40,15 +40,6 @@ export function exportDeployment({ deploymentId, includeGoKit = true }) {
 }
 
 /**
- * ICS 205 form data for client-side PDF rendering.
- * @param {string} formId
- * @returns {Promise<{ form: Object, locationName: string }>}
- */
-export function fetchIcs205Export(formId) {
-  return invokeFunction('export-ics205', { formId });
-}
-
-/**
  * Invite a new member by email. Requires admin or operator role.
  * @param {{ email: string, role?: string, aresGroupIds?: string[] }} params
  */
@@ -71,13 +62,4 @@ export function upsertMemberProfile(profile) {
  */
 export function cleanupDeletedUser(callSign) {
   return invokeFunction('cleanup-deleted-user', { callSign });
-}
-
-/**
- * Look up the what3words address for a coordinate pair.
- * @param {number} lat @param {number} lng
- * @returns {Promise<{ words: string, nearestPlace?: string, map?: string }>}
- */
-export function lookupWhat3Words(lat, lng) {
-  return invokeFunction('get-what3words', { lat, lng });
 }

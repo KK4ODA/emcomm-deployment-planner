@@ -11,7 +11,6 @@ export const TABLES = Object.freeze({
   items: 'deployment_items',
   tasks: 'tasks',
   templates: 'deployment_templates',
-  ics205Forms: 'ics205_forms',
   notifications: 'notifications',
   aresGroups: 'ares_groups',
   memberships: 'memberships',
@@ -19,6 +18,9 @@ export const TABLES = Object.freeze({
   positions: 'positions',
   shifts: 'shifts',
   assignments: 'assignments',
+  channels: 'channels',
+  commsPlans: 'comms_plans',
+  commsPlanChannels: 'comms_plan_channels',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -129,7 +131,6 @@ export const db = Object.freeze({
   items: createRepository(TABLES.items),
   tasks: createRepository(TABLES.tasks),
   templates: createRepository(TABLES.templates),
-  ics205Forms: createRepository(TABLES.ics205Forms),
   notifications: createRepository(TABLES.notifications),
   aresGroups: createRepository(TABLES.aresGroups),
   // Composite key (ares_group_id, user_id): use src/api/memberships.js for writes.
@@ -138,4 +139,7 @@ export const db = Object.freeze({
   positions: createRepository(TABLES.positions),
   shifts: createRepository(TABLES.shifts),
   assignments: createRepository(TABLES.assignments),
+  channels: createRepository(TABLES.channels),
+  commsPlans: createRepository(TABLES.commsPlans),
+  commsPlanChannels: createRepository(TABLES.commsPlanChannels),
 });

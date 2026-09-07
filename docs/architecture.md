@@ -103,6 +103,39 @@ Deployment ─┬─ OperationalPeriod[]      time windows (ICS scope)
   equipment/task views; migration 009 created one position per site that had
   a roster so nothing was lost. New staffing goes through positions.
 
+## Communications plan and the operator packet
+
+```
+ARES group ── channels[]  (library, ICS-217A shape: repeaters, simplex, gateways, phones)
+Deployment ── comms_plans[] (per deployment, optionally per operational period)
+                └─ comms_plan_channels[]  snapshot of a library row + function,
+                                          assignment, net, condition 1/2/3, PACE role
+```
+
+- `src/lib/comms.js`: frequency normalisation (4 decimals), band names,
+  standard repeater offsets, one-line channel summaries
+  ("146.8200− PL 146.2"), condition/PACE vocabularies, plan completeness
+  warnings, CHIRP CSV export.
+- `src/features/comms/ics205Pdf.js` renders the FEMA ICS-205 from a plan:
+  Condition 1 as block 4, Conditions 2 and 3 as further sections; cells
+  wrap. The per-site `ics205_forms` editor was removed (table kept, unused).
+- Plan rows are **snapshots**: editing the library flags stale rows on the
+  plan page ("Update from library") instead of changing a published plan.
+- **Publishing**: `deployments.plan_version` is bumped by "Publish plan"
+  (Staffing and Comms pages) with a change note; a trigger notifies everyone
+  assigned; `assignments.packet_version_seen` drives the packet's change
+  banner until the operator taps "Got it".
+- **Packet** (`/packet`, `/packet/:assignmentId`): `src/lib/packet.js`
+  projects one assignment into the operator view (`buildPacket`), picking
+  the running or next assignment by default (`pickCurrentAssignment`).
+  Channels are filtered to the position's net plus net-less rows.
+  `PacketView` puts position, tactical call, report time, place and primary
+  frequency above the fold, two actions at most (Directions + one primary),
+  prints on one page via `@media print` rules in `index.css`. Operators
+  without planning rights are sent to the packet when they open the app on
+  a phone with an assignment. Everything the packet reads is a Supabase
+  `GET` cached by the service worker, so it reopens offline once seen.
+
 ## Deployment lifecycle
 
 `planning → active → completed → archived`, with "back to planning",

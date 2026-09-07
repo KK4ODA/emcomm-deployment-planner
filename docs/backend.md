@@ -19,7 +19,7 @@ Edge Functions (set in the Supabase dashboard under Functions › Secrets):
 | Secret | Used by |
 |--------|---------|
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | provided automatically |
-| `WHAT3WORDS_API_KEY` | `get-what3words`, `export-deployment` (optional) |
+| `WHAT3WORDS_API_KEY` | `export-deployment` (optional) |
 
 ## Schema
 
@@ -43,12 +43,16 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `positions` | A job to staff: `deployment_id`, optional `site_id`, `name`, `tactical_callsign`, `position_type`, `net`, `headcount`, `requirements` JSONB (`[{kind,value,mandatory,notes}]`), `briefing_notes`, `supervisor_position_id` (009) |
 | `shifts` | A time window on a position: `starts_at`, `ends_at`, optional `muster_at`, optional `headcount` override, optional `operational_period_id` (009) |
 | `assignments` | One operator on one shift: `status` ladder `offered → accepted/declined → checked_in → on_position → released` (+ `no_show`, `cancelled`), transition timestamps, `decline_reason`, `packet_version_seen`, `notes`. Unique per (shift, user). Trigger `assignments_before_write` lets operators move only their own row along the ladder; planners may do anything; timestamps are stamped server-side (009) |
-| `ics205_forms` | One radio plan per site; `radio_channels` JSONB |
+| `channels` | The ARES group's channel library (ICS-217A): name, kind (repeater/simplex/digital/talkgroup/phone), RX/TX frequency and tones, bandwidth, mode A/D/M, digital mode, gateway call-SSID, tactical address, owner, phone number, timeout, `active` (010) |
+| `comms_plans` | One communications plan per deployment (optionally per operational period): special instructions, prepared by (010) |
+| `comms_plan_channels` | Snapshot of a library channel in a plan plus its use: zone/channel number, function, assignment, net, `condition_level` 1–3, `path_role` primary/alternate/contingency/emergency (010) |
+| `ics205_forms` | Legacy per-site radio plan; unused since 010 (no rows) |
 | `notifications` | Per-user notifications produced by triggers |
 
 Triggers: `handle_new_user` creates the `users` row on sign-up;
 `assignments_notify` writes a notification to the operator on offer and to
-the deployment creator on accept/decline;
+the deployment creator on accept/decline; `deployments_notify_plan` notifies
+everyone assigned when `plan_version` changes;
 `materialize_task_event` applies task events with a forward-only status
 machine (`006_task_status_state_machine.sql`); notification triggers fire on
 task assignment/completion and essential-item shortages (`005`).
@@ -115,8 +119,10 @@ the caller's JWT and use the service role only after checking the caller.
 | `create-or-update-user-profile` | Profile › Add member, Members › Edit | Admin-only upsert of a member profile by email; invites if new |
 | `cleanup-deleted-user` | Members › Remove | Admin-only; clears the call sign from items, sites and tasks. Body: `{ "callSign": "W1ABC" }` |
 | `export-deployment` | Deployments › Export | Plain-text operational summary (+ go-kit list) |
-| `export-ics205` | (legacy) | Returns form JSON; the app now renders the PDF locally |
-| `get-what3words` | (disabled in UI) | what3words lookup; needs `WHAT3WORDS_API_KEY` |
+
+Removed from the repository in v2.0: `export-ics205` and `get-what3words`
+(unreachable from the client). If they are still deployed in the Supabase
+project, delete them from Edge Functions in the dashboard.
 
 ## Realtime
 

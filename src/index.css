@@ -154,8 +154,22 @@
   }
 
   @media print {
-    .no-print {
+    .no-print,
+    aside,
+    header.sticky,
+    nav,
+    [data-sonner-toaster] {
       display: none !important;
+    }
+    main {
+      padding: 0 !important;
+    }
+    body {
+      background: white;
+      color: black;
+    }
+    @page {
+      margin: 12mm;
     }
     /* Go-kit checkboxes must keep their state and border on paper. */
     input[type='checkbox'] {

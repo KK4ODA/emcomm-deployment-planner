@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ClipboardList, Plus, Layers, CalendarRange, Users, AlertTriangle, MapPin, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,9 @@ import { BulkPositionsDialog } from '@/features/staffing/BulkPositionsDialog';
 import { AssignDialog } from '@/features/staffing/AssignDialog';
 import { OperationalPeriodsDialog } from '@/features/staffing/OperationalPeriodsDialog';
 import { useStaffingMutations } from '@/features/staffing/useStaffingMutations';
+import { PublishPlanDialog } from '@/features/deployments/PublishPlanDialog';
+import { usePublishPlan } from '@/features/comms/useCommsMutations';
+import { Send } from 'lucide-react';
 import { ROUTES } from '@/app/routes';
 
 export default function Staffing() {
@@ -54,13 +57,17 @@ function StaffingContent() {
   const { confirm, dialog } = useConfirm();
   const canEdit = hasPermission(user?.app_role, 'MANAGE_ASSIGNMENTS');
 
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [siteFilter, setSiteFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState(searchParams.get('site') || 'all');
+  useEffect(() => { const s = searchParams.get('site'); if (s) setSiteFilter(s); }, [searchParams]);
   const [positionDialog, setPositionDialog] = useState({ open: false, position: null });
   const [bulkOpen, setBulkOpen] = useState(false);
   const [periodsOpen, setPeriodsOpen] = useState(false);
   const [assignFor, setAssignFor] = useState(/** @type {{ position: Object, shift: Object }|null} */ (null));
+  const [publishOpen, setPublishOpen] = useState(false);
+  const publish = usePublishPlan();
 
   const sites = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
   const positions = useMemo(() => (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId), [positionsQ.data, deploymentId]);
@@ -127,8 +134,9 @@ function StaffingContent() {
         actions={canEdit && (
           <>
             <Button variant="ghost" size="sm" onClick={() => setPeriodsOpen(true)}><CalendarRange /> Periods ({periods.length})</Button>
-            <Button variant="outline" onClick={() => setBulkOpen(true)} disabled={positions.length === 0 && false}><Layers /> Create several</Button>
-            <Button onClick={() => setPositionDialog({ open: true, position: null })}><Plus /> Position</Button>
+            <Button variant="outline" onClick={() => setBulkOpen(true)}><Layers /> Create several</Button>
+            <Button variant="outline" onClick={() => setPositionDialog({ open: true, position: null })}><Plus /> Position</Button>
+            {positions.length > 0 && <Button onClick={() => setPublishOpen(true)}><Send /> Publish plan</Button>}
           </>
         )}
       />
@@ -256,6 +264,7 @@ function StaffingContent() {
         onRemove={(id) => mutations.unassign.mutate(id)}
         busy={busy}
       />
+      <PublishPlanDialog open={publishOpen} deployment={deployment} onClose={() => setPublishOpen(false)} onPublish={(note) => publish.mutate({ deployment, note }, { onSuccess: () => setPublishOpen(false) })} submitting={publish.isPending} />
       {dialog}
     </QueryState>
   );

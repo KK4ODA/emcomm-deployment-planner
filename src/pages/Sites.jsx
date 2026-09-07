@@ -10,7 +10,7 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useItems, useUsers, useIcs205Forms, useTasks, useEntityMutations, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useLocations, useItems, useUsers, useTasks, useEntityMutations, useRealtimeInvalidation } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { canCreate, canEdit, canDelete } from '@/lib/permissions';
 import { locationsOf, locationItemStats, missingSiteOperators } from '@/lib/deployments';
@@ -19,7 +19,6 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SiteCard } from '@/features/sites/SiteCard';
 import { SiteForm } from '@/features/sites/SiteForm';
 import { SiteMap } from '@/features/sites/SiteMap';
-import { Ics205Dialog } from '@/features/ics205/Ics205Dialog';
 
 export default function Sites() {
   return <DeploymentGate><SitesContent /></DeploymentGate>;
@@ -31,13 +30,11 @@ function SitesContent() {
   const locationsQ = useLocations();
   const itemsQ = useItems();
   const usersQ = useUsers();
-  const formsQ = useIcs205Forms();
   const tasksQ = useTasks();
   useRealtimeInvalidation('locations', queryKeys.locations);
 
   const [view, setView] = useLocalStorage('emcomm_sites_view', 'list');
   const [form, setForm] = useState({ open: false, location: null });
-  const [ics205Site, setIcs205Site] = useState(null);
   const { confirm, dialog } = useConfirm();
   const mutations = useEntityMutations('locations', queryKeys.locations, { label: 'site' });
 
@@ -49,7 +46,7 @@ function SitesContent() {
   const locations = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
   const items = itemsQ.data ?? [];
   const tasks = tasksQ.data ?? [];
-  const forms = formsQ.data ?? [];
+
   const usersWithCallSign = useMemo(() => (usersQ.data ?? []).filter(u => u.call_sign), [usersQ.data]);
 
   const submit = (data) => {
@@ -69,13 +66,13 @@ function SitesContent() {
   };
 
   const remove = async (location) => {
-    if (await confirm({ title: `Delete “${location.name}”?`, description: 'All items, tasks and the ICS 205 form for this site will be deleted.', destructive: true })) {
+    if (await confirm({ title: `Delete “${location.name}”?`, description: 'All items, tasks and positions at this site will be deleted.', destructive: true })) {
       mutations.remove.mutate(location.id, { onSuccess: () => toast.success('Site deleted') });
     }
   };
 
   return (
-    <QueryState queries={[locationsQ, itemsQ, usersQ, formsQ]}>
+    <QueryState queries={[locationsQ, itemsQ, usersQ]}>
       <PageHeader
         icon={MapPin}
         eyebrow={deployment.name}
@@ -88,7 +85,7 @@ function SitesContent() {
         <EmptyState
           icon={MapPin}
           title="No sites yet"
-          description={mayCreate ? 'Add the sites for this deployment. Each site gets its own equipment list, setup tasks and ICS 205 radio plan.' : 'Sites will appear here once an admin adds them.'}
+          description={mayCreate ? 'Add the sites for this deployment. Each site gets positions, an equipment list and setup tasks.' : 'Sites will appear here once an admin adds them.'}
           action={mayCreate && <Button onClick={() => setForm({ open: true, location: null })}><Plus /> Create first site</Button>}
         />
       ) : (
@@ -107,7 +104,6 @@ function SitesContent() {
                   location={loc}
                   itemStats={locationItemStats(items, loc.id)}
                   taskSummary={summarizeTasks(tasks.filter(t => t.deployment_location_id === loc.id))}
-                  hasIcs205={forms.some(f => f.deployment_location_id === loc.id)}
                   missingOperators={missing}
                   onAddOperators={() => addToRoster(loc, missing)}
                   addingOperators={rosterBusyId === loc.id}
@@ -115,7 +111,6 @@ function SitesContent() {
                   canDelete={mayDelete}
                   onEdit={() => setForm({ open: true, location: loc })}
                   onDelete={() => remove(loc)}
-                  onIcs205={() => setIcs205Site(loc)}
                 />
                 );
               })}
@@ -135,13 +130,6 @@ function SitesContent() {
         onClose={() => setForm({ open: false, location: null })}
         onSubmit={submit}
         submitting={mutations.create.isPending || mutations.update.isPending}
-      />
-      <Ics205Dialog
-        open={!!ics205Site}
-        location={ics205Site}
-        deployment={deployment}
-        form={ics205Site ? forms.find(f => f.deployment_location_id === ics205Site.id) ?? null : null}
-        onClose={() => setIcs205Site(null)}
       />
       {dialog}
     </QueryState>

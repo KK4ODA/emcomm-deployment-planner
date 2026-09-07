@@ -31,11 +31,11 @@ export function deploymentStats({ deploymentId, categories, locations, items, us
  * Readiness of a deployment at a glance: the stats above plus task progress
  * and how many sites have an ICS 205 radio plan.
  */
-export function deploymentReadiness({ deploymentId, categories, locations, items, users, tasks = [], forms = [], positions = [], shifts = [], assignments = [] }) {
+export function deploymentReadiness({ deploymentId, categories, locations, items, users, tasks = [], planRows = [], positions = [], shifts = [], assignments = [] }) {
   const stats = deploymentStats({ deploymentId, categories, locations, items, users });
   const siteIds = new Set(locationsOf(locations, deploymentId).map(l => l.id));
   const deploymentTasks = tasks.filter(t => siteIds.has(t.deployment_location_id));
-  const sitesWithIcs205 = new Set(forms.filter(f => siteIds.has(f.deployment_location_id)).map(f => f.deployment_location_id)).size;
+  const planChannels = planRows.filter(r => r.deployment_id === deploymentId).length;
   const tasksCompleted = deploymentTasks.filter(t => t.status === 'completed').length;
   const usersById = new Map(users.map(u => [u.id, u]));
   const staffing = coverageSummary(
@@ -48,14 +48,15 @@ export function deploymentReadiness({ deploymentId, categories, locations, items
     ...stats,
     tasksTotal: deploymentTasks.length,
     tasksCompleted,
-    sitesWithIcs205,
+    planChannels,
+    hasCommsPlan: planChannels > 0,
     slots: staffing.slots,
     slotsCovered: staffing.covered,
     slotsOpen: staffing.open,
     slotsPending: staffing.pending,
     positions: staffing.positions,
     /** Everything a leader checks before go time is green. */
-    ready: stats.sites > 0 && stats.unassigned === 0 && deploymentTasks.length === tasksCompleted && sitesWithIcs205 === stats.sites
+    ready: stats.sites > 0 && stats.unassigned === 0 && deploymentTasks.length === tasksCompleted && planChannels > 0
       && staffing.open === 0 && staffing.pending === 0 && staffing.atRisk === 0,
   };
 }

@@ -11,7 +11,7 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useIcs205Forms, usePositions, useShifts, useAssignments, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlanChannels, usePositions, useShifts, useAssignments, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { db } from '@/api/db';
 import { exportDeployment } from '@/api/functions';
@@ -66,7 +66,7 @@ export default function Deployments() {
   const locationsQ = useLocations();
   const usersQ = useUsers();
   const tasksQ = useTasks();
-  const formsQ = useIcs205Forms();
+  const formsQ = useCommsPlanChannels();
   const positionsQ = usePositions();
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
@@ -253,7 +253,7 @@ export default function Deployments() {
                 isCurrent={d.id === deploymentId}
                 readiness={deploymentReadiness({
                   deploymentId: d.id, categories: categoriesQ.data ?? [], locations: locationsQ.data ?? [], items: itemsQ.data ?? [],
-                  users: usersQ.data ?? [], tasks: tasksQ.data ?? [], forms: formsQ.data ?? [],
+                  users: usersQ.data ?? [], tasks: tasksQ.data ?? [], planRows: formsQ.data ?? [],
                   positions: positionsQ.data ?? [], shifts: shiftsQ.data ?? [], assignments: assignmentsQ.data ?? [],
                 })}
                 permissions={perms}

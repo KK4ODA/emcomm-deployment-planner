@@ -23,6 +23,23 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   anonymous clients.
 
 ### Added
+- **Operator packet** (`My packet`): one phone-first page per assignment
+  with the position and tactical call, report time, where to go with a
+  Directions button, parking / arrival / access notes, the frequencies for
+  normal, degraded and repeaters-down conditions, what to bring, who to
+  report to with phone numbers, and a "what changed" banner when the plan is
+  republished. Prints on one page. Operators on a phone land on it.
+- **Channel library**: your repeaters, simplex channels, digital gateways
+  and phone numbers entered once per ARES group, with frequency
+  normalisation and standard-offset suggestions.
+- **Communications plan** per deployment: pick channels from the library,
+  give each a role (primary / alternate / contingency / emergency), a
+  condition level (1 normal, 2 no internet or phones, 3 repeaters down), a
+  function, an assignment and a net. Plan check lists what is missing.
+  Exports a correctly formatted **ICS 205 PDF** (cells wrap; conditions 2
+  and 3 print as extra sections) and a **CHIRP CSV** for radio programming.
+- **Publish plan**: bumps the plan version with a note; everyone assigned is
+  notified and sees the note on their packet until they acknowledge it.
 - **Staffing**: positions (a job at a site or mobile, with tactical call,
   type, headcount, net, supervisor and requirements), shifts with muster
   times, and assignments with an offer / accept / decline flow. The Staffing
@@ -56,6 +73,13 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ### Changed
 - Templates belong to an ARES group.
 - `docs/offline-architecture.md` now documents what is actually shipped.
+- Navigation: My packet, Staffing, Comms plan and Channels added; the
+  planning sequence reads Deployments → Staffing → Comms plan → Sites.
+
+### Removed
+- The per-site ICS 205 editor. Radio plans are one per deployment (see
+  Communications plan); the old table is kept but unused.
+- Unreachable Edge Functions `export-ics205` and `get-what3words`.
 
 ## [1.1.0] - 2026-09-07
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Pencil, Trash2, ListTodo, Package, FileText, User, Navigation, AlertTriangle, UserPlus } from 'lucide-react';
+import { MapPin, Pencil, Trash2, ListTodo, Package, ClipboardList, User, Navigation, AlertTriangle, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Hint } from '@/components/ui/tooltip';
@@ -14,12 +14,12 @@ import { cn } from '@/lib/utils';
 /**
  * @param {{
  *   location: Object, itemStats: { itemCount: number, assigneeCount: number, unassignedCount: number },
- *   taskSummary: { total: number, completed: number }, hasIcs205: boolean,
+ *   taskSummary: { total: number, completed: number },
  *   missingOperators?: string[], onAddOperators?: () => void, addingOperators?: boolean,
- *   canEdit: boolean, canDelete: boolean, onEdit: () => void, onDelete: () => void, onIcs205: () => void
+ *   canEdit: boolean, canDelete: boolean, onEdit: () => void, onDelete: () => void
  * }} props
  */
-export function SiteCard({ location, itemStats, taskSummary, hasIcs205, missingOperators = [], onAddOperators, addingOperators, canEdit, canDelete, onEdit, onDelete, onIcs205 }) {
+export function SiteCard({ location, itemStats, taskSummary, missingOperators = [], onAddOperators, addingOperators, canEdit, canDelete, onEdit, onDelete }) {
   const coords = parseCoordinates(location.address);
   const mapsHref = coords ? `https://www.google.com/maps?q=${coords[0]},${coords[1]}` : null;
   return (
@@ -99,7 +99,7 @@ export function SiteCard({ location, itemStats, taskSummary, hasIcs205, missingO
           <div className="grid grid-cols-3 gap-1.5 pt-1">
             <Button asChild variant="outline" size="sm"><Link to={`${ROUTES.dashboard}?site=${location.id}`} title="Equipment board filtered to this site"><Package /> Equipment</Link></Button>
             <Button asChild variant="outline" size="sm"><Link to={ROUTES.siteTasks(location.id)}><ListTodo /> Tasks</Link></Button>
-            <Button variant={hasIcs205 ? 'outline' : 'secondary'} size="sm" onClick={onIcs205}><FileText /> ICS 205</Button>
+            <Button asChild variant="outline" size="sm"><Link to={`${ROUTES.staffing}?site=${location.id}`} title="Positions at this site"><ClipboardList /> Positions</Link></Button>
           </div>
         </div>
       </CardContent>

@@ -85,10 +85,10 @@ export function DeploymentCard({ deployment, readiness, isCurrent, permissions, 
           <Stat label="Staffed" value={<>{readiness.slotsCovered}<span className="text-xs font-normal text-muted-foreground">/{readiness.slots}</span></>} critical={readiness.slotsOpen > 0} warn={readiness.slotsOpen === 0 && readiness.slotsPending > 0} />
           <Stat label="Open kit" value={readiness.unassigned} critical={readiness.unassigned > 0} />
           <Stat label="Tasks" value={<>{readiness.tasksCompleted}<span className="text-xs font-normal text-muted-foreground">/{readiness.tasksTotal}</span></>} warn={readiness.tasksTotal > 0 && readiness.tasksCompleted < readiness.tasksTotal} />
-          <Stat label="ICS 205" value={<>{readiness.sitesWithIcs205}<span className="text-xs font-normal text-muted-foreground">/{readiness.sites}</span></>} warn={readiness.sites > 0 && readiness.sitesWithIcs205 < readiness.sites} />
+          <Stat label="Comms" value={readiness.hasCommsPlan ? `${readiness.planChannels} ch` : '—'} warn={!readiness.hasCommsPlan} />
         </dl>
         {readiness.ready && (
-          <p className="inline-flex items-center gap-1.5 text-xs font-medium text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Ready: every slot confirmed, items assigned, tasks done, ICS 205 on every site</p>
+          <p className="inline-flex items-center gap-1.5 text-xs font-medium text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Ready: every slot confirmed, items assigned, tasks done, comms plan in place</p>
         )}
         <Button className="mt-auto w-full" variant={isCurrent ? 'outline' : 'default'} onClick={onOpen}>
           {isCurrent ? 'Go to dashboard' : 'Open deployment'} <ArrowRight />
