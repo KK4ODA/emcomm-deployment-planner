@@ -23,7 +23,9 @@ export function InviteMemberDialog({ open, onClose, onInvite, currentUserRole, s
 
   useEffect(() => { if (open) { setEmail(''); setRole(ROLES.PENDING); setGroupIds([]); setError(''); } }, [open]);
 
-  const roles = currentUserRole === ROLES.ADMIN ? [ROLES.PENDING, ROLES.VIEWER, ROLES.OPERATOR, ROLES.ADMIN] : [ROLES.PENDING, ROLES.VIEWER];
+  const roles = currentUserRole === ROLES.ADMIN
+    ? [ROLES.PENDING, ROLES.VIEWER, ROLES.OPERATOR, ROLES.PLANNER, ROLES.ADMIN]
+    : [ROLES.PENDING, ROLES.VIEWER, ROLES.OPERATOR];
 
   const submit = (e) => {
     e.preventDefault();

@@ -13,5 +13,6 @@ export const queryKeys = Object.freeze({
   templates: ['templates'],
   ics205Forms: ['ics205forms'],
   aresGroups: ['ares-groups'],
+  memberships: ['memberships'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });

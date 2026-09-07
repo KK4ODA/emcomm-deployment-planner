@@ -28,8 +28,9 @@ SQL editor or the Supabase CLI (`supabase db push`).
 
 | Table | Purpose |
 |-------|---------|
-| `users` | Profile per auth user: name, call sign, phone, APRS call sign, `app_role`, `ares_group_ids[]`, `profile_image_url` |
-| `ares_groups` | Groups that scope deployments; `admin_user_ids[]` |
+| `users` | Profile per auth user: name, call sign (unique, format-checked), phone, APRS call sign, `app_role`, `ares_group_ids[]` (server-maintained mirror of active memberships; read-only), `profile_image_url` |
+| `ares_groups` | Groups (organisations) that scope deployments; `admin_user_ids[]` |
+| `memberships` | `(ares_group_id, user_id, status pending/active)`; members request, admins approve; the source of truth for group access (008) |
 | `deployments` | Name, status (`planning/active/completed/archived`), dates, region, `ares_group_id`, `created_by` |
 | `deployment_locations` | Sites within a deployment; address/coordinates, contact, `assigned_call_signs[]`, `sort_order` |
 | `categories` | Equipment categories per deployment (colour, `sort_order`) |
@@ -37,7 +38,7 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `tasks` | Setup tasks per site; materialised from `events` |
 | `events` | Append-only event log (ULID ids) for offline sync; trigger materialises `task` events |
 | `event_acks` | Reserved for multi-peer sync |
-| `deployment_templates` | Saved structure (JSONB) with counts |
+| `deployment_templates` | Saved structure (JSONB) with counts; `ares_group_id` scopes visibility |
 | `ics205_forms` | One radio plan per site; `radio_channels` JSONB |
 | `notifications` | Per-user notifications produced by triggers |
 
@@ -48,13 +49,53 @@ task assignment/completion and essential-item shortages (`005`).
 
 Storage: bucket `avatars` (public read, owner-only write under `<user id>/`).
 
+## Roles
+
+`users.app_role` is global (one role per person across groups):
+
+| Role | Can |
+|------|-----|
+| `admin` | Everything: members, roles, groups, approvals, deletes |
+| `planner` | Create and edit deployments, sites, categories, templates, positions, assignments, comms plans; invite (pending/viewer/operator) |
+| `operator` | Own profile and assignments; create/edit items and tasks; check in/out |
+| `viewer` | Read-only within their groups |
+| `pending` | Nothing beyond their own profile until approved |
+
+`memberships.role` is reserved for per-group roles and unused.
+
 ## Row-Level Security
 
-All tables have RLS enabled (`002_rls_policies.sql`, `007_fix_notifications_rls.sql`).
-Summary: any authenticated user can read most reference tables; deployments are
-readable by admins or ARES-group members; writes require `operator` or
-`admin`; deletes and user management require `admin`; notifications are
-scoped to the recipient's email from the JWT.
+All tables have RLS enabled. Since migration `008_security_and_roles.sql`:
+
+- **Read isolation**: every deployment-scoped table (`deployment_locations`,
+  `categories`, `deployment_items`, `tasks`, `ics205_forms`, `events`) is
+  visible only when `deployment_visible(deployment_id)` holds: the caller is
+  an admin or has an *active* membership in the deployment's group.
+  `deployment_templates` is scoped by `ares_group_id`. `users` rows are
+  visible to admins, to the user themself, and to people who share an active
+  group with them (`shares_group_with`). `ares_groups` names are readable by
+  all signed-in users so members can request to join.
+- **Writes**: planning tables require `admin` or `planner`; items and tasks
+  also allow `operator`; deletes of deployments, groups and users are
+  admin-only. All write policies also require deployment visibility.
+- **Event log**: inserts require `actor_user_id = auth.uid()`, a role in
+  (admin, planner, operator) and a visible, non-null `deployment_id`.
+- **Memberships**: a user may insert only their own `pending` row and delete
+  their own pending row; admins approve (update) and remove.
+- **Column protection** (`users_protect_columns` trigger): `ares_group_ids`
+  is only written by the membership mirror; `app_role` can only be changed by
+  an admin (closes self-escalation through the own-row update policy).
+- Helper functions (`is_admin`, `has_role`, `deployment_visible`,
+  `location_visible`, `shares_group_with`, `get_user_role`,
+  `get_user_ares_groups`) are `SECURITY DEFINER STABLE` with a fixed
+  `search_path`, executable by `authenticated` only. Trigger functions are
+  not executable by clients.
+- Notifications are scoped to the recipient's email from the JWT; only
+  admins/planners may insert them directly (triggers bypass RLS).
+
+Verification used after 008: with `SET LOCAL ROLE authenticated` and a JWT
+`sub` that belongs to no group, `users`, `deployments`, `deployment_locations`,
+`events` and `memberships` all return zero rows.
 
 ## Edge Functions
 
@@ -64,7 +105,7 @@ the caller's JWT and use the service role only after checking the caller.
 
 | Slug | Called from | What it does |
 |------|-------------|--------------|
-| `invite-user` | Members › Invite | `auth.admin.inviteUserByEmail`, sets role and ARES groups |
+| `invite-user` | Members › Invite | Admin or planner. `auth.admin.inviteUserByEmail`, sets the initial role (planners: pending/viewer/operator only) and inserts active `memberships` (planners: only their own groups) |
 | `create-or-update-user-profile` | Profile › Add member, Members › Edit | Admin-only upsert of a member profile by email; invites if new |
 | `cleanup-deleted-user` | Members › Remove | Admin-only; clears the call sign from items, sites and tasks. Body: `{ "callSign": "W1ABC" }` |
 | `export-deployment` | Deployments › Export | Plain-text operational summary (+ go-kit list) |

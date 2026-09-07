@@ -9,6 +9,30 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Security
+- Read isolation between ARES groups: sites, equipment, tasks, radio plans,
+  templates, the event log and member profiles are now visible only to
+  members of the owning group (and admins). Previously any signed-in account
+  could read all of them.
+- The task event log now requires an attributed, role-checked, group-scoped
+  insert; a viewer or pending account can no longer change tasks.
+- Members can no longer add themselves to a group or change their own role.
+  Joining a group is a request that an admin approves.
+- Call signs are unique and format-checked in the database.
+- Database functions have a fixed search path and are no longer callable by
+  anonymous clients.
+
+### Added
+- **Planner** role for coordinators who build deployments without being
+  admins. Operators keep field actions (own profile, items, tasks) and lose
+  deployment editing.
+- Join requests: a new member picks their groups and waits; admins see a
+  "Join requests" queue on the Members page and approve or decline.
+
+### Changed
+- Templates belong to an ARES group.
+- `docs/offline-architecture.md` now documents what is actually shipped.
+
 ## [1.1.0] - 2026-09-07
 
 Planning and maintenance flow improvements.

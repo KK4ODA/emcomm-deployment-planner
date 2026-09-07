@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { db } from '@/api/db';
 import { queryKeys } from '@/lib/queryKeys';
 import { listTasksLocal, TASKS_UPDATED_EVENT } from '@/api/taskEvents';
+import { listMemberships } from '@/api/memberships';
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,11 @@ export function useIcs205Forms() {
 
 export function useAresGroups(options = {}) {
   return useQuery({ queryKey: queryKeys.aresGroups, queryFn: () => db.aresGroups.list({ orderBy: 'name' }), ...options });
+}
+
+/** Group membership rows visible to the caller (own, same-group, or all for admins). */
+export function useMemberships(options = {}) {
+  return useQuery({ queryKey: queryKeys.memberships, queryFn: listMemberships, ...options });
 }
 
 export function useNotifications(email) {

@@ -12,7 +12,7 @@ export function createSupabaseMock() {
 
   function makeBuilder(table) {
     const builder = {};
-    const methods = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'gt', 'in', 'order', 'single', 'maybeSingle', 'limit'];
+    const methods = ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'is', 'order', 'single', 'maybeSingle', 'limit'];
     for (const m of methods) {
       builder[m] = vi.fn((...args) => {
         calls.push({ table, method: m, args });

@@ -107,7 +107,7 @@ export default function Deployments() {
     mutationFn: async (/** @type {{ deployment: Object, name: string, description: string }} */ { deployment, name, description }) => {
       const parts = partsOf(deployment);
       const structure = buildTemplateStructure(parts);
-      return db.templates.create({ name, description, structure, ...templateCounts(structure) });
+      return db.templates.create({ name, description, structure, ares_group_id: deployment.ares_group_id, ...templateCounts(structure) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.templates });

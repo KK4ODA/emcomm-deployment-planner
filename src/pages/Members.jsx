@@ -14,14 +14,17 @@ import { CallSign } from '@/components/common/CallSign';
 import { RoleBadge } from '@/components/common/Badges';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
-import { useUsers, useItems, useLocations, useDeployments, useAresGroups, reportMutationError } from '@/hooks/useEntities';
+import { useUsers, useItems, useLocations, useDeployments, useAresGroups, useMemberships, reportMutationError } from '@/hooks/useEntities';
 import { db } from '@/api/db';
 import { upsertMemberProfile, cleanupDeletedUser, inviteUser } from '@/api/functions';
+import { approveMembership, removeMembership, setUserMemberships } from '@/api/memberships';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission, ROLE_ORDER } from '@/lib/permissions';
 import { itemsAssignedTo } from '@/lib/assignments';
+import { pendingRequests } from '@/lib/memberships';
 import { InviteMemberDialog } from '@/features/members/InviteMemberDialog';
 import { MemberEditDialog } from '@/features/members/MemberEditDialog';
+import { MembershipRequests } from '@/features/members/MembershipRequests';
 import { RoleDialog } from '@/features/members/RoleDialog';
 import { cn } from '@/lib/utils';
 
@@ -33,18 +36,35 @@ export default function Members() {
   const locationsQ = useLocations();
   const deploymentsQ = useDeployments();
   const groupsQ = useAresGroups();
+  const membershipsQ = useMemberships();
 
   const [search, setSearch] = useState('');
   const [invite, setInvite] = useState(false);
   const [editing, setEditing] = useState(null);
   const [roleFor, setRoleFor] = useState(null);
+  const [busyRequest, setBusyRequest] = useState(/** @type {string|null} */ (null));
   const { confirm, dialog } = useConfirm();
 
   const role = user?.app_role;
   const canManage = hasPermission(role, 'MANAGE_USERS');
   const canInvite = hasPermission(role, 'INVITE_USERS');
+  const canApprove = hasPermission(role, 'APPROVE_MEMBERSHIPS');
 
-  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: queryKeys.users });
+  const invalidateUsers = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.users });
+    queryClient.invalidateQueries({ queryKey: queryKeys.memberships });
+  };
+
+  const decideRequest = useMutation({
+    mutationFn: async (/** @type {{ request: Object, approve: boolean }} */ { request, approve }) => {
+      setBusyRequest(`${request.ares_group_id}:${request.user_id}`);
+      if (approve) await approveMembership(request.ares_group_id, request.user_id, user.id);
+      else await removeMembership(request.ares_group_id, request.user_id);
+    },
+    onSettled: () => setBusyRequest(null),
+    onSuccess: (_d, { approve }) => { invalidateUsers(); toast.success(approve ? 'Membership approved' : 'Request declined'); },
+    onError: reportMutationError('Membership request'),
+  });
 
   const changeRole = useMutation({
     mutationFn: (/** @type {{ id: string, app_role: string }} */ { id, app_role }) => db.users.update(id, { app_role }),
@@ -54,9 +74,11 @@ export default function Members() {
 
   const saveProfile = useMutation({
     mutationFn: async (/** @type {{ member: Object, data: Object }} */ { member, data }) => {
-      // Edge function updates name/call sign/phone with service role; groups go straight to the row (admin RLS).
+      // Edge function updates name/call sign/phone with the service role; group membership goes through memberships rows.
       await upsertMemberProfile({ email: member.email, full_name: data.full_name, call_sign: data.call_sign, phone: data.phone || '—', aprs_call_sign: data.aprs_call_sign });
-      await db.users.update(member.id, { ares_group_ids: data.ares_group_ids, phone: data.phone });
+      await db.users.update(member.id, { phone: data.phone });
+      const current = (membershipsQ.data ?? []).filter(m => m.user_id === member.id);
+      await setUserMemberships(member.id, data.ares_group_ids, current, user.id);
     },
     onSuccess: (_d, { member }) => { invalidateUsers(); setEditing(null); toast.success('Member updated'); if (member.id === user?.id) refreshProfile(); },
     onError: reportMutationError('Update member'),
@@ -107,14 +129,23 @@ export default function Members() {
   };
 
   const pendingCount = (usersQ.data ?? []).filter(m => m.app_role === 'pending').length;
+  const requests = canApprove ? pendingRequests(membershipsQ.data ?? []) : [];
 
   return (
     <>
       <PageHeader
         icon={Users}
         title="Members"
-        description={pendingCount > 0 ? `${pendingCount} member${pendingCount === 1 ? '' : 's'} awaiting approval` : 'Everyone registered across your ARES groups'}
+        description={pendingCount > 0 ? `${pendingCount} member${pendingCount === 1 ? '' : 's'} awaiting role approval` : 'Everyone in your ARES groups'}
         actions={canInvite && <Button onClick={() => setInvite(true)}><UserPlus /> Invite member</Button>}
+      />
+      <MembershipRequests
+        requests={requests}
+        users={usersQ.data ?? []}
+        groups={groupsQ.data ?? []}
+        busyKey={busyRequest}
+        onApprove={(request) => decideRequest.mutate({ request, approve: true })}
+        onReject={(request) => decideRequest.mutate({ request, approve: false })}
       />
       <div className="mb-3 max-w-md">
         <SearchInput value={search} onChange={setSearch} placeholder="Search by name, call sign or email…" />

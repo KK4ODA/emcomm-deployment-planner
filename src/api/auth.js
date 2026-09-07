@@ -9,12 +9,23 @@ import { TABLES } from './db';
  * @property {string} [call_sign]
  * @property {string} [phone]
  * @property {string} [aprs_call_sign]
- * @property {'admin'|'operator'|'viewer'|'pending'} app_role
- * @property {string[]} ares_group_ids
+ * @property {'admin'|'planner'|'operator'|'viewer'|'pending'} app_role
+ * @property {string[]} ares_group_ids server-maintained mirror of active memberships (read-only)
  * @property {string|null} [profile_image_url]
+ * @property {string|null} [license_class]
+ * @property {string[]} [capabilities]
+ * @property {string[]} [station_types]
+ * @property {number|null} [power_hours]
+ * @property {string|null} [locality]
+ * @property {string|null} [equipment_notes]
  */
 
-const PROFILE_FIELDS = ['call_sign', 'phone', 'aprs_call_sign', 'ares_group_ids', 'full_name', 'profile_image_url'];
+// Group membership is not here on purpose: it changes through `memberships`
+// rows (requests and admin approval), never by editing the profile row.
+const PROFILE_FIELDS = [
+  'call_sign', 'phone', 'aprs_call_sign', 'full_name', 'profile_image_url',
+  'license_class', 'capabilities', 'station_types', 'power_hours', 'locality', 'equipment_notes',
+];
 
 function unwrap({ data, error }) {
   if (error) throw error;

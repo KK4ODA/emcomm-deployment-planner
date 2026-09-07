@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/common/PageHeader';
 import { FormField } from '@/components/common/FormField';
-import { AresGroupPicker } from '@/components/common/AresGroupPicker';
+import { Badge } from '@/components/ui/badge';
 import { RoleBadge } from '@/components/common/Badges';
 import { useAuth } from '@/lib/AuthContext';
 import { useAresGroups } from '@/hooks/useEntities';
@@ -83,14 +83,13 @@ export default function Profile() {
 
 function ProfileForm({ user, onSaved }) {
   const { data: groups = [] } = useAresGroups();
-  const [form, setForm] = useState({ full_name: '', call_sign: '', phone: '', aprs_call_sign: '', ares_group_ids: [] });
+  const [form, setForm] = useState({ full_name: '', call_sign: '', phone: '', aprs_call_sign: '' });
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [saving, setSaving] = useState(false);
-  const isAdmin = user?.app_role === 'admin';
 
   useEffect(() => {
     if (!user) return;
-    setForm({ full_name: user.full_name || '', call_sign: user.call_sign || '', phone: user.phone || '', aprs_call_sign: user.aprs_call_sign || '', ares_group_ids: user.ares_group_ids || [] });
+    setForm({ full_name: user.full_name || '', call_sign: user.call_sign || '', phone: user.phone || '', aprs_call_sign: user.aprs_call_sign || '' });
   }, [user]);
 
   const submit = async (e) => {
@@ -99,7 +98,6 @@ function ProfileForm({ user, onSaved }) {
     const next = {};
     const cs = validateCallsign(form.call_sign); if (!cs.isValid) next.call_sign = cs.error;
     const aprs = validateCallsign(form.aprs_call_sign); if (!aprs.isValid) next.aprs_call_sign = aprs.error;
-    if (!isAdmin && form.ares_group_ids.length === 0 && groups.length > 0) next.groups = 'Select at least one ARES group';
     setErrors(next);
     if (Object.keys(next).length) return;
     setSaving(true);
@@ -133,8 +131,14 @@ function ProfileForm({ user, onSaved }) {
           <FormField label="Phone" icon={Phone} hint="For contact during deployments">
             {({ id }) => <Input id={id} type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(555) 123-4567" />}
           </FormField>
-          <AresGroupPicker groups={groups} value={form.ares_group_ids} onChange={(ids) => setForm({ ...form, ares_group_ids: ids })} required={!isAdmin} hint="Which groups' deployments you take part in" />
-          {errors.groups && <p className="text-xs text-destructive" role="alert">{errors.groups}</p>}
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">ARES groups</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(user?.ares_group_ids || []).map(id => <Badge key={id} variant="info">{groups.find(g => g.id === id)?.name ?? id}</Badge>)}
+              {!(user?.ares_group_ids || []).length && <span className="text-xs text-muted-foreground">None yet</span>}
+            </div>
+            <p className="text-xs text-muted-foreground">Membership is granted by a group admin. Ask an admin to add you to another group.</p>
+          </div>
           <Button type="submit" loading={saving}><Save /> Save profile</Button>
         </form>
       </CardContent>

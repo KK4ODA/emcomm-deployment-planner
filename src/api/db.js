@@ -14,6 +14,7 @@ export const TABLES = Object.freeze({
   ics205Forms: 'ics205_forms',
   notifications: 'notifications',
   aresGroups: 'ares_groups',
+  memberships: 'memberships',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -127,4 +128,6 @@ export const db = Object.freeze({
   ics205Forms: createRepository(TABLES.ics205Forms),
   notifications: createRepository(TABLES.notifications),
   aresGroups: createRepository(TABLES.aresGroups),
+  // Composite key (ares_group_id, user_id): use src/api/memberships.js for writes.
+  memberships: createRepository(TABLES.memberships),
 });
