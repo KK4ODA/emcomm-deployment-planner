@@ -40,9 +40,12 @@ export const buttonVariants = cva(
 export const Button = React.forwardRef(
   /** @type {React.ForwardRefRenderFunction<HTMLButtonElement, ButtonProps>} */
   (({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+    // Slot requires exactly one child, so the spinner is only rendered for real buttons.
+    if (asChild) {
+      return <Slot className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props}>{children}</Slot>;
+    }
     return (
-      <Comp
+      <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
@@ -51,7 +54,7 @@ export const Button = React.forwardRef(
       >
         {loading ? <Loader2 className="animate-spin" aria-hidden /> : null}
         {children}
-      </Comp>
+      </button>
     );
   }),
 );
