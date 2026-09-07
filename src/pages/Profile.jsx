@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { User, Radio, Phone, Mail, Lock, UserPlus, Save, Smartphone } from 'lucide-react';
+import { User, Radio, Phone, Mail, Lock, UserPlus, Save, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,11 +17,17 @@ import { validateCallsign, validateEmail, normalizeCallsign } from '@/lib/callsi
 import { describeError } from '@/components/common/ErrorState';
 import { AvatarUploader } from '@/features/profile/AvatarUploader';
 import { AddMemberPanel } from '@/features/profile/AddMemberPanel';
-import { platformLabel } from '@/lib/platform';
+import { AboutPanel } from '@/features/about/AboutPanel';
+
+const TABS = ['profile', 'security', 'add-member', 'about'];
 
 export default function Profile() {
   const { user, refreshProfile, isOfflineSession } = useAuth();
   const isAdmin = user?.app_role === 'admin';
+  const [params, setParams] = useSearchParams();
+  const requested = params.get('tab');
+  const tab = TABS.includes(requested) && (requested !== 'add-member' || isAdmin) ? requested : 'profile';
+  const selectTab = (value) => setParams(value === 'profile' ? {} : { tab: value }, { replace: true });
 
   return (
     <>
@@ -32,29 +39,21 @@ export default function Profile() {
       {isOfflineSession && (
         <p className="mb-4 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">You are working from a cached sign-in. Profile changes need a connection to the server.</p>
       )}
-      <Tabs defaultValue="profile">
+      <Tabs value={tab} onValueChange={selectTab}>
         <TabsList className="mb-2">
           <TabsTrigger value="profile"><User className="h-4 w-4" /> My profile</TabsTrigger>
           <TabsTrigger value="security"><Lock className="h-4 w-4" /> Sign-in</TabsTrigger>
           {isAdmin && <TabsTrigger value="add-member"><UserPlus className="h-4 w-4" /> Add member</TabsTrigger>}
+          <TabsTrigger value="about"><Info className="h-4 w-4" /> About</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
             <ProfileForm user={user} onSaved={refreshProfile} />
-            <div className="space-y-4">
-              <Card>
-                <CardHeader><CardTitle>Photo</CardTitle></CardHeader>
-                <CardContent><AvatarUploader user={user} onChanged={refreshProfile} /></CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle>About this app</CardTitle><CardDescription>Version and runtime</CardDescription></CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p className="flex justify-between"><span className="text-muted-foreground">Version</span><span className="font-mono">{import.meta.env.VITE_APP_VERSION}</span></p>
-                  <p className="flex justify-between"><span className="text-muted-foreground">Running as</span><span className="inline-flex items-center gap-1 capitalize"><Smartphone className="h-3.5 w-3.5" />{platformLabel()}</span></p>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="self-start">
+              <CardHeader><CardTitle>Photo</CardTitle></CardHeader>
+              <CardContent><AvatarUploader user={user} onChanged={refreshProfile} /></CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -73,6 +72,10 @@ export default function Profile() {
             </Card>
           </TabsContent>
         )}
+
+        <TabsContent value="about">
+          <AboutPanel />
+        </TabsContent>
       </Tabs>
     </>
   );

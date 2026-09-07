@@ -9,6 +9,16 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- "About" tab on the profile page and an *About EmComm Planner* entry in the
+  account menu: version, update channel, platform, release notes, issue
+  tracker and documentation links. On the desktop app it includes a
+  **Check for updates** button.
+
+### Changed
+- README rewritten with an overview, feature list, download instructions,
+  offline summary and environment variable reference.
+
 ## [1.0.0] - 2026-09-06
 
 First independent release: no Base44 code, packages or services remain.

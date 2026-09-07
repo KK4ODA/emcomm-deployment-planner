@@ -9,6 +9,7 @@ export const ROUTES = Object.freeze({
   members: '/members',
   aresGroups: '/ares-groups',
   profile: '/profile',
+  about: '/profile?tab=about',
   login: '/login',
   resetPassword: '/reset-password',
 });

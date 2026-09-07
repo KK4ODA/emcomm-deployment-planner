@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, Settings, ChevronDown } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -43,6 +43,9 @@ export function UserMenu() {
           <Link to={ROUTES.profile}><Settings /> Profile &amp; settings</Link>
         </DropdownMenuItem>
         <ThemeMenuItems />
+        <DropdownMenuItem asChild>
+          <Link to={ROUTES.about}><Info /> About EmComm Planner</Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
           <LogOut /> Sign out

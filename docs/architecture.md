@@ -105,6 +105,15 @@ UI except the auto-updater (`src/features/desktop/DesktopUpdater.jsx`, using
 browser. `src/lib/platform.js` detects the shell at runtime. See
 `docs/release.md` for the build and update pipeline.
 
+## About panel
+
+`src/features/about/AboutPanel.jsx` (Profile › About, also reachable from the
+account menu) reads build facts from `src/lib/appInfo.js`: version (from
+`package.json` via Vite `define`), update channel, repository and release
+URLs. On the desktop it triggers a manual update check through
+`requestUpdateCheck()`, which the mounted `DesktopUpdater` answers so there is
+a single code path for showing the update banner.
+
 ## Design system
 
 Tokens are CSS variables in `src/index.css` consumed by

@@ -95,7 +95,8 @@ bootstrapper downloaded silently only if the runtime is missing. Metadata
   verifies the signature against the public key compiled into the app, runs
   the NSIS installer in passive mode, then offers **Restart now**; **Later**
   snoozes that version for 24 h. Network failures are logged and retried
-  silently.
+  silently. **Profile › About › Check for updates** runs the same check on
+  demand and ignores the snooze.
 - Channels: today only `latest`. To add a beta channel later, publish
   pre-release tags (already supported by the workflow), add a second manifest
   (e.g. `beta.json`) in the publish job, and let the client choose the
@@ -144,6 +145,18 @@ before building; the installer and exe are then signed and timestamped
 `bundle.windows.signCommand` in `tauri.conf.json` to the vendor's signing
 command instead (see the Tauri docs on Windows code signing) and provide its
 credentials as secrets. Nothing about signing is stored in the repository.
+
+## If the Release workflow fails
+
+- **`Secret ... is not set`** in the `verify` job: add the missing secret
+  (names must match exactly, e.g. `VITE_SUPABASE_ANON_KEY`) and re-run the
+  failed run from the Actions tab or with `gh run rerun <run-id>`. The tag does
+  not need to be moved.
+- **Tag does not match package.json**: delete the tag locally and remotely,
+  bump with `npm run release:*`, push again.
+- **Windows job fails in `tauri build`**: open the job log; the usual causes
+  are a missing `TAURI_SIGNING_PRIVATE_KEY` or a Rust compile error that also
+  reproduces locally with `npm run desktop:build`.
 
 ## Verifying a release manually
 

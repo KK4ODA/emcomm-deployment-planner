@@ -8,6 +8,19 @@ import { checkForUpdate, downloadAndInstall, relaunchApp, snoozeUpdate, isSnooze
 
 const STARTUP_DELAY_MS = 8_000;
 const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const MANUAL_CHECK_EVENT = 'emcomm:check-updates';
+
+/**
+ * Ask the mounted updater banner to check now, ignoring any snooze. Used by
+ * the "Check for updates" button on the About tab.
+ * @returns {Promise<'available'|'none'>}
+ */
+export function requestUpdateCheck() {
+  if (!isDesktopApp()) return Promise.resolve('none');
+  return new Promise((resolve, reject) => {
+    window.dispatchEvent(new CustomEvent(MANUAL_CHECK_EVENT, { detail: { resolve, reject } }));
+  });
+}
 
 /**
  * Desktop (Tauri) only. Checks GitHub Releases through the Tauri updater
@@ -37,9 +50,26 @@ function UpdaterBanner() {
         console.info('Update check skipped:', err?.message || err);
       }
     };
+    const manual = async (/** @type {Event} */ e) => {
+      const { resolve, reject } = /** @type {CustomEvent} */ (e).detail || {};
+      try {
+        const found = await checkForUpdate();
+        if (cancelled) return;
+        if (found) setUpdate(found);
+        resolve?.(found ? 'available' : 'none');
+      } catch (err) {
+        reject?.(err);
+      }
+    };
     const first = setTimeout(check, STARTUP_DELAY_MS);
     const interval = setInterval(check, RECHECK_INTERVAL_MS);
-    return () => { cancelled = true; clearTimeout(first); clearInterval(interval); };
+    window.addEventListener(MANUAL_CHECK_EVENT, manual);
+    return () => {
+      cancelled = true;
+      clearTimeout(first);
+      clearInterval(interval);
+      window.removeEventListener(MANUAL_CHECK_EVENT, manual);
+    };
   }, []);
 
   if (!update) return null;
