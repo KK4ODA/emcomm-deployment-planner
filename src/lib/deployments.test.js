@@ -106,13 +106,45 @@ describe('duplicateDeployment', () => {
     const { deployment, counts } = await duplicateDeployment(repos, data, { name: 'Field Day 2027', createdBy: 'u', createTask });
 
     expect(deployment).toMatchObject({ name: 'Field Day 2027', status: 'planning', start_date: null, end_date: null, ares_group_id: 'g', created_by: 'u' });
-    expect(counts).toEqual({ categories: 1, locations: 1, items: 1, tasks: 1 });
+    expect(counts).toMatchObject({ categories: 1, locations: 1, items: 1, tasks: 1, positions: 0, channels: 0 });
     expect(repos.locations.create).toHaveBeenCalledWith(expect.objectContaining({ deployment_id: deployment.id, assigned_call_signs: ['A'] }));
     const item = repos.items.create.mock.calls[0][0];
     expect(item.category_id).toBe('cat-2');
     expect(item.deployment_location_id).toBe('loc-3');
     expect(item.assigned_to).toEqual(['A']);
     expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ status: 'pending', due_date: null, assigned_to_call_sign: 'A', deployment_location_id: 'loc-3', deployment_id: deployment.id }));
+  });
+
+  it('copies periods, positions, shifts, offers and the comms plan, moved to a new date', async () => {
+    const repos = fakeRepos();
+    let n = 100;
+    const mk = (name) => ({ create: vi.fn(async (data) => ({ id: `${name}-${++n}`, ...data })), update: vi.fn(async () => ({})) });
+    Object.assign(repos, { operationalPeriods: mk('per'), positions: mk('pos'), shifts: mk('sh'), assignments: mk('as'), commsPlans: mk('plan'), commsPlanChannels: mk('row') });
+    const full = {
+      ...data,
+      source: { ...data.source, starts_at: '2026-03-01T05:00:00Z', ends_at: '2026-03-01T15:00:00Z' },
+      periods: [{ id: 'op1', sequence: 1, label: 'Race day', starts_at: '2026-03-01T05:00:00Z', ends_at: '2026-03-01T15:00:00Z' }],
+      positions: [
+        { id: 'p1', name: 'Net Control', site_id: 'L', headcount: 1, requirements: [], sort_order: 0 },
+        { id: 'p2', name: 'AID 12', supervisor_position_id: 'p1', headcount: 1, requirements: [{ kind: 'capability', value: 'vhf_voice' }], sort_order: 1 },
+      ],
+      shifts: [{ id: 's1', position_id: 'p2', operational_period_id: 'op1', starts_at: '2026-03-01T05:15:00Z', ends_at: '2026-03-01T14:00:00Z', muster_at: '2026-03-01T05:00:00Z' }],
+      assignments: [{ shift_id: 's1', user_id: 'u1', status: 'released' }, { shift_id: 's1', user_id: 'u2', status: 'declined' }],
+      plans: [{ id: 'cp', name: 'Plan', operational_period_id: 'op1', special_instructions: 'TAC only' }],
+      planRows: [{ id: 'r1', comms_plan_id: 'cp', deployment_id: 'src', channel_name: 'W4DOC', rx_freq: 146.82, condition_level: 1, path_role: 'primary', created_at: 'x' }],
+    };
+    const { deployment, counts, shiftedDays } = await duplicateDeployment(repos, full, { name: 'PAM 2027', newStartsAt: '2027-02-28T05:00:00Z', createTask: vi.fn() });
+    expect(shiftedDays).toBe(364);
+    expect(deployment.starts_at).toBe('2027-02-28T05:00:00.000Z');
+    expect(deployment.start_date).toBe('2027-02-28');
+    expect(counts).toMatchObject({ periods: 1, positions: 2, shifts: 1, assignments: 1, channels: 1 });
+    expect(repos.shifts.create.mock.calls[0][0]).toMatchObject({ starts_at: '2027-02-28T05:15:00.000Z', muster_at: '2027-02-28T05:00:00.000Z' });
+    expect(repos.assignments.create.mock.calls[0][0]).toMatchObject({ user_id: 'u1', status: 'offered' });
+    expect(repos.positions.update).toHaveBeenCalledWith(expect.any(String), { supervisor_position_id: expect.any(String) });
+    const row = repos.commsPlanChannels.create.mock.calls[0][0];
+    expect(row).toMatchObject({ channel_name: 'W4DOC', deployment_id: deployment.id });
+    expect(row).not.toHaveProperty('id');
+    expect(row).not.toHaveProperty('created_at');
   });
 
   it('can strip assignments and skip tasks', async () => {

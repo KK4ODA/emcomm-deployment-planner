@@ -11,7 +11,7 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlanChannels, usePositions, useShifts, useAssignments, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { db } from '@/api/db';
 import { exportDeployment } from '@/api/functions';
@@ -53,7 +53,10 @@ function normalizeDeployment(data) {
   };
 }
 
-const ALL_KEYS = [queryKeys.deployments, queryKeys.categories, queryKeys.items, queryKeys.locations, queryKeys.tasks];
+const ALL_KEYS = [
+  queryKeys.deployments, queryKeys.categories, queryKeys.items, queryKeys.locations, queryKeys.tasks,
+  queryKeys.operationalPeriods, queryKeys.positions, queryKeys.shifts, queryKeys.assignments, queryKeys.commsPlans, queryKeys.commsPlanChannels,
+];
 
 export default function Deployments() {
   const { user } = useAuth();
@@ -67,6 +70,8 @@ export default function Deployments() {
   const usersQ = useUsers();
   const tasksQ = useTasks();
   const formsQ = useCommsPlanChannels();
+  const plansQ = useCommsPlans();
+  const periodsQ = useOperationalPeriods();
   const positionsQ = usePositions();
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
@@ -96,12 +101,19 @@ export default function Deployments() {
   /** Everything that belongs to one deployment, for templates and copies. */
   const partsOf = (deployment) => {
     const locations = locationsOf(locationsQ.data ?? [], deployment.id);
+    const byDep = (rows) => (rows ?? []).filter(r => r.deployment_id === deployment.id);
     return {
       source: deployment,
       locations,
-      categories: (categoriesQ.data ?? []).filter(c => c.deployment_id === deployment.id),
+      categories: byDep(categoriesQ.data),
       items: itemsOf(itemsQ.data ?? [], locations),
       tasks: tasksInDeployment(tasksQ.data ?? [], locations),
+      periods: byDep(periodsQ.data).sort((a, b) => a.sequence - b.sequence),
+      positions: byDep(positionsQ.data),
+      shifts: byDep(shiftsQ.data),
+      assignments: byDep(assignmentsQ.data),
+      plans: byDep(plansQ.data),
+      planRows: byDep(formsQ.data),
     };
   };
 
@@ -139,16 +151,16 @@ export default function Deployments() {
   });
 
   const duplicate = useMutation({
-    mutationFn: (/** @type {{ source: Object, name: string, withAssignments: boolean, withTasks: boolean }} */ { source, name, withAssignments, withTasks }) =>
+    mutationFn: (/** @type {{ source: Object, name: string, withAssignments: boolean, withTasks: boolean, withPlan: boolean, newStartsAt: string|null }} */ { source, name, withAssignments, withTasks, withPlan, newStartsAt }) =>
       duplicateDeployment(db, partsOf(source), {
-        name, withAssignments, withTasks, createdBy: user?.id ?? null,
+        name, withAssignments, withTasks, withPlan, newStartsAt, createdBy: user?.id ?? null,
         createTask: (task) => createTaskEvent(task, user, isOnline),
       }),
-    onSuccess: ({ deployment, counts }) => {
+    onSuccess: ({ deployment, counts, shiftedDays }) => {
       invalidateAll();
       setDuplicateFor(null);
       toast.success(`“${deployment.name}” created`, {
-        description: `${counts.locations} sites, ${counts.items} items, ${counts.tasks} tasks copied.`,
+        description: `${counts.locations} sites, ${counts.positions} positions, ${counts.channels} channels${counts.assignments ? `, ${counts.assignments} people re-offered` : ''}${shiftedDays ? `, dates moved ${shiftedDays} days` : ''}.`,
         action: { label: 'Open', onClick: () => { selectDeployment(deployment.id); navigate(ROUTES.dashboard); } },
       });
     },
@@ -215,7 +227,9 @@ export default function Deployments() {
   };
 
   const listQuery = { isLoading, isError, error: null, refetch: () => queryClient.invalidateQueries({ queryKey: queryKeys.deployments }) };
-  const duplicateCounts = duplicateFor ? (() => { const p = partsOf(duplicateFor); return { sites: p.locations.length, categories: p.categories.length, items: p.items.length, tasks: p.tasks.length }; })() : { sites: 0, categories: 0, items: 0, tasks: 0 };
+  const duplicateCounts = duplicateFor
+    ? (() => { const p = partsOf(duplicateFor); return { sites: p.locations.length, categories: p.categories.length, items: p.items.length, tasks: p.tasks.length, positions: p.positions.length, shifts: p.shifts.length, channels: p.planRows.length }; })()
+    : { sites: 0, categories: 0, items: 0, tasks: 0, positions: 0, shifts: 0, channels: 0 };
 
   return (
     <>

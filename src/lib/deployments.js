@@ -120,24 +120,48 @@ export function missingSiteOperators(location, items, tasks) {
   return [...found].sort();
 }
 
+/** Shift an ISO timestamp by a number of milliseconds (null-safe). */
+export function shiftIso(iso, deltaMs) {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? null : new Date(t + deltaMs).toISOString();
+}
+
 /**
- * Copy a deployment with its sites, categories and items, optionally keeping
- * assignments and re-creating setup tasks (as pending). Returns the new
- * deployment row.
+ * Copy a deployment with its sites, categories, items, operational periods,
+ * positions, shifts and communications plan, optionally keeping who was
+ * assigned (re-offered, so people confirm for the new date) and re-creating
+ * setup tasks (as pending). When `newStartsAt` is given every timestamp is
+ * moved by the same offset so a yearly event lands on its new date.
+ * Returns the new deployment row and counts.
  *
- * @param {{ deployments: { create: Function }, locations: { create: Function }, categories: { create: Function }, items: { create: Function } }} repos
- * @param {{ source: Object, locations: Object[], categories: Object[], items: Object[], tasks?: Object[] }} data already scoped to the source deployment
- * @param {{ name: string, createdBy?: string|null, withAssignments?: boolean, withTasks?: boolean, createTask?: (task: Object) => Promise<any> }} options
+ * @param {Object} repos db repositories (deployments, locations, categories, items, operationalPeriods?, positions?, shifts?, assignments?, commsPlans?, commsPlanChannels?)
+ * @param {{ source: Object, locations: Object[], categories: Object[], items: Object[], tasks?: Object[], periods?: Object[], positions?: Object[], shifts?: Object[], assignments?: Object[], plans?: Object[], planRows?: Object[] }} data already scoped to the source deployment
+ * @param {{ name: string, createdBy?: string|null, withAssignments?: boolean, withTasks?: boolean, withPlan?: boolean, newStartsAt?: string|null, createTask?: (task: Object) => Promise<any> }} options
  */
-export async function duplicateDeployment(repos, { source, locations, categories, items, tasks = [] }, { name, createdBy = null, withAssignments = true, withTasks = true, createTask }) {
+export async function duplicateDeployment(
+  repos,
+  { source, locations, categories, items, tasks = [], periods = [], positions = [], shifts = [], assignments = [], plans = [], planRows = [] },
+  { name, createdBy = null, withAssignments = true, withTasks = true, withPlan = true, newStartsAt = null, createTask },
+) {
+  const anchor = source.starts_at || periods[0]?.starts_at || shifts[0]?.starts_at || null;
+  const delta = newStartsAt && anchor ? new Date(newStartsAt).getTime() - new Date(anchor).getTime() : 0;
+  const move = (iso) => (delta ? shiftIso(iso, delta) : iso ?? null);
+  const dateOf = (iso) => (iso ? iso.slice(0, 10) : null);
+
   const deployment = await repos.deployments.create({
     name,
     description: source.description ?? null,
     location: source.location ?? null,
     ares_group_id: source.ares_group_id,
+    profile: source.profile ?? 'public_service',
+    served_agency: source.served_agency ?? null,
+    requesting_official: source.requesting_official ?? null,
     status: 'planning',
-    start_date: null,
-    end_date: null,
+    starts_at: delta ? move(source.starts_at) : null,
+    ends_at: delta ? move(source.ends_at) : null,
+    start_date: delta ? dateOf(move(source.starts_at)) : null,
+    end_date: delta ? dateOf(move(source.ends_at)) : null,
     created_by: createdBy,
   });
 
@@ -185,5 +209,75 @@ export async function duplicateDeployment(repos, { source, locations, categories
     }
   }
 
-  return { deployment, counts: { categories: categoryIds.size, locations: locationIds.size, items: itemCount, tasks: taskCount } };
+  // Operational periods
+  const periodIds = new Map();
+  if (repos.operationalPeriods) {
+    for (const p of periods) {
+      const created = await repos.operationalPeriods.create({ deployment_id: deployment.id, sequence: p.sequence, label: p.label ?? null, starts_at: move(p.starts_at), ends_at: move(p.ends_at) });
+      periodIds.set(p.id, created.id);
+    }
+  }
+
+  // Positions (supervisor links resolved in a second pass), shifts, assignments
+  const positionIds = new Map();
+  let shiftCount = 0, assignmentCount = 0;
+  if (repos.positions) {
+    for (const p of positions) {
+      const created = await repos.positions.create({
+        deployment_id: deployment.id, site_id: p.site_id ? locationIds.get(p.site_id) ?? null : null,
+        name: p.name, tactical_callsign: p.tactical_callsign ?? null, position_type: p.position_type ?? null, net: p.net ?? null,
+        headcount: p.headcount ?? 1, requirements: p.requirements ?? [], briefing_notes: p.briefing_notes ?? null, sort_order: p.sort_order ?? 0,
+      });
+      positionIds.set(p.id, created.id);
+    }
+    if (repos.positions.update) {
+      for (const p of positions) {
+        if (p.supervisor_position_id && positionIds.has(p.supervisor_position_id)) {
+          await repos.positions.update(positionIds.get(p.id), { supervisor_position_id: positionIds.get(p.supervisor_position_id) });
+        }
+      }
+    }
+    if (repos.shifts) {
+      for (const s of shifts) {
+        const positionId = positionIds.get(s.position_id);
+        if (!positionId) continue;
+        const created = await repos.shifts.create({
+          position_id: positionId, deployment_id: deployment.id,
+          operational_period_id: s.operational_period_id ? periodIds.get(s.operational_period_id) ?? null : null,
+          starts_at: move(s.starts_at), ends_at: move(s.ends_at), muster_at: move(s.muster_at), headcount: s.headcount ?? null, notes: s.notes ?? null,
+        });
+        shiftCount += 1;
+        if (withAssignments && repos.assignments) {
+          for (const a of assignments) {
+            if (a.shift_id !== s.id || !['offered', 'accepted', 'checked_in', 'on_position', 'released'].includes(a.status)) continue;
+            await repos.assignments.create({ shift_id: created.id, deployment_id: deployment.id, user_id: a.user_id, status: 'offered', created_by: createdBy });
+            assignmentCount += 1;
+          }
+        }
+      }
+    }
+  }
+
+  // Communications plan (snapshots copied as they are)
+  let channelCount = 0;
+  if (withPlan && repos.commsPlans && repos.commsPlanChannels) {
+    for (const plan of plans) {
+      const created = await repos.commsPlans.create({
+        deployment_id: deployment.id, name: plan.name ?? 'Communications plan',
+        operational_period_id: plan.operational_period_id ? periodIds.get(plan.operational_period_id) ?? null : null,
+        special_instructions: plan.special_instructions ?? null, prepared_by_name: plan.prepared_by_name ?? null, prepared_by_position: plan.prepared_by_position ?? null,
+      });
+      for (const r of planRows.filter(x => x.comms_plan_id === plan.id)) {
+        const { id: _id, comms_plan_id: _p, deployment_id: _d, created_at: _c, updated_at: _u, ...rest } = r;
+        await repos.commsPlanChannels.create({ ...rest, comms_plan_id: created.id, deployment_id: deployment.id });
+        channelCount += 1;
+      }
+    }
+  }
+
+  return {
+    deployment,
+    counts: { categories: categoryIds.size, locations: locationIds.size, items: itemCount, tasks: taskCount, periods: periodIds.size, positions: positionIds.size, shifts: shiftCount, assignments: assignmentCount, channels: channelCount },
+    shiftedDays: delta ? Math.round(delta / 86_400_000) : 0,
+  };
 }

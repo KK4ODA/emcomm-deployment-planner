@@ -25,6 +25,10 @@ import { queueStatusIntent } from '@/api/assignmentIntents';
 import { db } from '@/api/db';
 import { formatDateTime } from '@/lib/time';
 import { syncNow } from '@/api/syncEngine';
+import { buildIcs205aRows, entriesForIcs214 } from '@/lib/icsForms';
+import { renderIcs214Pdf, renderIcs205aPdf } from '@/features/comms/icsRecordPdf';
+import { downloadBlob, safeFileName } from '@/lib/download';
+import { FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function NcsBoard() {
@@ -78,6 +82,21 @@ function NcsContent() {
     }
   };
 
+  const [exporting, setExporting] = useState('');
+  const exportForm = async (which) => {
+    setExporting(which);
+    try {
+      const blob = which === '214'
+        ? await renderIcs214Pdf({ deployment, entries: entriesForIcs214(logQ.data ?? []), preparedByName: user?.full_name })
+        : await renderIcs205aPdf({ deployment, rows: buildIcs205aRows({ positions, shifts, assignments, usersById }), preparedByName: user?.full_name });
+      downloadBlob(blob, `ICS${which}_${safeFileName(deployment.name)}.pdf`, 'application/pdf');
+    } catch (err) {
+      toast.error(`PDF failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setExporting('');
+    }
+  };
+
   const addNote = async (e) => {
     e.preventDefault();
     if (!note.trim()) return;
@@ -109,6 +128,8 @@ function NcsContent() {
               <SelectTrigger className="w-36" aria-label="Time window"><SelectValue /></SelectTrigger>
               <SelectContent>{WINDOWS.map(w => <SelectItem key={w.v} value={w.v}>{w.l}</SelectItem>)}</SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => exportForm('205A')} loading={exporting === '205A'} title="Communications list from the current assignments"><FileDown /> ICS 205A</Button>
+            <Button variant="outline" size="sm" onClick={() => exportForm('214')} loading={exporting === '214'} title="Activity log for the deployment"><FileDown /> ICS 214</Button>
             <Button variant="outline" size="sm" onClick={() => { syncNow(); queryClient.invalidateQueries({ queryKey: queryKeys.assignments }); setNow(new Date()); }}><RefreshCw /> Refresh</Button>
           </>
         )}

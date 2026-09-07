@@ -86,6 +86,16 @@ export function useActivityLog(deploymentId) {
     enabled: !!deploymentId,
   });
 }
+export function useFeedback(deploymentId) {
+  return useQuery({
+    queryKey: [...queryKeys.feedback, deploymentId],
+    queryFn: () => db.feedback.where({ deployment_id: deploymentId }, { orderBy: 'created_at' }),
+    enabled: !!deploymentId,
+  });
+}
+export function useLessons() {
+  return useQuery({ queryKey: queryKeys.lessons, queryFn: () => db.lessons.list({ orderBy: 'created_at', ascending: false }) });
+}
 export function useHourEntries() {
   return useQuery({ queryKey: queryKeys.hourEntries, queryFn: () => db.hourEntries.list({ orderBy: 'occurred_on', ascending: false }) });
 }

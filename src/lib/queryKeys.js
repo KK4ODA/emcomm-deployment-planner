@@ -22,5 +22,7 @@ export const queryKeys = Object.freeze({
   commsPlanChannels: ['comms-plan-channels'],
   activityLog: ['activity-log'],
   hourEntries: ['hour-entries'],
+  feedback: ['feedback'],
+  lessons: ['lessons'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });
