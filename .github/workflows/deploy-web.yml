@@ -9,9 +9,10 @@ name: Deploy web
 #   WEB_DEPLOY_HOST      e.g. access-1234567890.webspace-host.com
 #   WEB_DEPLOY_USER      e.g. u123456789
 #   WEB_DEPLOY_PASSWORD  the SFTP/SSH password for that user
-#   WEB_DEPLOY_PATH      remote directory that is the domain's web root,
-#                        e.g. /emcommplanner  (everything in it not present
-#                        in the build is DELETED, so it must be dedicated)
+#   WEB_DEPLOY_PATH      the domain's web root as shown by an SFTP client after
+#                        login, e.g. /emcommplanner (relative to the login
+#                        directory). Everything in it not present in the build
+#                        is DELETED, so it must be dedicated to this app.
 # Optional:
 #   WEB_DEPLOY_PROTOCOL  sftp (default) or ftps
 # Optional repository variable (Settings › Secrets and variables › Actions › Variables):
@@ -100,6 +101,12 @@ jobs:
           LFTP_PASSWORD: ${{ secrets.WEB_DEPLOY_PASSWORD }}
         run: |
           PROTO="${WEB_DEPLOY_PROTOCOL:-sftp}"
+          # The path is taken relative to the directory the SFTP login lands in
+          # (what an SFTP client shows after connecting). On IONOS that is the
+          # webspace root, so "/emcommplanner" and "emcommplanner" mean the same
+          # folder; a leading slash must not be passed to the server verbatim,
+          # otherwise lftp nests it under the login directory.
+          REL="${WEB_DEPLOY_PATH#/}"; REL="${REL%/}"; REL="${REL:-.}"
           # One script file: lftp rejects -f together with -e.
           # --env-password reads LFTP_PASSWORD, so the password is never in argv or in this file.
           cat > deploy.lftp <<EOF
@@ -115,7 +122,7 @@ jobs:
           open --env-password -u "$WEB_DEPLOY_USER" $PROTO://$WEB_DEPLOY_HOST
           # The target folder must already exist (it is the domain's web root).
           # Refusing to create it catches a mistyped WEB_DEPLOY_PATH.
-          cd "$WEB_DEPLOY_PATH"
+          cd "$REL"
           mirror --reverse --delete --verbose=1 --exclude '^\.well-known/' --exclude '^logs/' site/ .
           bye
           EOF
