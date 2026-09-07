@@ -2,7 +2,88 @@
 
 Development log for the roadmap in [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md).
 Update this file at the end of every implementation unit so a future session
-can resume without re-deriving state.
+can resume without re-deriving state, and keep the feature matrix below in
+step with every shipped or changed feature.
+
+## Feature matrix (design document §18)
+
+Row for row against "18. Prioritized Feature Matrix" in *Emcomm Planner -
+Product Vision, Requirements, and Development Roadmap*. **Update this
+table in the same commit that ships or changes a feature.** Status values:
+**Shipped** (in a released version, verified by tests or live probes),
+**Partial** (core exists, a named part of the row is missing), **Not
+started**. The version is the release the row first shipped in.
+
+### P0 — Core
+
+| Feature (design doc) | Status | What exists / what is missing |
+|---|---|---|
+| RLS / permission fixes (§16.1, items 1–4) | Shipped v2.0.0 | Migration 008: group read isolation on every table, self role-escalation closed, event log attributed and role-checked, call sign unique. 014 (v2.2.0): role helpers return false, never NULL. |
+| Position → Shift → Assignment model | Shipped v2.0.0 | Migration 009, guarded status ladder, server-stamped timestamps. |
+| Operator profile with capabilities and resources | Shipped v2.0.0 | Profile › "What I can do": license class, capabilities, station types, power hours, locality, equipment notes. Sign-up form unchanged. |
+| Operational periods | Shipped v2.0.0 | Per deployment; shifts and comms plans can reference them. |
+| Staffing board with live coverage count | Shipped v2.0.0 | `/staffing`: slots covered, open / pending / at-risk filters, realtime refresh. |
+| Assignment offer / accept / decline | Shipped v2.0.0 | Decline reason, notifications both ways, withdraw. |
+| Operator Packet (web + PDF, offline-cached, versioned, change-highlighted) | Shipped v2.0.0 (caveat) | Web packet, one-page print (browser print to PDF, no generated PDF file), cached offline once seen, versioned with acknowledgement. Changes arrive as a banner plus (v2.2.0) a per-position diff in the notification; fields are not highlighted inline. |
+| Channel library + deployment-scoped ICS-205 | Shipped v2.0.0 | `/channels`, per-deployment plan with snapshots, ICS 205 PDF from the plan. |
+| Degradation ladder (condition levels + PACE) | Shipped v2.0.0 | Condition 1–3 and P/A/C/E on every plan row, shown by condition on the packet. |
+| Check-in / check-out (offline) → hour entries | Shipped v2.0.0 | Idempotent RPC, IndexedDB intents outbox, hours derived on release, manual entries. |
+| Site fields: parking, arrival, access, map pin | Shipped v2.0.0 | Columns, site form, click-to-set pin, on the packet with a directions link. |
+| Migration of existing data (§15.6) | Shipped v2.0.0 | Site rosters became positions, memberships mirrored from existing group ids. |
+
+### P1 — High value
+
+| Feature (design doc) | Status | What exists / what is missing |
+|---|---|---|
+| Readiness / viability checklist | Partial | Deployment cards show slots covered, unassigned items, tasks done, comms-plan coverage; comms page has a plan check. No single checklist screen that turns gaps into a worklist. |
+| NCS live board (staffed / uncovered / released, offline) | Shipped v2.0.0 | `/ncs`, worst-first rows, on-behalf check-in, log notes, works from cache. |
+| Change notification to affected operators only, with a diff | Shipped v2.2.0 | Per-position packet snapshots; `publish_plan` notifies only changed positions with their changes; unaffected packets show no banner. |
+| Deployment cloning with lessons carried forward | Shipped v2.1.0 | Copies periods, positions, shifts, people, comms plan, map layers; shifts dates; open lessons carry over and show on Staffing. |
+| Structured post-event feedback + AAR assembly | Shipped v2.1.0 | `/aar`: two-minute form (anonymous option), planner review, Markdown draft, lessons. |
+| Hours rollup + ARRL Form 2 / FSD-212 figures | Shipped v2.1.0 | `/hours`: per operator and month in the report's activity buckets, CSV. Figures, not the form layout. |
+| ICS-214 (per person and unit) and ICS-205A | Shipped v2.1.0 | Both PDFs from the Net control board. |
+| Map view with layers, GPX/KML import, static map in the packet | Partial (v2.2.0) | Layers and KML / GPX / GeoJSON import shipped, waypoints become sites. No static map image in the packet. |
+| Shared asset registry with custody state | Not started | Equipment lists per site as before. |
+| Objectives (claimable, with completion) | Not started | |
+| Open-shift board + notify qualified operators | Partial (v2.2.0) | Board with qualification and overlap reasons, server-enforced capacity, coordinator told on sign-up. No proactive notification to qualified operators when a shift opens. |
+| Notification preferences (email / SMS / push) | Not started | In-app notifications only. |
+| CHIRP CSV export from the comms plan | Shipped v2.0.0 | |
+| Served agency / tasking / authorization fields | Shipped v2.0.0 | Deployment form and packet header. |
+| Roster CSV import | Not started | Invitations one at a time through the invite function. |
+| Light theme, type-scale control, mobile UX pass (§12) | Partial | Light and dark themes, phone-first packet with mobile redirect. No type-scale control, no systematic mobile pass over planner screens. |
+| Code signing for Windows builds | Not done (by instruction) | No certificate; updater artifacts are minisign-signed, installers unsigned. |
+| Outbox reliability: retry, backoff, dead-letter UI; `syncEngine` tests | Partial (v2.2.0) | Retry, dead-letter list with retry / discard for both outboxes, sync-engine tests. No exponential backoff (fixed 30 s cycle). |
+
+### P2 — Advanced
+
+| Feature (design doc) | Status |
+|---|---|
+| Empirical coverage map | Not started |
+| Training / credential records with versioned requirement sets | Not started |
+| ICS-204 generation | Not started |
+| Field Day / WFD profile | Not started (`field_day` deployment kind is a label only) |
+| Winlink check-in ingestion | Not started |
+| LAN-hosted mode | Not started |
+| Section / district rollups | Not started |
+| AI-assisted AAR drafting | Not started (AAR draft is assembled deterministically) |
+| AI-assisted import of a legacy assignment sheet or email | Not started |
+| Safety Officer checklist as a signed artifact | Not started |
+| Position naming schemes / tactical callsign generation | Partial: bulk create expands "AID MILE {n}" patterns; no saved schemes |
+
+### P3 — Experimental
+
+All six rows (RF / VARA-BBS sync, APRS ingestion, AREDN, propagation
+prediction, mutual aid, community channel sharing): not started, per the
+document's validation gates.
+
+### Explicitly deferred or dropped
+
+Followed as written: event sourcing limited to tasks, no Ed25519 / OR-set
+work, What3Words and `export-ics205` removed from the repo (the two Edge
+Functions still need deleting in the Supabase dashboard).
+
+**Count (2026-09-07):** P0 12/12 shipped. P1 10 shipped, 5 partial, 3 not
+started, 1 not done by instruction. P2 1 partial, 10 not started. P3 0/6.
 
 ## Completed
 
