@@ -9,6 +9,16 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- Automatic web deployment: the release pipeline uploads the web build to
+  the site over SFTP after publishing; the same workflow can be run by hand
+  to deploy or roll back any version.
+- `version.json` in the web build so the live site version can be checked.
+
+### Changed
+- Apache cache headers: entry points are never cached, hashed assets are
+  cached for a year, so new deployments show up immediately.
+
 ## [1.0.1] - 2026-09-07
 
 ### Added

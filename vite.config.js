@@ -6,6 +6,26 @@ import { readFileSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
+/**
+ * Emits `version.json` next to index.html so a deployed site can be checked
+ * (`curl https://<host>/version.json`) and the deploy workflow can confirm
+ * the upload landed. Not precached by the service worker (json is excluded
+ * from globPatterns) so it always reflects the server copy.
+ */
+function versionFile() {
+  return {
+    name: 'emcomm-version-file',
+    apply: /** @type {const} */ ('build'),
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ version: pkg.version, builtAt: new Date().toISOString() }, null, 2),
+      })
+    },
+  }
+}
+
 export default defineConfig({
   // Single source of truth for the version shown in the UI: package.json
   define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version) },
@@ -25,6 +45,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    versionFile(),
     VitePWA({
       // New service workers activate on the next load; UpdatePrompt offers an
       // immediate reload when a fresh build is waiting.

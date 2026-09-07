@@ -53,8 +53,8 @@ It is opinionated about a few things:
 | Platform | How |
 |----------|-----|
 | Windows 10/11 | Download `EmComm-Planner_<version>_x64-setup.exe` from the [latest release](https://github.com/KK4ODA/emcomm-deployment-planner/releases/latest). Installs per user (no admin rights), adds a Start Menu entry and updates itself. A portable `.exe` is also attached. |
-| Any browser | Open your group's hosted instance. Use the browser's *Install app* option to get an icon and offline start. |
-| Self-host | Deploy the `emcomm-planner-web-<version>.zip` from a release (or `dist/` from `npm run build`) to any static host; `public/.htaccess` covers Apache. Point it at your Supabase project via the build-time environment variables below. |
+| Any browser | https://emcommplanner.org (same version as the desktop app; `/version.json` shows which). Use the browser's *Install app* option to get an icon and offline start. |
+| Self-host | Deploy the `emcomm-planner-web-<version>.zip` from a release (or `dist/` from `npm run build`) to any static host; `public/.htaccess` covers Apache. The *Deploy web* workflow does this automatically for the official site. Point it at your Supabase project via the build-time environment variables below. |
 
 Windows builds are currently **unsigned**: SmartScreen shows "Windows
 protected your PC" on first run until you click *More info › Run anyway*.
@@ -114,6 +114,7 @@ More in [docs/development.md](docs/development.md).
 | `TAURI_SIGNING_PRIVATE_KEY` | GitHub secret, local shell | Signs desktop updates |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | GitHub secret | Password of that key (empty if none) |
 | `WINDOWS_CERTIFICATE`, `WINDOWS_CERTIFICATE_PASSWORD` | GitHub secret, optional | Authenticode code signing |
+| `WEB_DEPLOY_HOST`, `WEB_DEPLOY_USER`, `WEB_DEPLOY_PASSWORD`, `WEB_DEPLOY_PATH` | GitHub secret, optional | Automatic upload of the web build to the Apache host |
 
 `.env.example` lists the client variables with placeholders. Never commit
 `.env.local`, keys or certificates.

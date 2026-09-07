@@ -31,9 +31,46 @@
      Release with the CHANGELOG section as notes
 5. Installed desktop apps discover the release on their next launch.
 
-To deploy the web build, upload the contents of the release zip (or `dist/`
-from `npm run build`) to the static host. `public/.htaccess` provides the SPA
-rewrite for Apache.
+6. `deploy-web` uploads the same web build to the static host (see below), so
+   the website and the desktop app always run the same version.
+
+## Web deployment (emcommplanner.org)
+
+The site is static files on Apache (IONOS webspace). `public/.htaccess`
+provides the SPA rewrite and cache headers (entry points `no-cache`, hashed
+assets immutable). `version.json` next to `index.html` reports what is live:
+
+```bash
+curl -s https://emcommplanner.org/version.json
+```
+
+`.github/workflows/deploy-web.yml` downloads the `emcomm-planner-web-<v>.zip`
+attached to the GitHub Release, verifies its SHA-256, and mirrors it to the
+host with `lftp` (SFTP by default, FTPS optional), deleting files that are no
+longer part of the build. It runs:
+
+- automatically at the end of `Release` for non-pre-release tags when the
+  host secrets exist;
+- by hand from Actions › *Deploy web* › *Run workflow* (leave the version
+  empty for the latest release), or `gh workflow run deploy-web.yml -f version=1.0.1`.
+
+Secrets:
+
+| Secret | Example | Notes |
+|--------|---------|-------|
+| `WEB_DEPLOY_HOST` | `access-1234567890.webspace-host.com` | IONOS › Hosting › SFTP & SSH access |
+| `WEB_DEPLOY_USER` | `u123456789` | same page |
+| `WEB_DEPLOY_PASSWORD` | | same page (set or reset it there) |
+| `WEB_DEPLOY_PATH` | `/emcommplanner` | the folder the domain points to (IONOS › Domains & SSL › domain › *Adjust destination*). **Must contain only this app**: the mirror deletes anything else in it, except `.well-known/` and `logs/`. |
+| `WEB_DEPLOY_PROTOCOL` | `sftp` | optional; `ftps` if SFTP is unavailable |
+
+Optional repository *variable* `WEB_PUBLIC_URL` (`https://emcommplanner.org`)
+enables the post-upload check that `version.json` reports the new version.
+
+Rollback: run *Deploy web* by hand with the previous version number.
+
+Manual fallback: unzip the release's web zip and upload its contents
+(including the hidden `.htaccess`) to the web root with any SFTP client.
 
 ## GitHub repository configuration
 
@@ -47,6 +84,7 @@ Settings › Secrets and variables › Actions:
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | if the key has one | Key password |
 | `WINDOWS_CERTIFICATE` | optional | Base64 of a `.pfx` code-signing certificate |
 | `WINDOWS_CERTIFICATE_PASSWORD` | with the above | Certificate password |
+| `WEB_DEPLOY_HOST`, `WEB_DEPLOY_USER`, `WEB_DEPLOY_PASSWORD`, `WEB_DEPLOY_PATH` | for automatic web deploy | See *Web deployment* below |
 
 `GITHUB_TOKEN` is provided automatically; the workflow has `contents: write`.
 

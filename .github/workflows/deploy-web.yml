@@ -1,0 +1,133 @@
+name: Deploy web
+
+# Uploads the web build of a published release to the static host (Apache on
+# IONOS) over SFTP or FTPS. Runs automatically at the end of the Release
+# workflow and can be started by hand for any existing version from the
+# Actions tab (or `gh workflow run deploy-web.yml -f version=1.0.1`).
+#
+# Required repository secrets (Settings › Secrets and variables › Actions):
+#   WEB_DEPLOY_HOST      e.g. access-1234567890.webspace-host.com
+#   WEB_DEPLOY_USER      e.g. u123456789
+#   WEB_DEPLOY_PASSWORD  the SFTP/SSH password for that user
+#   WEB_DEPLOY_PATH      remote directory that is the domain's web root,
+#                        e.g. /emcommplanner  (everything in it not present
+#                        in the build is DELETED, so it must be dedicated)
+# Optional:
+#   WEB_DEPLOY_PROTOCOL  sftp (default) or ftps
+# Optional repository variable (Settings › Secrets and variables › Actions › Variables):
+#   WEB_PUBLIC_URL       e.g. https://emcommplanner.org  (enables the post-deploy check)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version to deploy (e.g. 1.0.1). Empty = latest release.'
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version to deploy'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Upload to web host
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WEB_DEPLOY_HOST: ${{ secrets.WEB_DEPLOY_HOST }}
+      WEB_DEPLOY_USER: ${{ secrets.WEB_DEPLOY_USER }}
+      WEB_DEPLOY_PASSWORD: ${{ secrets.WEB_DEPLOY_PASSWORD }}
+      WEB_DEPLOY_PATH: ${{ secrets.WEB_DEPLOY_PATH }}
+      WEB_DEPLOY_PROTOCOL: ${{ secrets.WEB_DEPLOY_PROTOCOL }}
+      WEB_PUBLIC_URL: ${{ vars.WEB_PUBLIC_URL }}
+    steps:
+      - name: Check deployment secrets
+        run: |
+          missing=""
+          for v in WEB_DEPLOY_HOST WEB_DEPLOY_USER WEB_DEPLOY_PASSWORD WEB_DEPLOY_PATH; do
+            eval "val=\${$v}"
+            [ -n "$val" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing. See .github/workflows/deploy-web.yml for the list."
+            exit 1
+          fi
+          case "${WEB_DEPLOY_PROTOCOL:-sftp}" in
+            sftp|ftps) ;;
+            *) echo "::error::WEB_DEPLOY_PROTOCOL must be sftp or ftps"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: v
+        run: |
+          V="${{ inputs.version }}"
+          if [ -z "$V" ]; then
+            V=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')
+            V="${V#v}"
+          fi
+          V="${V#v}"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Deploying web build $V"
+
+      - name: Download release web build
+        run: |
+          V="${{ steps.v.outputs.version }}"
+          gh release download "v$V" --repo "$GITHUB_REPOSITORY" \
+            -p "emcomm-planner-web-$V.zip" -p "emcomm-planner-web-$V.zip.sha256"
+          sha256sum -c "emcomm-planner-web-$V.zip.sha256"
+          mkdir site && unzip -q "emcomm-planner-web-$V.zip" -d site
+          test -f site/index.html
+          test -f site/.htaccess
+          echo "Files to upload: $(find site -type f | wc -l)"
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Upload (mirror with delete)
+        env:
+          LFTP_PASSWORD: ${{ secrets.WEB_DEPLOY_PASSWORD }}
+        run: |
+          PROTO="${WEB_DEPLOY_PROTOCOL:-sftp}"
+          cat > lftp.rc <<'EOF'
+          set net:timeout 30
+          set net:max-retries 3
+          set net:reconnect-interval-base 5
+          set sftp:auto-confirm yes
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ssl:verify-certificate yes
+          set mirror:parallel-transfer-count 4
+          EOF
+          # --env-password reads LFTP_PASSWORD, so the password never appears in argv or logs.
+          lftp -f lftp.rc -e "
+            open --env-password -u \"$WEB_DEPLOY_USER\" $PROTO://$WEB_DEPLOY_HOST;
+            mirror --reverse --delete --verbose=1 \
+              --exclude '^\.well-known/' \
+              --exclude '^logs/' \
+              site/ \"$WEB_DEPLOY_PATH\";
+            bye"
+
+      - name: Verify live site
+        if: env.WEB_PUBLIC_URL != ''
+        run: |
+          V="${{ steps.v.outputs.version }}"
+          URL="${WEB_PUBLIC_URL%/}/version.json"
+          for i in 1 2 3 4 5 6; do
+            LIVE=$(curl -fsS -H 'Cache-Control: no-cache' "$URL" | jq -r .version 2>/dev/null || true)
+            [ "$LIVE" = "$V" ] && { echo "Live site serves $LIVE"; exit 0; }
+            echo "Attempt $i: live version is '${LIVE:-unknown}', expected $V; retrying in 10 s"
+            sleep 10
+          done
+          echo "::warning::$URL does not report $V yet. The upload succeeded; a proxy cache may still hold the old copy."

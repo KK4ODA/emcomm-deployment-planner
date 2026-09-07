@@ -21,6 +21,9 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
+      deploy_web: ${{ steps.web.outputs.deploy_web }}
+    env:
+      WEB_DEPLOY_HOST: ${{ secrets.WEB_DEPLOY_HOST }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +41,16 @@ jobs:
           fi
           echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
           if [[ "$TAG_VERSION" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+      # Web deployment is optional: it runs only when the host secrets exist
+      # and never for pre-releases (secrets cannot be read in a job-level if).
+      - id: web
+        run: |
+          if [ -n "$WEB_DEPLOY_HOST" ] && [ "${{ steps.meta.outputs.prerelease }}" = "false" ]; then
+            echo "deploy_web=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_web=false" >> "$GITHUB_OUTPUT"
+            echo "Web deployment skipped (no WEB_DEPLOY_HOST secret or pre-release tag)."
+          fi
       - run: |
           test -n "$VITE_SUPABASE_URL" || { echo "::error::Secret VITE_SUPABASE_URL is not set"; exit 1; }
           test -n "$VITE_SUPABASE_ANON_KEY" || { echo "::error::Secret VITE_SUPABASE_ANON_KEY is not set"; exit 1; }
@@ -182,3 +195,12 @@ jobs:
             artifacts/web/*
             artifacts/windows/*
             artifacts/latest.json
+
+  deploy-web:
+    name: Deploy web
+    needs: [verify, publish]
+    if: needs.verify.outputs.deploy_web == 'true'
+    uses: ./.github/workflows/deploy-web.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
+    secrets: inherit
