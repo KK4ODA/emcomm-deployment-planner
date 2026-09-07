@@ -1,39 +1,40 @@
-**Welcome to your Base44 project** 
+# EmComm Deployment Planner
 
-**About**
+Deployment planning for Amateur Radio Emergency Service (ARES) groups: deployments, sites, equipment assignments, setup tasks, ICS 205 radio plans and member management. Built as a React web app / PWA with a Supabase backend, and packaged as a Windows desktop application.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Quick start
 
-This project contains everything you need to run your app locally.
+Prerequisites: Node.js 20 or newer (see `.nvmrc`), npm, and a Supabase project (see [docs/backend.md](docs/backend.md)).
 
-**Edit the code in your local development environment**
-
-Any change pushed to the repo will also be reflected in the Base44 Builder.
-
-**Prerequisites:** 
-
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
-
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
+```bash
+npm install
+cp .env.example .env.local   # then fill in your Supabase URL and anon key
+npm run dev
 ```
 
-Run the app: `npm run dev`
+Open http://localhost:5173.
 
-**Publish your changes**
+## Scripts
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Vite dev server with hot reload |
+| `npm run build` | Production web build into `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | ESLint over `src/` |
+| `npm run typecheck` | TypeScript `checkJs` over `src/` |
+| `npm test` | Vitest unit/component tests |
+| `npm run check` | lint + typecheck + test + build (what CI runs) |
 
-**Docs & Support**
+## Documentation
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+- [docs/architecture.md](docs/architecture.md): application structure, data flow, offline design
+- [docs/backend.md](docs/backend.md): Supabase schema, RLS, Edge Functions, environment variables
+- [docs/development.md](docs/development.md): local development, Git workflow, troubleshooting
+- [docs/release.md](docs/release.md): versioning, desktop build, GitHub Actions, auto-updater, code signing
+- [docs/base44-migration.md](docs/base44-migration.md): historical record of the Base44 removal
+- [CHANGELOG.md](CHANGELOG.md)
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+## License
+
+Private project of KK4ODA. All rights reserved unless a license file is added.
