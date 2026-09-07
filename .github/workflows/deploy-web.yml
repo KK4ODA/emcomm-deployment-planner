@@ -120,9 +120,15 @@ jobs:
           set mirror:parallel-transfer-count 4
           set cmd:fail-exit yes
           open --env-password -u "$WEB_DEPLOY_USER" $PROTO://$WEB_DEPLOY_HOST
+          echo "== login directory:"
+          pwd
+          cls -1
           # The target folder must already exist (it is the domain's web root).
           # Refusing to create it catches a mistyped WEB_DEPLOY_PATH.
           cd "$REL"
+          echo "== deploy target:"
+          pwd
+          cls -1
           mirror --reverse --delete --verbose=1 --exclude '^\.well-known/' --exclude '^logs/' site/ .
           bye
           EOF
