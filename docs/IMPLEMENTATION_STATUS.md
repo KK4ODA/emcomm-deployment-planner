@@ -74,15 +74,22 @@ can resume without re-deriving state.
   form. Verified on the live database with rollback probes. Tests:
   openShifts (3), OpenShiftBoard (3). 201 tests total.
 
+- 2026-09-07 **Phase 4d, outbox parity and sync tests**: task outbox
+  dead-letters permanent rejections and stops at transient ones (order
+  kept); `listDeadLetters`/`retryDeadLetter`/`discardDeadLetter` across
+  both outboxes; red count + dialog on the connectivity badge;
+  `syncEngine` tests (drain order, dead letter, transient stop, retry and
+  discard, inbox apply and high-water mark, no status regression, counts).
+  209 tests total.
+
 ## In Progress
 
 - Nothing mid-flight.
 
 ## Next
 
-Phase 4 remainder in roadmap order: map KML/GPX import; asset registry with custody;
-objectives; open-shift board; task outbox retry/dead-letter parity with the
-intents outbox; `syncEngine` tests. Housekeeping still on the user: delete
+Phase 4 remainder in roadmap order: map KML/GPX import; asset registry with
+custody; objectives. Housekeeping still on the user: delete
 the `export-ics205` and `get-what3words` Edge Functions in the dashboard and
 turn on leaked-password protection under Auth.
 

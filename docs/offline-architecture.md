@@ -45,22 +45,24 @@ with the simpler model below. The old draft remains in git history
   id, actor call sign), dispatches to Supabase with a 5 s race and falls back
   to the outbox.
 - `src/api/syncEngine.js`: connectivity tier (`ONLINE`/`OFFLINE`) from
-  `navigator.onLine` plus a probe of `/auth/v1/health`; drains the outbox;
-  pulls events above a high-water mark; subscribes to Realtime; exposes the
-  pending count for the badge.
-- `src/contexts/OfflineContext.jsx` and `components/shell/ConnectivityBadge.jsx`:
-  UI state; clicking the badge forces a sync attempt.
+  `navigator.onLine` plus a probe of `/auth/v1/health`; drains the outbox
+  in ULID order (a permanent rejection such as an RLS denial or a missing
+  parent row becomes a dead letter marked `_error`; a transient failure
+  stops the drain so order is kept and the next cycle retries); pulls
+  events above a high-water mark; subscribes to Realtime; exposes pending
+  and failed counts for the badge; `listDeadLetters()`,
+  `retryDeadLetter()`, `discardDeadLetter()` cover both outboxes.
+- `src/contexts/OfflineContext.jsx`, `components/shell/ConnectivityBadge.jsx`
+  and `DeadLetterDialog.jsx`: UI state; clicking the badge forces a sync
+  attempt; a red count opens the refused changes to retry or discard.
 - `vite.config.js`: Workbox configuration (precache globs, runtime caches,
   navigate fallback denylist for Supabase paths).
 
 ## Known limitations (tracked in IMPLEMENTATION_STATUS.md)
 
-- The task outbox retries forever without backoff and has no user-visible
-  failed list; a permanently rejected event (for example an RLS denial)
-  stays queued. (The newer intents outbox does surface failures.)
+- Transient failures retry every 30 s without backoff.
 - An `update` event for a task that is not in the local store is dropped
   instead of held in `inbox`.
-- `syncEngine.js` has no automated tests.
 
 ## Security notes
 

@@ -1,8 +1,8 @@
 import { supabase } from './supabaseClient';
 import { queryClientInstance } from '@/lib/query-client';
-import { offlineStorage } from '@/lib/offline/storage';
+import { offlineStorage, STORES } from '@/lib/offline/storage';
 import { applyTaskEvent, TASKS_UPDATED_EVENT, OUTBOX_CHANGED_EVENT } from './taskEvents';
-import { drainIntents, listIntents } from './assignmentIntents';
+import { drainIntents, listIntents, discardIntent } from './assignmentIntents';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -53,10 +53,14 @@ async function detectTier() {
 // ─── Outbox size (for the UI) ────────────────────────────────────────────────
 
 let _pending = 0;
+let _failed = 0;
 const _pendingListeners = new Set();
 
 export function getPendingCount() { return _pending; }
+/** Queued changes the server rejected for good (dead letters), task events and intents together. */
+export function getFailedCount() { return _failed; }
 
+/** Listener receives (pending, failed). */
 export function onPendingChange(fn) {
   _pendingListeners.add(fn);
   return () => _pendingListeners.delete(fn);
@@ -65,14 +69,58 @@ export function onPendingChange(fn) {
 export async function refreshPendingCount() {
   try {
     const outbox = await offlineStorage.getAllEntities('outbox');
-    const intents = (await listIntents()).filter(i => !i.error);
-    const total = outbox.length + intents.length;
-    if (total !== _pending) {
-      _pending = total;
-      _pendingListeners.forEach(fn => fn(_pending));
+    const intents = await listIntents();
+    const pending = outbox.filter(e => !e._error).length + intents.filter(i => !i.error).length;
+    const failed = outbox.filter(e => e._error).length + intents.filter(i => i.error).length;
+    if (pending !== _pending || failed !== _failed) {
+      _pending = pending;
+      _failed = failed;
+      _pendingListeners.forEach(fn => fn(_pending, _failed));
     }
   } catch { /* storage unavailable */ }
   return _pending;
+}
+
+// ─── Dead letters ─────────────────────────────────────────────────────────────
+// Postgres/PostgREST codes that will not succeed on retry: permission,
+// constraint, malformed payload, missing function. Anything else (network,
+// 5xx, timeouts) is transient and keeps the entry queued.
+const PERMANENT_EVENT_CODES = new Set(['42501', '23503', '23505', '23514', '22P02', '22023', 'PGRST202', 'PGRST204', 'PGRST301']);
+
+export function isPermanentError(error) {
+  if (!error) return false;
+  if (error.code && PERMANENT_EVENT_CODES.has(String(error.code))) return true;
+  const status = Number(error.status ?? error.statusCode);
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
+/** Rejected task events and intents, oldest first, in one shape for the UI. */
+export async function listDeadLetters() {
+  const outbox = await offlineStorage.getAllEntities('outbox');
+  const intents = await listIntents();
+  return [
+    ...outbox.filter(e => e._error).map(e => ({ id: e.id, kind: 'task', summary: `${e.op} task${e.patch?.name ? ` “${e.patch.name}”` : ''}`, error: e._error, at: e._queued_at ?? null })),
+    ...intents.filter(i => i.error).map(i => ({ id: i.id, kind: 'assignment', summary: `${String(i.status).replace('_', ' ')} (assignment)`, error: i.error, at: i.queued_at ?? null })),
+  ].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export async function discardDeadLetter(letter) {
+  if (letter.kind === 'task') await offlineStorage.deleteEntity('outbox', letter.id);
+  else await discardIntent(letter.id);
+  await refreshPendingCount();
+}
+
+/** Put a rejected entry back in the queue (after the cause was fixed, e.g. a role granted). */
+export async function retryDeadLetter(letter) {
+  if (letter.kind === 'task') {
+    const entry = await offlineStorage.getEntity('outbox', letter.id);
+    if (entry) { const { _error, ...rest } = entry; await offlineStorage.saveEntity('outbox', rest); }
+  } else {
+    const intent = await offlineStorage.getEntity(STORES.intents, letter.id);
+    if (intent) await offlineStorage.saveEntity(STORES.intents, { ...intent, error: null });
+  }
+  await refreshPendingCount();
+  return syncNow();
 }
 
 // ─── Sync state helpers ───────────────────────────────────────────────────────
@@ -107,28 +155,47 @@ async function ensureSeeded() {
 
 // ─── Outbox drain ─────────────────────────────────────────────────────────────
 
-async function drainOutbox() {
-  const outbox = await offlineStorage.getAllEntities('outbox');
-  if (!outbox.length) { await refreshPendingCount(); return; }
+/**
+ * Send queued task events in ULID order. A permanent rejection marks the
+ * entry with `_error` (dead letter, shown to the user, not retried); a
+ * transient failure stops the drain so order is preserved and the next cycle
+ * tries again.
+ * @returns {Promise<{ sent: number, failed: number, remaining: number }>}
+ */
+export async function drainOutbox() {
+  const outbox = (await offlineStorage.getAllEntities('outbox')).filter(e => !e._error);
+  let sent = 0, failed = 0;
+  if (!outbox.length) { await refreshPendingCount(); return { sent, failed, remaining: 0 }; }
 
-  // Apply in ULID order (ascending time)
   const sorted = [...outbox].sort((a, b) => a.id.localeCompare(b.id));
-
   for (const entry of sorted) {
-    const { _queued_at, ...event } = entry;
-    const { error } = await supabase.from('events').insert(event);
+    const { _queued_at, _error, ...event } = entry;
+    let error;
+    try {
+      ({ error } = await supabase.from('events').insert(event));
+    } catch (err) {
+      error = err;
+    }
     if (!error) {
       await offlineStorage.deleteEntity('outbox', event.id);
+      sent += 1;
+    } else if (isPermanentError(error)) {
+      console.warn('Outbox drain: event rejected for good', event.id, error.message);
+      await offlineStorage.saveEntity('outbox', { ...entry, _error: error.message || 'Rejected by the server' });
+      failed += 1;
     } else {
-      console.warn('Outbox drain: Supabase rejected event', event.id, error.message);
+      console.warn('Outbox drain: transient failure, will retry', event.id, error.message);
+      break;
     }
   }
   await refreshPendingCount();
+  const remaining = (await offlineStorage.getAllEntities('outbox')).filter(e => !e._error).length;
+  return { sent, failed, remaining };
 }
 
 // ─── Inbox fetch ──────────────────────────────────────────────────────────────
 
-async function fetchAndApplyInbox() {
+export async function fetchAndApplyInbox() {
   const state = await getSyncState();
   const hwm = state?.hwm ?? null;
 
@@ -208,7 +275,8 @@ export async function syncNow() {
     if (tier !== 'ONLINE') return;
 
     await ensureSeeded();
-    await drainOutbox();
+    const drainedEvents = await drainOutbox();
+    if (drainedEvents.sent) notifyTasksUpdated();
     const drained = await drainIntents();
     if (drained.sent) queryClientInstance.invalidateQueries({ queryKey: ['assignments'] });
     await refreshPendingCount();

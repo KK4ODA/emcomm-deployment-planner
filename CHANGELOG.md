@@ -16,6 +16,11 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   hold, say why. Planners can turn self sign-up off per position.
 
 ### Changed
+- **Offline queue**: a queued change the server refuses for good (for
+  example a permission) no longer retries forever in silence. It shows as
+  a red count next to the connectivity badge, where you can retry it after
+  the cause is fixed or discard it. Task events and check-ins share the
+  same list.
 - **Publish plan** now tells you what changed since the last publication,
   position by position, and notifies only the operators whose packet
   changed, with their changes in the notification. Operators whose packet
