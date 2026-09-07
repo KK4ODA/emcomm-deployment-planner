@@ -9,6 +9,40 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-07
+
+Planning and maintenance flow improvements.
+
+### Added
+- Deployment lifecycle actions on each deployment card: Mark active, Mark
+  completed, Back to planning, Archive, Unarchive. Archived deployments are
+  hidden from the switcher and the list by default ("Show archived").
+- Readiness on deployment cards: tasks done and ICS 205 coverage per site,
+  plus a "Ready" line when every item is assigned, every task is done and
+  every site has a radio plan.
+- When a deployment is marked completed, the app offers to save it as a
+  template.
+- Duplicate a deployment (with or without assignments, with or without
+  setup tasks) for recurring events.
+- Bulk assignment: "Assign N unassigned" on the dashboard gives every
+  unclaimed item, for one site or all, to one operator (defaults to you).
+- Site roster check: a site card warns when an operator has equipment or
+  tasks there but is not on the roster, with one click to add them.
+- Go-kit checkboxes on My Assignments: tick items as you pack; ticks are
+  remembered per deployment on this device and print with the page.
+- Start / Done buttons on My Assignments tasks.
+
+### Changed
+- Navigation order: Dashboard, Deployments, Sites, My Assignments, ...
+- Dashboard header now reads "Deployment dashboard"; the site filter is a
+  segmented control for up to five sites and shows a banner while active.
+- Site cards link to "Equipment" (the dashboard filtered to that site)
+  instead of "Items".
+- Deployments are listed active first, then planning, completed, archived.
+
+### Removed
+- "My open tasks" panel on the dashboard; My Assignments covers it.
+
 ## [1.0.2] - 2026-09-07
 
 ### Added

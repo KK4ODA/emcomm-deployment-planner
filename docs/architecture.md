@@ -31,7 +31,7 @@ Storage, Edge Functions). There is no other server.
 |------|---------|
 | `src/app/` | `App.jsx` (providers + router) and `routes.js` (all paths, legacy redirects) |
 | `src/pages/` | One component per route; composes feature components |
-| `src/features/<area>/` | Forms, cards, dialogs and hooks that belong to one area |
+| `src/features/<area>/` | Forms, cards, dialogs and hooks that belong to one area (`dashboard`, `deployments`, `items`, `sites`, `tasks`, `ics205`, `members`, `assignments`, `profile`, `about`, `desktop`, `pwa`, `auth`, `notifications`, `templates`, `aresGroups`) |
 | `src/components/ui/` | shadcn-style Radix wrappers, typed with JSDoc |
 | `src/components/common/` | PageHeader, StatCard, Section, EmptyState, ErrorState, QueryState, ConfirmDialog, CallSign, Badges, FormField, AresGroupPicker, DeploymentGate |
 | `src/components/shell/` | Sidebar, TopBar, DeploymentSwitcher, ConnectivityBadge, OfflineBanner, UserMenu, MobileNav |
@@ -68,7 +68,19 @@ Storage, Edge Functions). There is no other server.
 | Connectivity, outbox size | `OfflineContext` | Badge, banner, task dispatch |
 | Server data | React Query cache | Shared between pages, invalidated by mutations/Realtime |
 | Tasks | IndexedDB `entities.tasks` | Offline reads/writes |
-| UI preferences | localStorage (`sidebar`, `sites view`, theme) | Per device |
+| UI preferences | localStorage (`sidebar`, `sites view`, theme, show archived) | Per device |
+| Go-kit ticks | localStorage `emcomm_gokit:<deployment>:<call sign>` | Personal packing state, not shared |
+
+## Deployment lifecycle
+
+`planning → active → completed → archived`, with "back to planning",
+"reopen" and "unarchive" as reverse moves (`DEPLOYMENT_TRANSITIONS` in
+`src/lib/constants.js`). Lists sort by `sortDeployments()` (active first),
+the switcher hides archived deployments, and marking one completed offers to
+save it as a template. `deploymentReadiness()` in `src/lib/deployments.js`
+computes the per-card readiness (unassigned items, tasks done, ICS 205
+coverage) and `duplicateDeployment()` copies structure, optionally with
+assignments and tasks (tasks go through the event log as new events).
 
 ## Authentication and authorization
 

@@ -36,13 +36,13 @@ It is opinionated about a few things:
 
 | Area | What you get |
 |------|--------------|
-| Deployments | Status lifecycle (planning → active → completed → archived), per-ARES-group visibility, templates that pre-populate sites, categories and items |
-| Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, contact and access notes, readiness overview |
-| Equipment | Categories and items per site, drag-and-drop ordering, priorities, assignment to one or more operators, go-kit checklist |
+| Deployments | Status lifecycle (planning → active → completed → archived) with one-click transitions, readiness at a glance (unassigned items, tasks done, ICS 205 coverage), duplicate for recurring events, templates, per-ARES-group visibility |
+| Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, contact and access notes, operator roster with a consistency check against assignments |
+| Equipment | Categories and items per site, drag-and-drop ordering, priorities, assignment to one or more operators, bulk "assign all unassigned" |
 | Tasks | Setup/teardown tasks per site with forward-only status, assignees, due times; work offline and sync via an event log |
 | ICS 205 | Incident Radio Communications Plan editor with saved versions and a real PDF export rendered on the device |
 | Members | Roles (admin, operator, viewer, pending), ARES group membership, invitations, profile photos, call sign validation |
-| My assignments | Personal view of every item and task assigned to the signed-in operator across sites |
+| My assignments | Personal view of every item, task and site for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
 | Notifications | In-app notifications for assignments and changes |
 | Exports | Deployment summary text export, ICS 205 PDF |
 | Platforms | Web, installable PWA (desktop and mobile), Windows desktop app with signed auto-updates |
