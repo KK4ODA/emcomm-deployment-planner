@@ -26,50 +26,72 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // 'autoUpdate' silently activates new SW versions on next page load.
-      // Operators don't get a "reload to update" banner — they just get fresh
-      // code on their next refresh. Trade-off: if you push during active use,
-      // their next navigation reloads the page; with the event log + outbox,
-      // unsaved work survives, so this is safe in practice.
+      // New service workers activate on the next load; UpdatePrompt offers an
+      // immediate reload when a fresh build is waiting.
       registerType: 'autoUpdate',
-      // Don't run the SW in dev (would interfere with HMR)
+      // Registration happens in React (features/pwa/UpdatePrompt) so the
+      // desktop build, which bundles its own assets, can skip it entirely.
+      injectRegister: null,
       devOptions: { enabled: false },
-      // Don't include .htaccess — Apache serves it 403 (server config, not a
-      // public asset), which makes Workbox's precache install fail and prevents
-      // SW activation entirely.
-      includeAssets: ['login-bg.jpg'],
+      includeAssets: ['favicon.svg', 'login-bg.jpg', 'icons/*.png'],
       manifest: {
         name: 'EmComm Planner',
         short_name: 'EmComm',
         description: 'ARES emergency communications deployment planner',
         theme_color: '#0f172a',
-        background_color: '#f8fafc',
+        background_color: '#f4f6fa',
         display: 'standalone',
+        orientation: 'any',
         start_url: '/',
-        // No icons yet — browser uses fallback. Add /pwa-192x192.png and
-        // /pwa-512x512.png to public/ later for proper homescreen icons.
+        scope: '/',
+        categories: ['productivity', 'utilities'],
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
-        // Precache the app shell (HTML, JS, CSS, images that Vite emits)
+        // App shell: everything Vite emits (fonts included) is precached so the
+        // UI loads with no network at all.
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,webp,woff2}'],
-        // Navigation requests fall back to index.html when offline → SPA routing works
+        // .htaccess is server configuration, not an asset (Apache 403s it).
+        globIgnores: ['**/.htaccess'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: '/index.html',
-        // Don't cache Supabase API; always go to network when online
         navigateFallbackDenylist: [/^\/api/, /^\/storage/, /^\/auth/, /supabase\.co/],
-        // Runtime cache: Supabase Storage avatars (network-first with offline fallback)
         runtimeCaching: [
           {
-            urlPattern: /\/storage\/v1\/object\/public\//,
-            handler: 'StaleWhileRevalidate',
+            // Reference data (deployments, sites, items, members...). Network
+            // first so online users always see fresh rows; the last good
+            // response is served when the server is unreachable, which lets
+            // the dashboard render read-only after an offline reload.
+            urlPattern: ({ url, request }) => request.method === 'GET' && /\.supabase\.co$/.test(url.hostname) && url.pathname.startsWith('/rest/v1/'),
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-storage',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheName: 'supabase-rest',
+              networkTimeoutSeconds: 6,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 14 },
+              cacheableResponse: { statuses: [200] },
             },
           },
+          {
+            // Profile photos
+            urlPattern: /\/storage\/v1\/object\/public\//,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'supabase-storage', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
+          {
+            // Map tiles: keep what has been viewed so recently used areas still
+            // render offline. Tiles never change, so cache first.
+            urlPattern: /^https:\/\/([a-z]\.tile\.openstreetmap\.org|server\.arcgisonline\.com)\//,
+            handler: 'CacheFirst',
+            options: { cacheName: 'map-tiles', expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 30 }, cacheableResponse: { statuses: [0, 200] } },
+          },
         ],
-        // With autoUpdate, the new SW takes over next page load
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
       },
     }),
   ],
