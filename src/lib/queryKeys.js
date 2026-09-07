@@ -24,5 +24,6 @@ export const queryKeys = Object.freeze({
   hourEntries: ['hour-entries'],
   feedback: ['feedback'],
   lessons: ['lessons'],
+  mapLayers: ['map-layers'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });

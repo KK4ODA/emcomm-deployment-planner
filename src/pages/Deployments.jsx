@@ -11,7 +11,7 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useMapLayers, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
 import { lessonsToCarry } from '@/lib/aar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { db } from '@/api/db';
@@ -77,6 +77,7 @@ export default function Deployments() {
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
   const lessonsQ = useLessons();
+  const layersQ = useMapLayers();
 
   const [form, setForm] = useState({ open: false, deployment: null });
   const [templateFor, setTemplateFor] = useState(null);
@@ -116,6 +117,7 @@ export default function Deployments() {
       assignments: byDep(assignmentsQ.data),
       plans: byDep(plansQ.data),
       planRows: byDep(formsQ.data),
+      layers: byDep(layersQ.data),
     };
   };
 

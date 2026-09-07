@@ -25,6 +25,7 @@ export const TABLES = Object.freeze({
   hourEntries: 'hour_entries',
   feedback: 'feedback',
   lessons: 'lessons',
+  mapLayers: 'map_layers',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -150,4 +151,5 @@ export const db = Object.freeze({
   hourEntries: createRepository(TABLES.hourEntries),
   feedback: createRepository(TABLES.feedback),
   lessons: createRepository(TABLES.lessons),
+  mapLayers: createRepository(TABLES.mapLayers),
 });

@@ -52,6 +52,7 @@ SQL editor or the Supabase CLI (`supabase db push`).
 
 | `feedback` | Post-event feedback, one per user per deployment, or anonymous (`user_id` NULL): rating 1–5, went well, problems, comms worked yes/partly/no, comms and equipment notes, one change (012) |
 | `lessons` | Lessons learned per group and deployment, optional position/site, category staffing/comms/equipment/logistics/safety/process, finding, recommendation, status open/carried_forward/addressed/wont_fix, `carried_from_lesson_id` (012) |
+| `map_layers` | Imported course routes, boundaries and waypoints per deployment: `name`, `kind` route/area/points/mixed, `color`, `geojson` (FeatureCollection, < 4 MB), `source_file`, `sort_order` (016). Planners write, group reads |
 | `notifications` | Per-user notifications produced by triggers |
 
 RPC `set_assignment_status(assignment, status, at, note, intent_id)`

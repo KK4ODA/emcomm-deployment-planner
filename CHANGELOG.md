@@ -15,6 +15,11 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   is told. Shifts you do not qualify for, or that overlap one you already
   hold, say why. Planners can turn self sign-up off per position.
 
+- **Map layers**: import the course route, boundaries or waypoints from a
+  KML, GPX or GeoJSON file onto the site map (Sites > Map layers). Turn a
+  layer's waypoints into sites in one click. Layers copy with the
+  deployment when you duplicate it.
+
 ### Changed
 - **Offline queue**: a queued change the server refuses for good (for
   example a permission) no longer retries forever in silence. It shows as

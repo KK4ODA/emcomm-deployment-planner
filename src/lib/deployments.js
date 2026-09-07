@@ -136,12 +136,12 @@ export function shiftIso(iso, deltaMs) {
  * Returns the new deployment row and counts.
  *
  * @param {Object} repos db repositories (deployments, locations, categories, items, operationalPeriods?, positions?, shifts?, assignments?, commsPlans?, commsPlanChannels?)
- * @param {{ source: Object, locations: Object[], categories: Object[], items: Object[], tasks?: Object[], periods?: Object[], positions?: Object[], shifts?: Object[], assignments?: Object[], plans?: Object[], planRows?: Object[] }} data already scoped to the source deployment
+ * @param {{ source: Object, locations: Object[], categories: Object[], items: Object[], tasks?: Object[], periods?: Object[], positions?: Object[], shifts?: Object[], assignments?: Object[], plans?: Object[], planRows?: Object[], layers?: Object[] }} data already scoped to the source deployment
  * @param {{ name: string, createdBy?: string|null, withAssignments?: boolean, withTasks?: boolean, withPlan?: boolean, newStartsAt?: string|null, createTask?: (task: Object) => Promise<any> }} options
  */
 export async function duplicateDeployment(
   repos,
-  { source, locations, categories, items, tasks = [], periods = [], positions = [], shifts = [], assignments = [], plans = [], planRows = [] },
+  { source, locations, categories, items, tasks = [], periods = [], positions = [], shifts = [], assignments = [], plans = [], planRows = [], layers = [] },
   { name, createdBy = null, withAssignments = true, withTasks = true, withPlan = true, newStartsAt = null, createTask },
 ) {
   const anchor = source.starts_at || periods[0]?.starts_at || shifts[0]?.starts_at || null;
@@ -275,9 +275,16 @@ export async function duplicateDeployment(
     }
   }
 
+  // Map layers (course route, boundaries) belong to the event, not the year.
+  let layerCount = 0;
+  for (const l of layers) {
+    await repos.mapLayers.create({ deployment_id: deployment.id, name: l.name, kind: l.kind, color: l.color, geojson: l.geojson, source_file: l.source_file, sort_order: l.sort_order ?? layerCount, created_by: createdBy });
+    layerCount += 1;
+  }
+
   return {
     deployment,
-    counts: { categories: categoryIds.size, locations: locationIds.size, items: itemCount, tasks: taskCount, periods: periodIds.size, positions: positionIds.size, shifts: shiftCount, assignments: assignmentCount, channels: channelCount },
+    counts: { categories: categoryIds.size, locations: locationIds.size, items: itemCount, tasks: taskCount, periods: periodIds.size, positions: positionIds.size, shifts: shiftCount, assignments: assignmentCount, channels: channelCount, layers: layerCount },
     shiftedDays: delta ? Math.round(delta / 86_400_000) : 0,
     positionIds,
     locationIds,

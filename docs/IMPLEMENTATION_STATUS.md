@@ -82,14 +82,20 @@ can resume without re-deriving state.
   discard, inbox apply and high-water mark, no status regression, counts).
   209 tests total.
 
+- 2026-09-07 **Phase 4e, map layers** (migration `016`, applied):
+  `map_layers` table; dependency-free KML/GPX/GeoJSON parser; overlays on
+  the site map framed with the sites; import dialog with colour and name;
+  waypoints to sites; layers copied on duplicate. Tests: geo (10). 218
+  tests total.
+
 ## In Progress
 
 - Nothing mid-flight.
 
 ## Next
 
-Phase 4 remainder in roadmap order: map KML/GPX import; asset registry with
-custody; objectives. Housekeeping still on the user: delete
+Phase 4 remainder in roadmap order: asset registry with custody;
+objectives. Housekeeping still on the user: delete
 the `export-ics205` and `get-what3words` Edge Functions in the dashboard and
 turn on leaked-password protection under Auth.
 

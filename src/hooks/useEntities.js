@@ -93,6 +93,9 @@ export function useFeedback(deploymentId) {
     enabled: !!deploymentId,
   });
 }
+export function useMapLayers() {
+  return useQuery({ queryKey: queryKeys.mapLayers, queryFn: () => db.mapLayers.list({ orderBy: 'sort_order' }) });
+}
 export function useLessons() {
   return useQuery({ queryKey: queryKeys.lessons, queryFn: () => db.lessons.list({ orderBy: 'created_at', ascending: false }) });
 }

@@ -199,6 +199,19 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
   deployment (and remapped position) when a deployment is duplicated;
   `CarriedLessons` shows them on Staffing until they are marked addressed.
 
+## Map layers
+
+- `src/lib/geo.js` parses KML (Placemark Point / LineString / Polygon /
+  MultiGeometry / gx:Track, style colours), GPX (wpt / trk / rte) and
+  GeoJSON into a FeatureCollection with the browser's DOMParser, and
+  computes summaries, bounds, waypoints and route length. No dependency.
+- Layers are stored per deployment in `map_layers` (GeoJSON in JSONB, under
+  4 MB) and drawn by `SiteMap` as toggleable overlays under the site
+  markers; the map frames sites and layers together. `MapLayersDialog`
+  (Sites › Map layers, planners) imports a file, names and colours it, lists
+  and removes layers, and creates sites from a layer's waypoints (skipping
+  names that already exist). Duplicating a deployment copies its layers.
+
 ## Deployment lifecycle
 
 `planning → active → completed → archived`, with "back to planning",
