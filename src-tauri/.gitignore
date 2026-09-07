@@ -1,0 +1,9 @@
+# Rust build output and generated Tauri schemas
+/target/
+/gen/schemas/
+
+# Never commit signing material
+*.key
+*.key.pub
+*.pfx
+*.p12

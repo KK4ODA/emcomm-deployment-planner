@@ -1,0 +1,32 @@
+[package]
+name = "emcomm-planner"
+# The version is read from tauri.conf.json (which points at ../package.json)
+# at build time; this value is only a placeholder for cargo metadata.
+version = "0.0.0"
+description = "EmComm Deployment Planner desktop application"
+authors = ["KK4ODA"]
+edition = "2021"
+publish = false
+
+[lib]
+name = "emcomm_planner_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

@@ -7,6 +7,7 @@ import { Hint } from '@/components/ui/tooltip';
 import { CallSignList, CallSign } from '@/components/common/CallSign';
 import { ProgressBar } from '@/components/common/ProgressBar';
 import { parseCoordinates } from '@/lib/coordinates';
+import { openExternal } from '@/lib/platform';
 import { ROUTES } from '@/app/routes';
 import { cn } from '@/lib/utils';
 
@@ -44,7 +45,9 @@ export function SiteCard({ location, itemStats, taskSummary, hasIcs205, canEdit,
           {location.address && (
             <div className="flex items-start gap-1.5">
               <Navigation className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              {mapsHref ? <a href={mapsHref} target="_blank" rel="noreferrer" className="font-mono hover:underline">{location.address}</a> : <span>{location.address}</span>}
+              {mapsHref ? (
+                <a href={mapsHref} onClick={(e) => { e.preventDefault(); openExternal(mapsHref); }} className="font-mono hover:underline" title="Open in maps">{location.address}</a>
+              ) : <span>{location.address}</span>}
             </div>
           )}
           {location.contact_person && (
