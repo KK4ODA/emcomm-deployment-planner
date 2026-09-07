@@ -37,12 +37,18 @@ None required. Supabase tables were created fresh during the first migration wit
 
 Authentication was already Supabase Auth (email/password, invites, password recovery). The removal deleted the duplicate `auth.me()` path in the shim; the single source of truth is `AuthContext`, which reads the `users` profile row for the signed-in Supabase user.
 
-## Verification of independence
+## Verification of independence (2026-09-06)
 
-After removal:
-
-- `grep -ri base44` over the repository returns matches only in this file.
-- `package.json` and `package-lock.json` contain no `@base44/*` packages; `npm ls` shows no Base44 packages.
-- The app installs, builds, lints, type-checks, and runs with only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set.
-- The test suite (Vitest) exercises the data layer, auth helpers, task event log, and permission logic without any Base44 code.
-- The desktop build (Tauri) bundles the same Vite output and needs no Base44 tooling.
+- `grep -ri base44` over the repository (excluding `node_modules`, `dist`,
+  `src-tauri/target`) matches only this file, the historical baseline note in
+  `docs/baseline-2026-09-06.md`, the CHANGELOG entry and the README link to
+  this document. No source, configuration, workflow or manifest file mentions it.
+- `package.json` / `package-lock.json` contain no `@base44/*` packages
+  (`npm ls | grep -i base44` is empty).
+- `npm install`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
+  and `npm run desktop:build` succeed with only `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY` set. No `VITE_BASE44_*` variable exists.
+- Authentication, data access, Edge Functions, the PWA service worker and the
+  Windows installer/updater are all Supabase-, GitHub- or local-only.
+- The Vitest suite (95 tests) covers the replacement data layer, auth helpers,
+  task event log, permissions and domain logic.
