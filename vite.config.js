@@ -2,9 +2,27 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'fs'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
 export default defineConfig({
-  logLevel: 'error',
+  // Single source of truth for the version shown in the UI: package.json
+  define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version) },
+  // Tauri dev server needs a fixed port and no HMR reconnect surprises
+  server: { port: 5173, strictPort: true },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+          leaflet: ['leaflet', 'react-leaflet'],
+          pdf: ['jspdf'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
