@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,7 +167,6 @@ function ResetForm({ onBack }) {
       </FormField>
       <Button type="submit" className="w-full" loading={busy}>Send reset link</Button>
       <Button type="button" variant="ghost" className="w-full" onClick={onBack}>Back to sign in</Button>
-      <p className="sr-only"><Link to={ROUTES.login}>Sign in</Link></p>
     </form>
   );
 }

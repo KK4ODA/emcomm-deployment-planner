@@ -9,6 +9,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { RequireAresGroup } from '@/features/auth/RequireAresGroup';
 import { UpdatePrompt } from '@/features/pwa/UpdatePrompt';
+import { DesktopUpdater } from '@/features/desktop/DesktopUpdater';
 import { cn } from '@/lib/utils';
 
 const VERSION = import.meta.env.VITE_APP_VERSION;
@@ -37,6 +38,7 @@ export function AppShell({ children }) {
         </div>
         <RequireAresGroup />
         <UpdatePrompt />
+        <DesktopUpdater />
       </div>
     </TooltipProvider>
   );
