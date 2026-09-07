@@ -1,391 +1,211 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Users, UserPlus, Mail, Phone, Pencil, Shield, Trash2, MoreHorizontal, Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PageHeader } from '@/components/common/PageHeader';
+import { SearchInput } from '@/components/common/SearchInput';
+import { EmptyState } from '@/components/common/EmptyState';
+import { QueryState } from '@/components/common/QueryState';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { CallSign } from '@/components/common/CallSign';
+import { RoleBadge } from '@/components/common/Badges';
+import { useConfirm } from '@/components/common/ConfirmDialog';
+import { useAuth } from '@/lib/AuthContext';
+import { useUsers, useItems, useLocations, useDeployments, useAresGroups, reportMutationError } from '@/hooks/useEntities';
 import { db } from '@/api/db';
-import { upsertMemberProfile, cleanupDeletedUser, inviteUser as inviteUserFn } from '@/api/functions';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Search, User, Radio, Phone, Mail, Package, ArrowLeft, Shield, Eye, Edit, Settings, Trash2, UserPlus } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { motion } from "framer-motion";
-import { hasPermission, getRoleLabel } from "@/components/permissions.jsx";
-import RoleChangeDialog from "@/components/RoleChangeDialog";
-import UserEditDialog from "@/components/UserEditDialog";
-import InviteUserDialog from "@/components/InviteUserDialog";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { useAuth } from "@/lib/AuthContext";
+import { upsertMemberProfile, cleanupDeletedUser, inviteUser } from '@/api/functions';
+import { queryKeys } from '@/lib/queryKeys';
+import { hasPermission, ROLE_ORDER } from '@/lib/permissions';
+import { itemsAssignedTo } from '@/lib/assignments';
+import { InviteMemberDialog } from '@/features/members/InviteMemberDialog';
+import { MemberEditDialog } from '@/features/members/MemberEditDialog';
+import { RoleDialog } from '@/features/members/RoleDialog';
+import { cn } from '@/lib/utils';
 
 export default function Members() {
-  const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-
+  const { user, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
+  const usersQ = useUsers();
+  const itemsQ = useItems();
+  const locationsQ = useLocations();
+  const deploymentsQ = useDeployments();
+  const groupsQ = useAresGroups();
 
-  const { data: users = [], refetch: refetchUsers } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => db.users.list(),
-    staleTime: 0,
-    gcTime: 0
-  });
+  const [search, setSearch] = useState('');
+  const [invite, setInvite] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [roleFor, setRoleFor] = useState(null);
+  const { confirm, dialog } = useConfirm();
 
-  const { data: items = [] } = useQuery({
-    queryKey: ['items'],
-    queryFn: () => db.items.list()
-  });
+  const role = user?.app_role;
+  const canManage = hasPermission(role, 'MANAGE_USERS');
+  const canInvite = hasPermission(role, 'INVITE_USERS');
 
-  const { data: locations = [] } = useQuery({
-    queryKey: ['locations'],
-    queryFn: () => db.locations.list()
-  });
-
-  const { data: deployments = [] } = useQuery({
-    queryKey: ['deployments'],
-    queryFn: () => db.deployments.list()
-  });
-
-  const filteredUsers = users.filter(user => 
-    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.call_sign?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const canManageUsers = hasPermission(user?.app_role || user?.role, 'MANAGE_USERS');
-  const canInviteUsers = hasPermission(user?.app_role || user?.role, 'INVITE_USERS');
+  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: queryKeys.users });
 
   const changeRole = useMutation({
-    mutationFn: ({ userId, role }) => db.users.update(userId, { app_role: role }),
-    onSuccess: async () => {
-      await refetchUsers();
-      toast.success('User role updated successfully');
-      setRoleDialogOpen(false);
-      setSelectedUser(null);
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update user role');
-    }
+    mutationFn: (/** @type {{ id: string, app_role: string }} */ { id, app_role }) => db.users.update(id, { app_role }),
+    onSuccess: () => { invalidateUsers(); setRoleFor(null); toast.success('Role updated'); },
+    onError: reportMutationError('Change role'),
   });
 
-  const handleRoleChange = (userId, newRole) => {
-    changeRole.mutate({ userId, role: newRole });
-  };
-
-  const updateProfile = useMutation({
-    mutationFn: (profileData) => upsertMemberProfile(profileData),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
-      toast.success('User profile updated successfully');
-      setEditDialogOpen(false);
-      setSelectedUser(null);
+  const saveProfile = useMutation({
+    mutationFn: async (/** @type {{ member: Object, data: Object }} */ { member, data }) => {
+      // Edge function updates name/call sign/phone with service role; groups go straight to the row (admin RLS).
+      await upsertMemberProfile({ email: member.email, full_name: data.full_name, call_sign: data.call_sign, phone: data.phone || '—', aprs_call_sign: data.aprs_call_sign });
+      await db.users.update(member.id, { ares_group_ids: data.ares_group_ids, phone: data.phone });
     },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update user profile');
-    }
+    onSuccess: (_d, { member }) => { invalidateUsers(); setEditing(null); toast.success('Member updated'); if (member.id === user?.id) refreshProfile(); },
+    onError: reportMutationError('Update member'),
   });
 
-  const handleProfileSave = (profileData) => {
-    updateProfile.mutate(profileData);
-  };
-
-  const deleteUser = useMutation({
-    mutationFn: async (userId) => {
-      const userToDelete = users.find(u => u.id === userId);
-      if (userToDelete?.call_sign) {
-        await cleanupDeletedUser(userToDelete.call_sign);
-      }
-      return db.users.remove(userId);
+  const removeMember = useMutation({
+    mutationFn: async (/** @type {Object} */ member) => {
+      if (member.call_sign) await cleanupDeletedUser(member.call_sign);
+      await db.users.remove(member.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
-      queryClient.invalidateQueries(['items']);
-      queryClient.invalidateQueries(['locations']);
-      queryClient.invalidateQueries(['tasks']);
-      toast.success('User deleted and references cleaned up');
+      for (const key of [queryKeys.users, queryKeys.items, queryKeys.locations, queryKeys.tasks]) queryClient.invalidateQueries({ queryKey: key });
+      toast.success('Member removed and assignments cleared');
     },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to delete user');
-    }
+    onError: reportMutationError('Remove member'),
   });
 
-  const handleDeleteUser = (userId) => {
-    if (confirm('Are you sure you want to delete this user? All their assignments will be removed.')) {
-      deleteUser.mutate(userId);
-    }
-  };
-
-  const inviteUser = useMutation({
-    mutationFn: async ({ email, role, aresGroupIds }) => {
-      await inviteUserFn({ email, role, aresGroupIds });
-    },
-    onSuccess: () => {
-      toast.success('Invitation sent successfully');
-      setInviteDialogOpen(false);
-      queryClient.invalidateQueries(['users']);
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to send invitation');
-    }
+  const sendInvite = useMutation({
+    mutationFn: (/** @type {{ email: string, role?: string, aresGroupIds?: string[] }} */ data) => inviteUser(data),
+    onSuccess: (_r, data) => { invalidateUsers(); setInvite(false); toast.success(`Invitation sent to ${data.email}`); },
+    onError: reportMutationError('Invite'),
   });
 
-  const handleInvite = (inviteData) => {
-    inviteUser.mutate(inviteData);
+  const members = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = (usersQ.data ?? []).filter(m => !q || [m.full_name, m.call_sign, m.email].some(v => v?.toLowerCase().includes(q)));
+    return list.sort((a, b) => ROLE_ORDER.indexOf(a.app_role) - ROLE_ORDER.indexOf(b.app_role) || (a.full_name || '').localeCompare(b.full_name || ''));
+  }, [usersQ.data, search]);
+
+  const groupName = useMemo(() => new Map((groupsQ.data ?? []).map(g => [g.id, g.name])), [groupsQ.data]);
+  const deploymentName = useMemo(() => new Map((deploymentsQ.data ?? []).map(d => [d.id, d.name])), [deploymentsQ.data]);
+  const locationDeployment = useMemo(() => new Map((locationsQ.data ?? []).map(l => [l.id, l.deployment_id])), [locationsQ.data]);
+
+  const assignmentSummary = (callSign) => {
+    const items = itemsAssignedTo(itemsQ.data ?? [], callSign);
+    const byDeployment = new Map();
+    for (const i of items) {
+      const dep = deploymentName.get(locationDeployment.get(i.deployment_location_id));
+      if (!dep) continue;
+      byDeployment.set(dep, (byDeployment.get(dep) || 0) + 1);
+    }
+    return { total: items.length, byDeployment };
   };
 
-  const getRoleIcon = (role) => {
-    const icons = {
-      admin: Shield,
-      operator: Settings,
-      viewer: User,
-      pending: Eye
-    };
-    return icons[role] || User;
+  const del = async (member) => {
+    const ok = await confirm({ title: `Remove ${member.full_name || member.email}?`, description: 'Their item, site and task assignments will be cleared. Their sign-in is deleted as well.', destructive: true, confirmLabel: 'Remove member' });
+    if (ok) removeMember.mutate(member);
   };
 
-  const getAssignedItemsByDeployment = (callSign) => {
-    const userItems = items.filter(item => item.assigned_to === callSign);
-    const itemsByDeployment = {};
-    
-    userItems.forEach(item => {
-      const location = locations.find(loc => loc.id === item.deployment_location_id);
-      if (location) {
-        const deployment = deployments.find(d => d.id === location.deployment_id);
-        if (deployment) {
-          if (!itemsByDeployment[deployment.id]) {
-            itemsByDeployment[deployment.id] = {
-              deployment,
-              items: []
-            };
-          }
-          itemsByDeployment[deployment.id].items.push(item);
-        }
-      }
-    });
-    
-    return itemsByDeployment;
-  };
+  const pendingCount = (usersQ.data ?? []).filter(m => m.app_role === 'pending').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-        <Link 
-          to={createPageUrl('Dashboard')} 
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Team Members</h1>
-            <p className="text-slate-500">View all registered members and their assignments</p>
-          </div>
-          {canInviteUsers && (
-            <Button
-              onClick={() => setInviteDialogOpen(true)}
-              className="bg-slate-900 hover:bg-slate-800"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite User
-            </Button>
-          )}
-        </div>
-
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search by name, call sign, or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-white border-slate-200"
-          />
-        </div>
-
-        <div className="grid gap-4">
-          {filteredUsers.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
-              <User className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No members found</h3>
-              <p className="text-slate-500">
-                {searchQuery ? 'Try a different search term' : 'No members have registered yet'}
-              </p>
-            </div>
-          ) : (
-            filteredUsers.map((member, index) => {
-              const itemsByDeployment = getAssignedItemsByDeployment(member.call_sign);
-              const totalItems = Object.values(itemsByDeployment).reduce((sum, d) => sum + d.items.length, 0);
-              
-              return (
-                <motion.div
-                  key={member.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="border-slate-100 hover:shadow-lg transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-slate-800 to-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-semibold">
-                              {member.full_name?.charAt(0) || '?'}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-slate-900">{member.full_name}</h3>
-                              <Badge 
-                               variant="outline" 
-                               className={`text-xs cursor-pointer ${
-                                 member.app_role === 'admin' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                 member.app_role === 'operator' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                 member.app_role === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                 'bg-slate-50 text-slate-700 border-slate-200'
-                               }`}
-                                onClick={() => {
-                                  if (canManageUsers) {
-                                    setSelectedUser(member);
-                                    setRoleDialogOpen(true);
-                                  }
-                                }}
-                                title={canManageUsers ? 'Click to change role' : ''}
-                              >
-                                {React.createElement(getRoleIcon(member.app_role), { className: "h-3 w-3 mr-1" })}
-                                {getRoleLabel(member.app_role)}
-                              </Badge>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                              {member.call_sign && (
-                                <span className="flex items-center gap-1.5 font-mono bg-slate-100 px-2 py-0.5 rounded">
-                                  <Radio className="h-3.5 w-3.5" />
-                                  {member.call_sign}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1.5">
-                                <Mail className="h-3.5 w-3.5" />
-                                {member.email}
-                              </span>
-                              {member.phone && (
-                                <span className="flex items-center gap-1.5">
-                                  <Phone className="h-3.5 w-3.5" />
-                                  {member.phone}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 sm:ml-auto">
-                          {canManageUsers && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedUser(member);
-                                  setEditDialogOpen(true);
-                                }}
-                                className="gap-2"
-                              >
-                                <Edit className="h-4 w-4" />
-                                Edit
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedUser(member);
-                                  setRoleDialogOpen(true);
-                                }}
-                                className="gap-2"
-                              >
-                                <Shield className="h-4 w-4" />
-                                Role
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteUser(member.id)}
-                                className="gap-2 text-red-600 hover:text-red-700 hover:border-red-300"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </Button>
-                            </>
-                          )}
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg">
-                            <Package className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm font-medium text-slate-700">
-                              {totalItems} item{totalItems !== 1 ? 's' : ''} assigned
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {Object.keys(itemsByDeployment).length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
-                          {Object.values(itemsByDeployment).map(({ deployment, items }) => (
-                            <div key={deployment.id}>
-                              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
-                                {deployment.name}
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {items.map(item => (
-                                  <Badge 
-                                    key={item.id} 
-                                    variant="secondary" 
-                                    className="bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                  >
-                                    {item.name}
-                                    {item.quantity > 1 && ` ×${item.quantity}`}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
-
-        <RoleChangeDialog
-          open={roleDialogOpen}
-          onClose={() => {
-            setRoleDialogOpen(false);
-            setSelectedUser(null);
-          }}
-          user={selectedUser}
-          onRoleChange={handleRoleChange}
-        />
-
-        <UserEditDialog
-          open={editDialogOpen}
-          onClose={() => {
-            setEditDialogOpen(false);
-            setSelectedUser(null);
-          }}
-          user={selectedUser}
-          onSave={handleProfileSave}
-        />
-
-        <InviteUserDialog
-          open={inviteDialogOpen}
-          onClose={() => setInviteDialogOpen(false)}
-          onInvite={handleInvite}
-          currentUserRole={user?.app_role || user?.role}
-        />
+    <>
+      <PageHeader
+        icon={Users}
+        title="Members"
+        description={pendingCount > 0 ? `${pendingCount} member${pendingCount === 1 ? '' : 's'} awaiting approval` : 'Everyone registered across your ARES groups'}
+        actions={canInvite && <Button onClick={() => setInvite(true)}><UserPlus /> Invite member</Button>}
+      />
+      <div className="mb-3 max-w-md">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search by name, call sign or email…" />
       </div>
-    </div>
+
+      <QueryState queries={[usersQ, itemsQ, locationsQ, deploymentsQ]}>
+        {members.length === 0 ? (
+          <EmptyState icon={Users} title="No members found" description={search ? 'Try a different search.' : 'Invite the first member of your group.'} />
+        ) : (
+          <div className="rounded-lg border bg-card shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead className="hidden md:table-cell">Contact</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="hidden lg:table-cell">ARES groups</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Items</TableHead>
+                  {(canManage || canInvite) && <TableHead className="w-10"><span className="sr-only">Actions</span></TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map(m => {
+                  const a = assignmentSummary(m.call_sign);
+                  const isSelf = m.id === user?.id;
+                  return (
+                    <TableRow key={m.id} className={cn(m.app_role === 'pending' && 'bg-accent/5')}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <UserAvatar user={m} size="sm" />
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{m.full_name || <span className="text-muted-foreground">No name yet</span>}{isSelf && <span className="ml-1 text-xs text-muted-foreground">(you)</span>}</p>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                              {m.call_sign ? <CallSign value={m.call_sign} /> : <span>No call sign</span>}
+                              {m.aprs_call_sign && <span className="font-mono">APRS {m.aprs_call_sign}</span>}
+                              <span className="md:hidden truncate">{m.email}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5"><Mail className="h-3 w-3" /><a href={`mailto:${m.email}`} className="hover:underline">{m.email}</a></div>
+                        {m.phone && <div className="mt-0.5 flex items-center gap-1.5"><Phone className="h-3 w-3" /><a href={`tel:${m.phone}`} className="hover:underline">{m.phone}</a></div>}
+                      </TableCell>
+                      <TableCell>
+                        {canManage ? (
+                          <button type="button" onClick={() => setRoleFor(m)} className="rounded" title="Change role"><RoleBadge role={m.app_role} /></button>
+                        ) : <RoleBadge role={m.app_role} />}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                        {(m.ares_group_ids || []).map(id => groupName.get(id)).filter(Boolean).join(', ') || '—'}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-right">
+                        {a.total > 0 ? (
+                          <span className="tnum inline-flex items-center gap-1 text-sm" title={[...a.byDeployment].map(([d, n]) => `${d}: ${n}`).join('\n')}>
+                            <Package className="h-3.5 w-3.5 text-muted-foreground" /> {a.total}
+                          </span>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
+                      {(canManage || canInvite) && (
+                        <TableCell>
+                          {canManage && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Actions for ${m.full_name || m.email}`}><MoreHorizontal /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setEditing(m)}><Pencil /> Edit profile</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRoleFor(m)}><Shield /> Change role</DropdownMenuItem>
+                                {!isSelf && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => del(m)} className="text-destructive focus:text-destructive"><Trash2 /> Remove member</DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </QueryState>
+
+      <InviteMemberDialog open={invite} onClose={() => setInvite(false)} onInvite={(d) => sendInvite.mutate(d)} currentUserRole={role} submitting={sendInvite.isPending} />
+      <MemberEditDialog open={!!editing} member={editing} onClose={() => setEditing(null)} onSave={(data) => saveProfile.mutate({ member: editing, data })} submitting={saveProfile.isPending} />
+      <RoleDialog open={!!roleFor} member={roleFor} onClose={() => setRoleFor(null)} onChange={(app_role) => changeRole.mutate({ id: roleFor.id, app_role })} submitting={changeRole.isPending} />
+      {dialog}
+    </>
   );
 }

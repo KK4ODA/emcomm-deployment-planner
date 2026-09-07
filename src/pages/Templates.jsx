@@ -1,177 +1,88 @@
 import React, { useState } from 'react';
-import { db } from '@/api/db';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Trash2, Clock } from "lucide-react";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import TemplateForm from "@/components/TemplateForm";
-import { useAuth } from "@/lib/AuthContext";
+import { toast } from 'sonner';
+import { FileText, Trash2, Pencil, Layers, MapPin, Package, Clock } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/common/PageHeader';
+import { EmptyState } from '@/components/common/EmptyState';
+import { QueryState } from '@/components/common/QueryState';
+import { useConfirm } from '@/components/common/ConfirmDialog';
+import { useAuth } from '@/lib/AuthContext';
+import { useTemplates, useEntityMutations } from '@/hooks/useEntities';
+import { queryKeys } from '@/lib/queryKeys';
+import { canEdit, canDelete } from '@/lib/permissions';
+import { formatDateTime } from '@/lib/time';
+import { TemplateForm } from '@/features/templates/TemplateForm';
 
-export default function TemplatesPage() {
+export default function Templates() {
   const { user } = useAuth();
-  const [editFormOpen, setEditFormOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState(null);
+  const templatesQ = useTemplates();
+  const mutations = useEntityMutations('templates', queryKeys.templates, { label: 'template' });
+  const [editing, setEditing] = useState(null);
+  const { confirm, dialog } = useConfirm();
+  const mayEdit = canEdit(user?.app_role, 'template');
+  const mayDelete = canDelete(user?.app_role, 'template');
 
-  const queryClient = useQueryClient();
-
-  const { data: templates = [] } = useQuery({
-    queryKey: ['templates'],
-    queryFn: () => db.templates.list({ orderBy: 'created_at', ascending: false })
-  });
-
-  const isAdmin = user?.app_role === 'admin';
-
-  const updateTemplate = useMutation({
-    mutationFn: ({ id, data }) => db.templates.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['templates']);
-      setEditFormOpen(false);
-      setEditingTemplate(null);
-      toast.success('Template updated');
-    },
-    onError: (err) => {
-      console.error('Update template failed:', err);
-      toast.error(`Failed to update template: ${err?.message || 'unknown error'}`);
-    },
-  });
-
-  const deleteTemplate = useMutation({
-    mutationFn: (id) => db.templates.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['templates']);
-      toast.success('Template deleted');
-    },
-    onError: (err) => {
-      console.error('Delete template failed:', err);
-      toast.error(`Failed to delete template: ${err?.message || 'unknown error'}`);
-    },
-  });
-
-  const handleEditSubmit = (data) => {
-    if (editingTemplate) {
-      updateTemplate.mutate({
-        id: editingTemplate.id,
-        data: { ...editingTemplate, ...data }
-      });
+  const remove = async (template) => {
+    if (await confirm({ title: `Delete template “${template.name}”?`, description: 'Deployments already created from it are not affected.', destructive: true })) {
+      mutations.remove.mutate(template.id, { onSuccess: () => toast.success('Template deleted') });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Deployment Templates</h1>
-          <p className="text-slate-500">Reusable deployment structures for quick setup</p>
-        </div>
-
-        {templates.length === 0 ? (
-          <Card className="border-slate-100">
-            <CardContent className="py-16 text-center">
-              <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No templates yet</h3>
-              <p className="text-slate-500">
-                Save a deployment as a template from the Deployments page to reuse its structure
-              </p>
-            </CardContent>
-          </Card>
+    <>
+      <PageHeader icon={FileText} title="Deployment templates" description="Reusable site, category and item structures. Save one from any deployment." />
+      <QueryState queries={[templatesQ]}>
+        {(templatesQ.data ?? []).length === 0 ? (
+          <EmptyState icon={FileText} title="No templates yet" description="Open the Deployments page and choose “Save as template” from a deployment's menu." />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {templates.map((template, index) => (
-              <motion.div
-                key={template.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className="border-slate-100 hover:shadow-lg transition-all h-full">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className="p-2 bg-slate-100 rounded-lg">
-                          <FileText className="h-5 w-5 text-slate-600" />
-                        </div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
-                          {template.description && (
-                            <p className="text-sm text-slate-500 mt-1">{template.description}</p>
-                          )}
-                          {template.created_date && (
-                            <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
-                              <Clock className="h-3 w-3" />
-                              <span>Saved {format(new Date(template.created_date), 'MMM d, yyyy h:mm a')}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-rose-600 hover:text-rose-700"
-                          onClick={() => {
-                            if (confirm('Delete this template?')) {
-                              deleteTemplate.mutate(template.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {templatesQ.data.map(t => (
+              <Card key={t.id} className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-semibold">{t.name}</h3>
+                      {t.description && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{t.description}</p>}
+                      {t.created_at && (
+                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" /> Saved {formatDateTime(t.created_at)}</p>
                       )}
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-slate-50 rounded-lg p-2">
-                        <div className="text-lg font-bold text-slate-900">
-                          {template.category_count || 0}
-                        </div>
-                        <div className="text-xs text-slate-500">Categories</div>
+                    {(mayEdit || mayDelete) && (
+                      <div className="flex shrink-0">
+                        {mayEdit && <Button variant="ghost" size="icon-sm" aria-label="Edit template" onClick={() => setEditing(t)}><Pencil /></Button>}
+                        {mayDelete && <Button variant="ghost" size="icon-sm" aria-label="Delete template" className="text-destructive hover:text-destructive" onClick={() => remove(t)}><Trash2 /></Button>}
                       </div>
-                      <div className="bg-slate-50 rounded-lg p-2">
-                        <div className="text-lg font-bold text-slate-900">
-                          {template.item_count || 0}
-                        </div>
-                        <div className="text-xs text-slate-500">Items</div>
-                      </div>
-                      <div className="bg-slate-50 rounded-lg p-2">
-                        <div className="text-lg font-bold text-slate-900">
-                          {template.location_count || 0}
-                        </div>
-                        <div className="text-xs text-slate-500">Locations</div>
-                      </div>
-                    </div>
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        className="w-full mt-4"
-                        onClick={() => {
-                          setEditingTemplate(template);
-                          setEditFormOpen(true);
-                        }}
-                      >
-                        Edit Details
-                      </Button>
                     )}
-                  </CardContent>
-                </Card>
-              </motion.div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid grid-cols-3 gap-2 text-center">
+                    {[
+                      { icon: MapPin, label: 'Sites', value: t.location_count || 0 },
+                      { icon: Layers, label: 'Categories', value: t.category_count || 0 },
+                      { icon: Package, label: 'Items', value: t.item_count || 0 },
+                    ].map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="rounded-md bg-muted/60 py-2">
+                        <dd className="tnum text-lg font-semibold leading-tight">{value}</dd>
+                        <dt className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground"><Icon className="h-3 w-3" />{label}</dt>
+                      </div>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
-
-        <TemplateForm
-          open={editFormOpen}
-          onClose={() => {
-            setEditFormOpen(false);
-            setEditingTemplate(null);
-          }}
-          onSubmit={handleEditSubmit}
-          template={editingTemplate}
-        />
-      </div>
-    </div>
+      </QueryState>
+      <TemplateForm
+        open={!!editing}
+        template={editing}
+        onClose={() => setEditing(null)}
+        onSubmit={(data) => mutations.update.mutate({ id: editing.id, data }, { onSuccess: () => { setEditing(null); toast.success('Template updated'); } })}
+        submitting={mutations.update.isPending}
+      />
+      {dialog}
+    </>
   );
 }

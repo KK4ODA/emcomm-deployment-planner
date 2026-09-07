@@ -115,7 +115,7 @@ export function useEntityMutations(repoName, queryKey, { label, extraKeys = [] }
   };
 
   const create = useMutation({
-    mutationFn: (data) => repo.create(data),
+    mutationFn: (/** @type {Object} */ data) => repo.create(data),
     onSuccess: invalidate,
     onError: reportMutationError(`Create ${label}`),
   });
@@ -126,7 +126,7 @@ export function useEntityMutations(repoName, queryKey, { label, extraKeys = [] }
     onError: reportMutationError(`Update ${label}`),
   });
   const remove = useMutation({
-    mutationFn: (id) => repo.remove(id),
+    mutationFn: (/** @type {string} */ id) => repo.remove(id),
     onSuccess: invalidate,
     onError: reportMutationError(`Delete ${label}`),
   });

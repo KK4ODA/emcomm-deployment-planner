@@ -37,6 +37,7 @@ function unwrap({ data, error }) {
   return data;
 }
 
+/** @param {any} query @param {ListOptions} [options] */
 function applyOrder(query, { orderBy, ascending = true } = {}) {
   return orderBy ? query.order(orderBy, { ascending }) : query;
 }

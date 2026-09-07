@@ -1,504 +1,190 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Plus, FolderOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/common/PageHeader';
+import { EmptyState } from '@/components/common/EmptyState';
+import { QueryState } from '@/components/common/QueryState';
+import { useConfirm } from '@/components/common/ConfirmDialog';
+import { useAuth } from '@/lib/AuthContext';
+import { useCurrentDeployment } from '@/contexts/DeploymentContext';
+import { useOffline } from '@/contexts/OfflineContext';
+import { useCategories, useItems, useLocations, useUsers, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
 import { db } from '@/api/db';
 import { exportDeployment } from '@/api/functions';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Globe, Package, Pencil, Trash2, ArrowRight, Clock, Save, FileDown, FileText } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { motion } from "framer-motion";
-import { format } from "date-fns";
-import { createPageUrl } from "@/utils";
-import DeploymentForm from "@/components/DeploymentForm";
-import TemplateForm from "@/components/TemplateForm";
-import { toast } from "sonner";
-import { canCreate, canEdit, canDelete, hasPermission } from "@/components/permissions.jsx";
-import { useAuth } from "@/lib/AuthContext";
+import { queryKeys } from '@/lib/queryKeys';
+import { canCreate, canEdit, canDelete, hasPermission } from '@/lib/permissions';
+import { deploymentStats, locationsOf, itemsOf } from '@/lib/deployments';
+import { buildTemplateStructure, templateCounts, applyTemplate } from '@/lib/templates';
+import { downloadBlob, safeFileName } from '@/lib/download';
+import { fileTimestamp } from '@/lib/time';
+import { DeploymentCard } from '@/features/deployments/DeploymentCard';
+import { DeploymentForm } from '@/features/deployments/DeploymentForm';
+import { TemplateForm } from '@/features/templates/TemplateForm';
+import { ROUTES } from '@/app/routes';
 
-const statusStyles = {
-  planning: "bg-blue-100 text-blue-700 border-blue-200",
-  active: "bg-green-100 text-green-700 border-green-200",
-  completed: "bg-slate-100 text-slate-700 border-slate-200",
-  archived: "bg-amber-100 text-amber-700 border-amber-200",
-};
-
-const statusIcons = {
-  planning: Clock,
-  active: Package,
-  completed: Package,
-  archived: Package,
-};
+function normalizeDeployment(data) {
+  const { template_id: _template, start_date, end_date, ...rest } = data;
+  return { ...rest, start_date: start_date || null, end_date: end_date || null };
+}
 
 export default function Deployments() {
   const { user } = useAuth();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingDeployment, setEditingDeployment] = useState(null);
-  const [templateFormOpen, setTemplateFormOpen] = useState(false);
-  const [savingDeploymentId, setSavingDeploymentId] = useState(null);
-
+  const { deployments, deploymentId, selectDeployment, isLoading, isError } = useCurrentDeployment();
+  const { isOnline } = useOffline();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const categoriesQ = useCategories();
+  const itemsQ = useItems();
+  const locationsQ = useLocations();
+  const usersQ = useUsers();
 
-  const { data: allDeployments = [] } = useQuery({
-    queryKey: ['deployments'],
-    queryFn: () => db.deployments.list({ orderBy: 'created_at', ascending: false })
-  });
+  const [form, setForm] = useState({ open: false, deployment: null });
+  const [templateFor, setTemplateFor] = useState(null);
+  const [exportingId, setExportingId] = useState(null);
+  const { confirm, dialog } = useConfirm();
 
-  // Filter deployments by user's ARES groups
-  const deployments = allDeployments.filter(d => {
-    if (user?.app_role === 'admin') return true;
-    if (!user?.ares_group_ids || user.ares_group_ids.length === 0) return false;
-    return user.ares_group_ids.includes(d.ares_group_id);
-  });
+  const role = user?.app_role;
+  const perms = {
+    canCreate: canCreate(role, 'deployment'),
+    canEdit: canEdit(role, 'deployment'),
+    canDelete: canDelete(role, 'deployment'),
+    canExport: hasPermission(role, 'EXPORT_DEPLOYMENT'),
+    canTemplate: canCreate(role, 'template'),
+  };
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => db.categories.list()
-  });
+  const mutations = useEntityMutations('deployments', queryKeys.deployments, { label: 'deployment' });
 
-  const { data: items = [] } = useQuery({
-    queryKey: ['items'],
-    queryFn: () => db.items.list()
-  });
-
-  const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => db.users.list()
-  });
-
-  const { data: locations = [] } = useQuery({
-    queryKey: ['locations'],
-    queryFn: () => db.locations.list()
-  });
-
-  const userRole = user?.app_role;
-  const canCreateDeployment = canCreate(userRole, 'deployment');
-  const canEditDeployment = canEdit(userRole, 'deployment');
-  const canDeleteDeployment = canDelete(userRole, 'deployment');
-  const canExportDeployment = hasPermission(userRole, 'EXPORT_DEPLOYMENT');
-
-  const createDeployment = useMutation({
-    mutationFn: async (data) => {
-      // template_id isn't a column on deployments — strip before insert
-      const { template_id, start_date, end_date, ...rest } = data;
-      const deploymentData = {
-        ...rest,
-        // Empty strings break DATE columns; convert to null
-        start_date: start_date || null,
-        end_date: end_date || null,
-      };
-
-      const deployment = await db.deployments.create(deploymentData);
-
-      // If creating from template, copy structure
-      if (template_id) {
-        const template = await db.templates.findById(template_id);
-        if (template?.structure) {
-          await applyTemplate(deployment.id, template.structure);
-        }
+  const createWithTemplate = useMutation({
+    mutationFn: async (/** @type {Object} */ data) => {
+      const deployment = await db.deployments.create({ ...normalizeDeployment(data), created_by: user?.id });
+      if (data.template_id) {
+        const template = await db.templates.findById(data.template_id);
+        if (template?.structure) await applyTemplate(db, deployment.id, template.structure);
       }
-
       return deployment;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['deployments']);
-      queryClient.invalidateQueries(['categories']);
-      queryClient.invalidateQueries(['items']);
-      queryClient.invalidateQueries(['locations']);
-      setFormOpen(false);
-      toast.success('Deployment created successfully');
+    onSuccess: (deployment) => {
+      for (const key of [queryKeys.deployments, queryKeys.categories, queryKeys.items, queryKeys.locations]) queryClient.invalidateQueries({ queryKey: key });
+      setForm({ open: false, deployment: null });
+      toast.success(`Deployment “${deployment.name}” created`);
     },
-    onError: (err) => {
-      toast.error(`Failed to create deployment: ${err.message}`);
-    },
+    onError: reportMutationError('Create deployment'),
   });
 
-  const saveAsTemplate = useMutation({
-    mutationFn: async ({ deploymentId, templateData }) => {
-      // Get deployment data
-      const deploymentCategories = categories.filter(c => c.deployment_id === deploymentId);
-      const deploymentLocations = locations.filter(l => l.deployment_id === deploymentId);
-      const deploymentItems = items.filter(i => 
-        deploymentLocations.some(loc => loc.id === i.deployment_location_id)
-      );
-
-      // Build structure (without IDs and assignments)
-      const structure = {
-        categories: deploymentCategories.map(c => ({
-          name: c.name,
-          color: c.color,
-          description: c.description,
-          sort_order: c.sort_order
-        })),
-        locations: deploymentLocations.map(l => ({
-          name: l.name,
-          description: l.description,
-          address: l.address,
-          contact_person: l.contact_person,
-          sort_order: l.sort_order
-        })),
-        items: deploymentItems.map(i => ({
-          name: i.name,
-          description: i.description,
-          category_name: deploymentCategories.find(c => c.id === i.category_id)?.name,
-          location_name: deploymentLocations.find(l => l.id === i.deployment_location_id)?.name,
-          quantity: i.quantity,
-          priority: i.priority
-        }))
-      };
-
-      return db.templates.create({
-        ...templateData,
-        structure,
-        category_count: deploymentCategories.length,
-        item_count: deploymentItems.length,
-        location_count: deploymentLocations.length
+  const saveTemplate = useMutation({
+    mutationFn: async (/** @type {{ deployment: Object, name: string, description: string }} */ { deployment, name, description }) => {
+      const locations = locationsOf(locationsQ.data ?? [], deployment.id);
+      const structure = buildTemplateStructure({
+        categories: (categoriesQ.data ?? []).filter(c => c.deployment_id === deployment.id),
+        locations,
+        items: itemsOf(itemsQ.data ?? [], locations),
       });
+      return db.templates.create({ name, description, structure, ...templateCounts(structure) });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['templates']);
-      setTemplateFormOpen(false);
-      setSavingDeploymentId(null);
-      toast.success('Template saved successfully');
-    }
+      queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+      setTemplateFor(null);
+      toast.success('Template saved');
+    },
+    onError: reportMutationError('Save template'),
   });
 
-  const applyTemplate = async (deploymentId, structure) => {
-    // Create categories and build mapping
-    const categoryMap = {};
-    for (const cat of structure.categories || []) {
-      const newCategory = await db.categories.create({
-        ...cat,
-        deployment_id: deploymentId
-      });
-      categoryMap[cat.name] = newCategory.id;
-    }
-
-    // Create locations and build mapping
-    const locationMap = {};
-    for (const loc of structure.locations || []) {
-      const newLocation = await db.locations.create({
-        ...loc,
-        deployment_id: deploymentId
-      });
-      locationMap[loc.name] = newLocation.id;
-    }
-
-    // Create items
-    for (const item of structure.items || []) {
-      await db.items.create({
-        name: item.name,
-        description: item.description,
-        category_id: categoryMap[item.category_name],
-        deployment_location_id: locationMap[item.location_name],
-        quantity: item.quantity,
-        priority: item.priority
-      });
-    }
-  };
-
-  const updateDeployment = useMutation({
-    mutationFn: ({ id, data }) => {
-      const { template_id, start_date, end_date, ...rest } = data;
-      return db.deployments.update(id, {
-        ...rest,
-        start_date: start_date || null,
-        end_date: end_date || null,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['deployments']);
-      setFormOpen(false);
-      setEditingDeployment(null);
-      toast.success('Deployment updated successfully');
-    },
-    onError: (err) => {
-      toast.error(`Failed to update deployment: ${err.message}`);
-    },
-  });
-
-  const deleteDeployment = useMutation({
-    mutationFn: (id) => db.deployments.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['deployments']);
-      toast.success('Deployment deleted successfully');
-    }
-  });
-
-
-
-  const handleSubmit = (data) => {
-    if (editingDeployment) {
-      updateDeployment.mutate({ id: editingDeployment.id, data });
+  const submit = (data) => {
+    if (form.deployment) {
+      mutations.update.mutate({ id: form.deployment.id, data: normalizeDeployment(data) }, { onSuccess: () => { setForm({ open: false, deployment: null }); toast.success('Deployment updated'); } });
     } else {
-      createDeployment.mutate(data);
+      createWithTemplate.mutate(data);
     }
   };
 
-  const handleSelectDeployment = (deploymentId) => {
-    localStorage.setItem('currentDeploymentId', deploymentId);
-    window.location.href = createPageUrl('Dashboard');
-  };
-
-  const handleSaveAsTemplate = (deploymentId) => {
-    setSavingDeploymentId(deploymentId);
-    setTemplateFormOpen(true);
-  };
-
-  const handleTemplateSubmit = (templateData) => {
-    saveAsTemplate.mutate({
-      deploymentId: savingDeploymentId,
-      templateData
+  const remove = async (deployment) => {
+    const ok = await confirm({
+      title: `Delete “${deployment.name}”?`,
+      description: 'All of its sites, categories, items, tasks and ICS 205 forms will be deleted. This cannot be undone.',
+      destructive: true,
+    });
+    if (!ok) return;
+    mutations.remove.mutate(deployment.id, {
+      onSuccess: () => { if (deployment.id === deploymentId) selectDeployment(null); toast.success('Deployment deleted'); },
     });
   };
 
-  const handleExportDeployment = async (deploymentId, format = 'txt', includeGoKit = true) => {
+  const exportText = async (deployment, includeGoKit) => {
+    if (!isOnline) { toast.error('Exports need a connection to the server.'); return; }
+    setExportingId(deployment.id);
     try {
-      const deployment = deployments.find(d => d.id === deploymentId);
-      const text = await exportDeployment({ deploymentId, includeGoKit });
-      
-      const mimeType = format === 'pdf' ? 'application/pdf' : 'text/plain';
-      const extension = format === 'pdf' ? 'pdf' : 'txt';
-      
-      const blob = new Blob([text], { type: mimeType });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const now = new Date();
-      const filename = `${deployment.name.replace(/[^a-z0-9]/gi, '_')}_${now.toISOString().replace(/:/g, '-').replace(/\..+/, '')}.${extension}`;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      toast.success(`Deployment exported as ${format.toUpperCase()}`);
-    } catch (error) {
-      toast.error('Failed to export deployment');
+      const text = await exportDeployment({ deploymentId: deployment.id, includeGoKit });
+      downloadBlob(text, `${safeFileName(deployment.name)}_${fileTimestamp()}.txt`, 'text/plain;charset=utf-8');
+      toast.success('Export downloaded');
+    } catch (err) {
+      toast.error(`Export failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setExportingId(null);
     }
   };
 
-  const getDeploymentStats = (deploymentId) => {
-    const deploymentLocations = locations.filter(l => l.deployment_id === deploymentId);
-    const deploymentCategories = categories.filter(c => c.deployment_id === deploymentId);
-    const deploymentItems = items.filter(i => 
-      deploymentLocations.some(loc => loc.id === i.deployment_location_id)
-    );
-    const assignedItems = deploymentItems.filter(i => 
-      i.assigned_to && (Array.isArray(i.assigned_to) ? i.assigned_to.length > 0 : true)
-    );
-    const usersWithCallSign = users.filter(u => u.call_sign);
-
-    return {
-      categories: deploymentCategories.length,
-      items: deploymentItems.length,
-      assigned: assignedItems.length,
-      members: usersWithCallSign.length
-    };
+  const open = (deployment) => {
+    selectDeployment(deployment.id);
+    navigate(ROUTES.dashboard);
   };
 
+  const listQuery = { isLoading, isError, error: null, refetch: () => queryClient.invalidateQueries({ queryKey: queryKeys.deployments }) };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Deployments</h1>
-            <p className="text-slate-500">Manage and organize multiple deployment operations</p>
-          </div>
-          {canCreateDeployment && (
-            <Button
-              onClick={() => { setEditingDeployment(null); setFormOpen(true); }}
-              className="bg-slate-900 hover:bg-slate-800"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Deployment
-            </Button>
-          )}
-        </div>
-
+    <>
+      <PageHeader
+        icon={FolderOpen}
+        title="Deployments"
+        description="Activations and exercises for your ARES groups"
+        actions={perms.canCreate && <Button onClick={() => setForm({ open: true, deployment: null })}><Plus /> New deployment</Button>}
+      />
+      <QueryState queries={[listQuery, categoriesQ, itemsQ, locationsQ, usersQ]}>
         {deployments.length === 0 ? (
-          <Card className="border-slate-100">
-            <CardContent className="py-16 text-center">
-              <Package className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No deployments yet</h3>
-              <p className="text-slate-500 mb-4">
-                {canCreateDeployment ? 'Create your first deployment to get started' : 'Waiting for an admin to create one'}
-              </p>
-              {canCreateDeployment && (
-                <Button onClick={() => setFormOpen(true)} className="bg-slate-900 hover:bg-slate-800">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Deployment
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={FolderOpen}
+            title="No deployments yet"
+            description={perms.canCreate ? 'Create the first deployment for your group. You can start blank or from a saved template.' : 'Deployments will appear here once an admin creates one for your ARES group.'}
+            action={perms.canCreate && <Button onClick={() => setForm({ open: true, deployment: null })}><Plus /> Create deployment</Button>}
+          />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {deployments.map((deployment, index) => {
-              const stats = getDeploymentStats(deployment.id);
-              const StatusIcon = statusIcons[deployment.status];
-
-              return (
-                <motion.div
-                  key={deployment.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="border-slate-100 hover:shadow-lg transition-all duration-300">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CardTitle className="text-xl">{deployment.name}</CardTitle>
-                            <Badge variant="outline" className={`${statusStyles[deployment.status]} border`}>
-                              {deployment.status}
-                            </Badge>
-                          </div>
-                          {deployment.location && (
-                            <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                              <Globe className="h-4 w-4" />
-                              {deployment.location}
-                            </div>
-                          )}
-                          {deployment.start_date && (
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Calendar className="h-4 w-4" />
-                              {format(new Date(deployment.start_date), 'MMM d, yyyy')}
-                              {deployment.end_date && ` - ${format(new Date(deployment.end_date), 'MMM d, yyyy')}`}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          {canExportDeployment && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  title="Export deployment"
-                                >
-                                  <FileDown className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleExportDeployment(deployment.id, 'txt', true)}>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  TXT (with Go-Kit)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExportDeployment(deployment.id, 'txt', false)}>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  TXT (without Go-Kit)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExportDeployment(deployment.id, 'pdf', true)}>
-                                  <FileDown className="h-4 w-4 mr-2" />
-                                  PDF (with Go-Kit)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExportDeployment(deployment.id, 'pdf', false)}>
-                                  <FileDown className="h-4 w-4 mr-2" />
-                                  PDF (without Go-Kit)
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                          {canCreateDeployment && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleSaveAsTemplate(deployment.id)}
-                              title="Save as template"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canEditDeployment && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => { setEditingDeployment(deployment); setFormOpen(true); }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canDeleteDeployment && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-rose-600 hover:text-rose-700"
-                              onClick={() => {
-                                if (confirm('Delete this deployment? This will also delete all associated categories and items.')) {
-                                  deleteDeployment.mutate(deployment.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {deployment.description && (
-                        <p className="text-sm text-slate-600 mb-4">{deployment.description}</p>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <div className="text-2xl font-bold text-slate-900">{stats.categories}</div>
-                          <div className="text-xs text-slate-500">Categories</div>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <div className="text-2xl font-bold text-slate-900">{stats.items}</div>
-                          <div className="text-xs text-slate-500">Items</div>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <div className="text-2xl font-bold text-slate-900">{stats.assigned}</div>
-                          <div className="text-xs text-slate-500">Assigned</div>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <div className="text-2xl font-bold text-slate-900">{stats.members}</div>
-                          <div className="text-xs text-slate-500">Members</div>
-                        </div>
-                      </div>
-
-                      <Button
-                        className="w-full bg-slate-900 hover:bg-slate-800"
-                        onClick={() => handleSelectDeployment(deployment.id)}
-                      >
-                        Open Deployment
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {deployments.map(d => (
+              <DeploymentCard
+                key={d.id}
+                deployment={d}
+                isCurrent={d.id === deploymentId}
+                stats={deploymentStats({ deploymentId: d.id, categories: categoriesQ.data ?? [], locations: locationsQ.data ?? [], items: itemsQ.data ?? [], users: usersQ.data ?? [] })}
+                permissions={perms}
+                exporting={exportingId === d.id}
+                onOpen={() => open(d)}
+                onEdit={() => setForm({ open: true, deployment: d })}
+                onDelete={() => remove(d)}
+                onExport={(includeGoKit) => exportText(d, includeGoKit)}
+                onSaveTemplate={() => setTemplateFor(d)}
+              />
+            ))}
           </div>
         )}
+      </QueryState>
 
-        <DeploymentForm
-          open={formOpen}
-          onClose={() => { setFormOpen(false); setEditingDeployment(null); }}
-          onSubmit={handleSubmit}
-          deployment={editingDeployment}
-        />
-
-        <TemplateForm
-          open={templateFormOpen}
-          onClose={() => {
-            setTemplateFormOpen(false);
-            setSavingDeploymentId(null);
-          }}
-          onSubmit={handleTemplateSubmit}
-        />
-      </div>
-    </div>
+      <DeploymentForm
+        open={form.open}
+        deployment={form.deployment}
+        onClose={() => setForm({ open: false, deployment: null })}
+        onSubmit={submit}
+        submitting={createWithTemplate.isPending || mutations.update.isPending}
+      />
+      <TemplateForm
+        open={!!templateFor}
+        sourceName={templateFor?.name}
+        onClose={() => setTemplateFor(null)}
+        onSubmit={({ name, description }) => saveTemplate.mutate({ deployment: templateFor, name, description })}
+        submitting={saveTemplate.isPending}
+      />
+      {dialog}
+    </>
   );
 }
