@@ -10,13 +10,15 @@ import { QueryState } from '@/components/common/QueryState';
 import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { buildPacket, pickCurrentAssignment } from '@/lib/packet';
 import { occupies } from '@/lib/staffing';
 import { markPacketSeen } from '@/api/assignments';
 import { PacketView } from '@/features/packet/PacketView';
+import { PacketMap } from '@/features/packet/PacketMap';
+import { directionsUrl } from '@/lib/packet';
 import { PacketActions } from '@/features/packet/PacketActions';
 import { useIntents } from '@/hooks/useIntents';
 import { ROUTES } from '@/app/routes';
@@ -42,6 +44,7 @@ function PacketContent() {
   const assignmentsQ = useAssignments();
   const plansQ = useCommsPlans();
   const rowsQ = useCommsPlanChannels();
+  const layersQ = useMapLayers();
   const itemsQ = useItems();
   const periodsQ = useOperationalPeriods();
   useRealtimeInvalidation('assignments', queryKeys.assignments);
@@ -132,6 +135,7 @@ function PacketContent() {
             acknowledging={acking}
             actions={isMine && ['accepted', 'checked_in', 'on_position', 'released'].includes(assignment.status) ? <PacketActions assignment={assignment} intents={intents} /> : null}
             statusLine={isMine && assignment.status === 'offered' ? <>You have not answered this offer yet. <Link to={ROUTES.myAssignments} className="underline">Accept or decline</Link>.</> : null}
+            map={<PacketMap site={packet.site} layers={(layersQ.data ?? []).filter(l => l.deployment_id === deploymentId)} directions={directionsUrl(packet.site)} />}
           />
         </>
       )}

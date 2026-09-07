@@ -143,6 +143,9 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
   projects one assignment into the operator view (`buildPacket`), picking
   the running or next assignment by default (`pickCurrentAssignment`).
   Channels are filtered to the position's net plus net-less rows.
+  `PacketMap` draws the site pin over the deployment's map layers (tiles
+  come from the OpenStreetMap runtime cache once seen, so the map survives
+  offline) and opens directions on tap.
   `PacketView` puts position, tactical call, report time, place and primary
   frequency above the fold, two actions at most (Directions + one primary),
   prints on one page via `@media print` rules in `index.css`. Operators
@@ -290,6 +293,11 @@ URLs. On the desktop it triggers a manual update check through
 a single code path for showing the update banner.
 
 ## Design system
+
+Text size: `src/lib/textSize.js` sets the root font size (14 / 16 / 18 /
+20 px) from a per-device choice in localStorage before the first paint;
+every component is sized in rem so the whole app scales. The control lives
+in the user menu next to the theme.
 
 Tokens are CSS variables in `src/index.css` consumed by
 `tailwind.config.js`: `background/foreground`, `card`, `primary` (navy),

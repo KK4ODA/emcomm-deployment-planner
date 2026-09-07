@@ -87,6 +87,11 @@ export async function refreshPendingCount() {
 // 5xx, timeouts) is transient and keeps the entry queued.
 const PERMANENT_EVENT_CODES = new Set(['42501', '23503', '23505', '23514', '22P02', '22023', 'PGRST202', 'PGRST204', 'PGRST301']);
 
+/** Exponential backoff for transient failures: 30 s, 1, 2, 4 ... capped at 30 min. */
+export function backoffMs(attempts) {
+  return Math.min(30_000 * 2 ** Math.max(0, attempts - 1), 30 * 60_000);
+}
+
 export function isPermanentError(error) {
   if (!error) return false;
   if (error.code && PERMANENT_EVENT_CODES.has(String(error.code))) return true;
@@ -114,10 +119,10 @@ export async function discardDeadLetter(letter) {
 export async function retryDeadLetter(letter) {
   if (letter.kind === 'task') {
     const entry = await offlineStorage.getEntity('outbox', letter.id);
-    if (entry) { const { _error, ...rest } = entry; await offlineStorage.saveEntity('outbox', rest); }
+    if (entry) { const { _error, _attempts, _next_at, ...rest } = entry; await offlineStorage.saveEntity('outbox', rest); }
   } else {
     const intent = await offlineStorage.getEntity(STORES.intents, letter.id);
-    if (intent) await offlineStorage.saveEntity(STORES.intents, { ...intent, error: null });
+    if (intent) await offlineStorage.saveEntity(STORES.intents, { ...intent, error: null, attempts: 0, next_at: null });
   }
   await refreshPendingCount();
   return syncNow();
@@ -162,14 +167,16 @@ async function ensureSeeded() {
  * tries again.
  * @returns {Promise<{ sent: number, failed: number, remaining: number }>}
  */
-export async function drainOutbox() {
+export async function drainOutbox(now = Date.now()) {
   const outbox = (await offlineStorage.getAllEntities('outbox')).filter(e => !e._error);
   let sent = 0, failed = 0;
   if (!outbox.length) { await refreshPendingCount(); return { sent, failed, remaining: 0 }; }
 
   const sorted = [...outbox].sort((a, b) => a.id.localeCompare(b.id));
   for (const entry of sorted) {
-    const { _queued_at, _error, ...event } = entry;
+    // Order matters: if the head entry is still backing off, nothing behind it goes either.
+    if (entry._next_at && entry._next_at > now) break;
+    const { _queued_at, _error, _attempts, _next_at, ...event } = entry;
     let error;
     try {
       ({ error } = await supabase.from('events').insert(event));
@@ -184,7 +191,9 @@ export async function drainOutbox() {
       await offlineStorage.saveEntity('outbox', { ...entry, _error: error.message || 'Rejected by the server' });
       failed += 1;
     } else {
-      console.warn('Outbox drain: transient failure, will retry', event.id, error.message);
+      const attempts = (entry._attempts || 0) + 1;
+      console.warn(`Outbox drain: transient failure (attempt ${attempts}), retry in ${Math.round(backoffMs(attempts) / 1000)} s`, event.id, error.message);
+      await offlineStorage.saveEntity('outbox', { ...entry, _attempts: attempts, _next_at: now + backoffMs(attempts) });
       break;
     }
   }
@@ -268,16 +277,17 @@ function subscribeRealtime() {
 
 // ─── Public sync API ──────────────────────────────────────────────────────────
 
-export async function syncNow() {
+export async function syncNow({ force = false } = {}) {
   try {
     await refreshPendingCount();
     const tier = await detectTier();
     if (tier !== 'ONLINE') return;
 
     await ensureSeeded();
-    const drainedEvents = await drainOutbox();
+    const now = force ? Number.POSITIVE_INFINITY : Date.now();
+    const drainedEvents = await drainOutbox(now);
     if (drainedEvents.sent) notifyTasksUpdated();
-    const drained = await drainIntents();
+    const drained = await drainIntents(now);
     if (drained.sent) queryClientInstance.invalidateQueries({ queryKey: ['assignments'] });
     await refreshPendingCount();
     await fetchAndApplyInbox();
@@ -295,8 +305,8 @@ export async function initSyncEngine() {
   // Initial sync on startup
   await syncNow();
 
-  // Re-sync immediately when coming back online
-  window.addEventListener('online', syncNow);
+  // Re-sync immediately when coming back online, ignoring any backoff
+  window.addEventListener('online', () => syncNow({ force: true }));
   window.addEventListener(OUTBOX_CHANGED_EVENT, refreshPendingCount);
 
   // Flip tier immediately when the browser detects offline (avoids the

@@ -75,10 +75,11 @@ export async function discardIntent(id) {
  * Retry every pending intent in order. Called by the sync engine when online.
  * @returns {Promise<{ sent: number, failed: number, remaining: number }>}
  */
-export async function drainIntents() {
+export async function drainIntents(now = Date.now()) {
   const all = (await listIntents()).filter(i => !i.error).sort((a, b) => a.id.localeCompare(b.id));
   let sent = 0, failed = 0;
   for (const intent of all) {
+    if (intent.next_at && intent.next_at > now) break; // still backing off; keep order
     try {
       await sendIntent(intent);
       await offlineStorage.deleteEntity(STORES.intents, intent.id);
@@ -88,7 +89,9 @@ export async function drainIntents() {
         await offlineStorage.saveEntity(STORES.intents, { ...intent, error: err.message });
         failed += 1;
       } else {
-        break; // network problem: stop and try again next cycle
+        const attempts = (intent.attempts || 0) + 1;
+        await offlineStorage.saveEntity(STORES.intents, { ...intent, attempts, next_at: now + Math.min(30_000 * 2 ** (attempts - 1), 30 * 60_000) });
+        break; // network problem: stop and try again after the backoff
       }
     }
   }

@@ -6,7 +6,7 @@ vi.mock('@/api/supabaseClient', () => ({ supabase: mock.supabase }));
 vi.mock('@/lib/query-client', () => ({ queryClientInstance: { invalidateQueries: vi.fn() } }));
 
 const { offlineStorage, STORES } = await import('@/lib/offline/storage');
-const { drainOutbox, fetchAndApplyInbox, refreshPendingCount, getPendingCount, getFailedCount, listDeadLetters, discardDeadLetter, retryDeadLetter, isPermanentError } = await import('./syncEngine');
+const { drainOutbox, fetchAndApplyInbox, refreshPendingCount, getPendingCount, getFailedCount, listDeadLetters, discardDeadLetter, retryDeadLetter, isPermanentError, backoffMs } = await import('./syncEngine');
 
 const event = (id, op = 'update', patch = { status: 'in_progress' }) => ({ id, ts: '2026-03-01T00:00:00Z', entity: 'task', entity_id: `t-${id}`, op, patch, _queued_at: 1 });
 
@@ -89,6 +89,32 @@ describe('drainOutbox', () => {
     expect((await offlineStorage.getEntity('outbox', '01A'))?._error).toBeUndefined();
     await discardDeadLetter(letters[0]);
     expect(await offlineStorage.getEntity('outbox', '01A')).toBeNull();
+  });
+});
+
+describe('backoff', () => {
+  it('doubles from 30 s and caps at 30 min', () => {
+    expect(backoffMs(1)).toBe(30_000);
+    expect(backoffMs(2)).toBe(60_000);
+    expect(backoffMs(4)).toBe(240_000);
+    expect(backoffMs(20)).toBe(30 * 60_000);
+  });
+
+  it('holds the whole queue while the head entry backs off, then retries', async () => {
+    await offlineStorage.saveEntity('outbox', event('01A'));
+    await offlineStorage.saveEntity('outbox', event('02B'));
+    const t0 = 1_000_000;
+    scriptInserts({ '01A': { error: { message: 'Failed to fetch' } }, '02B': { error: null } });
+    expect(await drainOutbox(t0)).toEqual({ sent: 0, failed: 0, remaining: 2 });
+    const head = await offlineStorage.getEntity('outbox', '01A');
+    expect(head).toMatchObject({ _attempts: 1, _next_at: t0 + 30_000 });
+
+    const inserts = [];
+    scriptInserts(new Proxy({}, { get: (_, id) => { if (typeof id === 'string' && id !== '__select') inserts.push(id); return { error: null }; } }));
+    expect(await drainOutbox(t0 + 10_000)).toEqual({ sent: 0, failed: 0, remaining: 2 });   // too early: nothing sent, order kept
+    expect(inserts).toEqual([]);
+    expect(await drainOutbox(t0 + 30_000)).toEqual({ sent: 2, failed: 0, remaining: 0 });    // backoff elapsed
+    expect(inserts).toEqual(['01A', '02B']);
   });
 });
 

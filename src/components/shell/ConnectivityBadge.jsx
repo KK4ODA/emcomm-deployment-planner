@@ -21,7 +21,7 @@ export function ConnectivityBadge({ className } = {}) {
 
   const handleSync = async () => {
     setBusy(true);
-    try { await syncNow(); } finally { setBusy(false); }
+    try { await syncNow({ force: true }); } finally { setBusy(false); }
   };
 
   const label = isOnline

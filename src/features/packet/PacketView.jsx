@@ -15,9 +15,9 @@ const ROLE_VARIANT = { primary: 'success', alternate: 'info', contingency: 'warn
 /**
  * The operator packet, phone-first. Above the fold: where, when, my call,
  * primary frequency. Two primary actions at most. Prints on one page.
- * @param {{ packet: ReturnType<import('@/lib/packet').buildPacket>, asOf?: Date|null, onAcknowledge?: () => void, acknowledging?: boolean, actions?: React.ReactNode, statusLine?: React.ReactNode }} props
+ * @param {{ packet: ReturnType<import('@/lib/packet').buildPacket>, asOf?: Date|null, onAcknowledge?: () => void, acknowledging?: boolean, actions?: React.ReactNode, statusLine?: React.ReactNode, map?: React.ReactNode }} props
  */
-export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, actions, statusLine }) {
+export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, actions, statusLine, map = null }) {
   const p = packet;
   const dir = directionsUrl(p.site);
   const primary = p.primaryChannel;
@@ -48,6 +48,8 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
           {primary && <Fact icon={Radio} label={`Primary${p.position.net ? ` · ${p.position.net} net` : ''}`} value={<span className="font-mono">{channelSummary(primary)}</span>} sub={primary.channel_name} />}
           {p.supervisor && <Fact icon={User} label="Report to" value={p.supervisor.tactical || p.supervisor.name} sub={p.supervisor.people.map(x => x.callSign || x.name).filter(Boolean).join(', ') || undefined} />}
         </dl>
+
+        {map && <div className="mt-4">{map}</div>}
 
         {(actions || dir) && (
           <div className="no-print mt-4 grid grid-cols-2 gap-2">

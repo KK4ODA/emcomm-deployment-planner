@@ -26,6 +26,16 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   preview, and invite everyone in one go. Existing members are added to the
   groups instead of failing; call sign, name, phone and licence class fill
   in empty profile fields.
+- **Map on the packet**: the site pin over the course layers, small and
+  non-interactive; tap it for directions. Once seen it works offline and it
+  prints with the packet.
+- **Text size**: Compact, Default, Large or Larger from the user menu,
+  remembered on the device.
+
+### Changed
+- **Offline queue** retries with exponential backoff (30 s doubling to
+  30 min) instead of every 30 s, keeps changes in order while waiting, and
+  sends at once when the connection returns or you click the badge.
 
 ## [2.2.0] - 2026-09-07
 

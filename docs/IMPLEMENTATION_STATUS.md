@@ -42,7 +42,7 @@ started**. The version is the release the row first shipped in.
 | Structured post-event feedback + AAR assembly | Shipped v2.1.0 | `/aar`: two-minute form (anonymous option), planner review, Markdown draft, lessons. |
 | Hours rollup + ARRL Form 2 / FSD-212 figures | Shipped v2.1.0 | `/hours`: per operator and month in the report's activity buckets, CSV. Figures, not the form layout. |
 | ICS-214 (per person and unit) and ICS-205A | Shipped v2.1.0 | Both PDFs from the Net control board. |
-| Map view with layers, GPX/KML import, static map in the packet | Partial (v2.2.0) | Layers and KML / GPX / GeoJSON import shipped, waypoints become sites. No static map image in the packet. |
+| Map view with layers, GPX/KML import, static map in the packet | Shipped v2.3.0 | Layers and KML / GPX / GeoJSON import (v2.2.0); the packet now carries a small non-interactive map of the site pin over the course layers, tiles cached by the service worker once seen, tap for directions, prints. |
 | Shared asset registry with custody state | Not started | Equipment lists per site as before. |
 | Objectives (claimable, with completion) | Not started | |
 | Open-shift board + notify qualified operators | Shipped v2.3.0 | Board (v2.2.0) plus "Notify N qualified" in the assign dialog: `notify_open_shift` RPC restricts to group members, skips people already on the shift and anyone told in the last 24 hours. |
@@ -50,9 +50,9 @@ started**. The version is the release the row first shipped in.
 | CHIRP CSV export from the comms plan | Shipped v2.0.0 | |
 | Served agency / tasking / authorization fields | Shipped v2.0.0 | Deployment form and packet header. |
 | Roster CSV import | Shipped v2.3.0 | Members > Import roster: tolerant headers (email, call sign, name or first/last, phone, licence class, role), per-row validation and preview, sequential invitations with progress; existing members are added to the groups instead of failing; profile fields fill empty columns only (`invite-user` v3). |
-| Light theme, type-scale control, mobile UX pass (§12) | Partial | Light and dark themes, phone-first packet with mobile redirect. No type-scale control, no systematic mobile pass over planner screens. |
+| Light theme, type-scale control, mobile UX pass (§12) | Shipped v2.3.0 | Light and dark themes; text size (Compact / Default / Large / Larger) in the user menu, applied before first paint and remembered per device; phone-first packet with mobile redirect; dialogs cap at the viewport and scroll, tables scroll sideways, page headers stack. Not verified on a physical phone by a second person. |
 | Code signing for Windows builds | Not done (by instruction) | No certificate; updater artifacts are minisign-signed, installers unsigned. |
-| Outbox reliability: retry, backoff, dead-letter UI; `syncEngine` tests | Partial (v2.2.0) | Retry, dead-letter list with retry / discard for both outboxes, sync-engine tests. No exponential backoff (fixed 30 s cycle). |
+| Outbox reliability: retry, backoff, dead-letter UI; `syncEngine` tests | Shipped v2.3.0 | Retry, dead-letter list with retry / discard for both outboxes, sync-engine tests (v2.2.0); exponential backoff per entry (30 s doubling to 30 min, queue order kept) for task events and check-ins; coming back online or clicking the badge forces past the backoff. |
 
 ### P2 — Advanced
 
@@ -82,9 +82,9 @@ Followed as written: event sourcing limited to tasks, no Ed25519 / OR-set
 work, What3Words and `export-ics205` removed from the repo (the two Edge
 Functions still need deleting in the Supabase dashboard).
 
-**Count (2026-09-07, after P1 part 1):** P0 12/12 shipped. P1 13 shipped,
-3 partial, 2 not started, 1 not done by instruction. P2 1 partial, 10 not
-started. P3 0/6.
+**Count (2026-09-07, after P1 part 2):** P0 12/12 shipped. P1 16 shipped,
+0 partial, 2 not started (asset registry, objectives), 1 not done by
+instruction (code signing). P2 1 partial, 10 not started. P3 0/6.
 
 ## Completed
 
@@ -176,6 +176,10 @@ started. P3 0/6.
   qualified operators about an open shift (verified with a rollback probe:
   notifies once, skips within 24 h, filters non-members); roster CSV import
   with preview. Tests: readiness (3), roster (5). 226 tests total.
+- 2026-09-07 **P1 sweep, part 2**: packet map (site pin over layers,
+  offline once seen); text-size control; exponential backoff with
+  order-preserving hold on both outboxes, manual sync forces through.
+  Tests: backoff (2). 228 tests total.
 
 ## In Progress
 

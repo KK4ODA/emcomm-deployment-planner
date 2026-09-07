@@ -8,7 +8,7 @@ import { initSyncEngine, syncNow, getTier, onTierChange, getPendingCount, getFai
  * @property {boolean} isOnline
  * @property {number} pendingCount events waiting in the outbox
  * @property {number} failedCount queued changes the server rejected for good
- * @property {() => Promise<void>} syncNow
+ * @property {(opts?: { force?: boolean }) => Promise<void>} syncNow
  */
 
 const OfflineContext = createContext(/** @type {OfflineState|null} */ (null));

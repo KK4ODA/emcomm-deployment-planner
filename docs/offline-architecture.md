@@ -60,7 +60,11 @@ with the simpler model below. The old draft remains in git history
 
 ## Known limitations (tracked in IMPLEMENTATION_STATUS.md)
 
-- Transient failures retry every 30 s without backoff.
+- Transient failures back off per entry (30 s doubling to 30 min, stored as
+  `_next_at` / `_attempts` on the outbox row and `next_at` / `attempts` on
+  the intent); the head of the queue holds everything behind it so order
+  is kept. `syncNow({ force: true })` (badge click, `online` event) ignores
+  the backoff.
 - An `update` event for a task that is not in the local store is dropped
   instead of held in `inbox`.
 

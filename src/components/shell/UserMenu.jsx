@@ -9,6 +9,7 @@ import { UserAvatar } from '@/components/common/UserAvatar';
 import { CallSign } from '@/components/common/CallSign';
 import { RoleBadge } from '@/components/common/Badges';
 import { ThemeMenuItems } from './ThemeToggle';
+import { TextSizeMenuItems } from './TextSizeMenuItems';
 import { useAuth } from '@/lib/AuthContext';
 import { ROUTES } from '@/app/routes';
 
@@ -43,6 +44,7 @@ export function UserMenu() {
           <Link to={ROUTES.profile}><Settings /> Profile &amp; settings</Link>
         </DropdownMenuItem>
         <ThemeMenuItems />
+        <TextSizeMenuItems />
         <DropdownMenuItem asChild>
           <Link to={ROUTES.about}><Info /> About EmComm Planner</Link>
         </DropdownMenuItem>
