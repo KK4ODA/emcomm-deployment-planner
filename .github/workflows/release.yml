@@ -1,0 +1,180 @@
+name: Release
+
+# Triggered by pushing a semver tag, e.g. `npm run release:patch && git push --follow-tags`.
+# Produces: web build (zip), Windows NSIS installer + updater signature, portable exe,
+# SHA-256 checksums and the updater manifest (latest.json) attached to a GitHub Release.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*']
+
+permissions:
+  contents: write
+
+env:
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+jobs:
+  verify:
+    name: Verify tag matches package.json
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - id: meta
+        shell: bash
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG_VERSION" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+      - run: |
+          test -n "$VITE_SUPABASE_URL" || { echo "::error::Secret VITE_SUPABASE_URL is not set"; exit 1; }
+          test -n "$VITE_SUPABASE_ANON_KEY" || { echo "::error::Secret VITE_SUPABASE_ANON_KEY is not set"; exit 1; }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  web:
+    name: Web build
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package web build
+        run: |
+          cd dist && zip -r "../emcomm-planner-web-${{ needs.verify.outputs.version }}.zip" . && cd ..
+          sha256sum "emcomm-planner-web-${{ needs.verify.outputs.version }}.zip" > "emcomm-planner-web-${{ needs.verify.outputs.version }}.zip.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: |
+            emcomm-planner-web-*.zip
+            emcomm-planner-web-*.zip.sha256
+
+  windows:
+    name: Windows installer
+    needs: verify
+    runs-on: windows-latest
+    env:
+      # Updater signing (required). Generate with `npx tauri signer generate`
+      # and store the PRIVATE key (file contents) in this secret.
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Check updater signing key
+        shell: bash
+        run: test -n "$TAURI_SIGNING_PRIVATE_KEY" || { echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY is not set; the updater cannot sign this release"; exit 1; }
+
+      # ── Optional Authenticode code signing ─────────────────────────────────
+      # When WINDOWS_CERTIFICATE (base64 .pfx) and WINDOWS_CERTIFICATE_PASSWORD
+      # are configured, the certificate is imported and its thumbprint is
+      # injected into tauri.conf.json so the installer and exe are signed.
+      # Without them the build is unsigned (SmartScreen will warn users).
+      - name: Import code-signing certificate
+        if: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $secure = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $secure
+          Remove-Item $pfx
+          $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $conf.bundle.windows.certificateThumbprint = $cert.Thumbprint
+          $conf | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json -Encoding utf8
+          Write-Host "Signing with certificate $($cert.Thumbprint)"
+
+      - name: Build installer
+        run: npm run tauri -- build
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          V="${{ needs.verify.outputs.version }}"
+          mkdir -p out
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe "out/EmComm-Planner_${V}_x64-setup.exe"
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe.sig "out/EmComm-Planner_${V}_x64-setup.exe.sig"
+          # The bare executable runs without installation (needs WebView2, present on Win10/11).
+          cp src-tauri/target/release/emcomm-planner.exe "out/EmComm-Planner_${V}_x64-portable.exe"
+          cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/*
+
+  publish:
+    name: Publish GitHub Release
+    needs: [verify, web, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Write updater manifest
+        shell: bash
+        run: |
+          V="${{ needs.verify.outputs.version }}"
+          SIG=$(cat "artifacts/windows/EmComm-Planner_${V}_x64-setup.exe.sig")
+          NOTES=$(awk -v ver="$V" 'BEGIN{p=0} /^## \[/{ if (p) exit; if (index($0, "[" ver "]")) { p=1; next } } p' CHANGELOG.md | sed -e 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+          cat > artifacts/latest.json <<EOF
+          {
+            "version": "${V}",
+            "notes": "${NOTES}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "${SIG}",
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${V}/EmComm-Planner_${V}_x64-setup.exe"
+              }
+            }
+          }
+          EOF
+          cat artifacts/latest.json
+      - name: Release notes from CHANGELOG
+        shell: bash
+        run: |
+          V="${{ needs.verify.outputs.version }}"
+          awk -v ver="$V" 'BEGIN{p=0} /^## \[/{ if (p) exit; if (index($0, "[" ver "]")) { p=1; next } } p' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "Release v${V}" > notes.md; fi
+          printf '\n\n### Verify downloads\n\nCompare against `SHA256SUMS.txt`. Windows builds are %s.\n' "${{ secrets.WINDOWS_CERTIFICATE != '' && 'Authenticode-signed' || 'unsigned (expect a SmartScreen prompt on first run)' }}" >> notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: EmComm Planner v${{ needs.verify.outputs.version }}
+          body_path: notes.md
+          prerelease: ${{ needs.verify.outputs.prerelease == 'true' }}
+          files: |
+            artifacts/web/*
+            artifacts/windows/*
+            artifacts/latest.json
