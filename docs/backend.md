@@ -54,6 +54,8 @@ RPC `set_assignment_status(assignment, status, at, note, intent_id)`
 (011): the only write path the offline outbox uses. Operators may only move
 their own assignment forward; planners and admins may set any status; the
 call is idempotent per `intent_id`.
+| `feedback` | Post-event feedback, one per user per deployment, or anonymous (`user_id` NULL): rating 1–5, went well, problems, comms worked yes/partly/no, comms and equipment notes, one change (012) |
+| `lessons` | Lessons learned per group and deployment, optional position/site, category staffing/comms/equipment/logistics/safety/process, finding, recommendation, status open/carried_forward/addressed/wont_fix, `carried_from_lesson_id` (012) |
 | `notifications` | Per-user notifications produced by triggers |
 
 Triggers: `handle_new_user` creates the `users` row on sign-up;

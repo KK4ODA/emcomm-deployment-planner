@@ -160,7 +160,30 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
   released assignment (actual check-in to check-out, or the scheduled shift
   flagged *estimated*), activity type from the deployment kind. Manual
   entries (admin, planning, maintenance) are added on Profile › My hours;
-  CSV export per operator. `hoursByMonth()` groups for the monthly report.
+  CSV export per operator. `hoursByMonth()` groups for the monthly report;
+  `/hours` (planners) rolls the whole group up per operator and month with
+  `hoursRollup()` in `src/lib/icsForms.js`.
+- **ICS forms from the record**: `renderIcs214Pdf()` (activity log per
+  deployment, unit or person) and `renderIcs205aPdf()` (communications
+  list: position, tactical call, operator, phone, primary channel) in
+  `src/features/comms/icsRecordPdf.js`, row-building in `src/lib/icsForms.js`.
+
+## After action
+
+- **Feedback** (`feedback` table, migration 012): one row per operator per
+  deployment, or anonymous rows with no user id at all; the form lives on
+  `/aar` and is linked from the packet after checkout. RLS lets a user
+  insert only a row that is either their own or fully anonymous.
+- **Review** (`aarSummary()` in `src/lib/aar.js`): operators worked, slots
+  worked, person-hours, no-shows, unstaffed shifts, incidents (log entries
+  that are not status changes), feedback count, average rating and the
+  comms yes/partly/no vote. `aarMarkdown()` renders the draft that the
+  planner copies into the group's AAR.
+- **Lessons** (`lessons` table): finding, recommendation, category, optional
+  position, status open / carried_forward / addressed / wont_fix.
+  `lessonsToCarry()` re-points open and carried lessons at the new
+  deployment (and remapped position) when a deployment is duplicated;
+  `CarriedLessons` shows them on Staffing until they are marked addressed.
 
 ## Deployment lifecycle
 
@@ -170,8 +193,11 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
 the switcher hides archived deployments, and marking one completed offers to
 save it as a template. `deploymentReadiness()` in `src/lib/deployments.js`
 computes the per-card readiness (unassigned items, tasks done, ICS 205
-coverage) and `duplicateDeployment()` copies structure, optionally with
-assignments and tasks (tasks go through the event log as new events).
+coverage) and `duplicateDeployment()` copies structure, operational periods,
+positions, shifts and the comms plan snapshot, optionally with assignments
+(re-offered) and tasks (tasks go through the event log as new events). A new
+start date shifts every timestamp by the same offset; the Deployments page
+then carries open lessons over with `lessonsToCarry()`.
 
 ## Authentication and authorization
 

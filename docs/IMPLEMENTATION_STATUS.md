@@ -46,18 +46,29 @@ can resume without re-deriving state.
   and log notes; hours derived on release plus manual entries and CSV on
   Profile › My hours. Tests: operations (9). 174 tests total.
 
+- 2026-09-07 **Release v2.0.0** published (web auto-deployed, desktop
+  installer signed for the updater).
+- 2026-09-07 **Phase 4a, the record becomes memory** (migration `012`,
+  applied): `feedback` and `lessons`; duplicate copies periods, positions,
+  shifts, comms plan and people with a date shift; ICS 214 and ICS 205A
+  PDFs; group hours page; `/aar` with operator feedback form (anonymous
+  option, RLS-enforced), planner review, Markdown draft, lessons CRUD;
+  lessons carried forward on duplicate and shown on Staffing; packet links
+  to feedback after checkout. Tests: icsForms (3), aar (3), LessonsList
+  (3), FeedbackForm (3). 188 tests total. Released as v2.1.0.
+
 ## In Progress
 
-- Nothing mid-flight. Releasing v2.0.0 next, then Phase 4.
+- Nothing mid-flight.
 
 ## Next
 
-Phase 4 in roadmap order: notify only affected operators with a diff on
-publish; lessons carried forward on duplicate; post-event feedback form and
-AAR assembly; ICS-214 (per person and unit) and ICS-205A from the activity
-log; group-wide hours rollup (ARRL Form 2 buckets); map KML/GPX import;
-asset registry with custody; objectives; open-shift board; task outbox
-retry/dead-letter parity with the intents outbox; `syncEngine` tests.
+Phase 4 remainder in roadmap order: notify only affected operators with a
+diff on publish; map KML/GPX import; asset registry with custody;
+objectives; open-shift board; task outbox retry/dead-letter parity with the
+intents outbox; `syncEngine` tests. Housekeeping still on the user: delete
+the `export-ics205` and `get-what3words` Edge Functions in the dashboard and
+turn on leaked-password protection under Auth.
 
 ## Deferred
 

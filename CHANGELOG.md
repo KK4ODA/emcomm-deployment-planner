@@ -9,6 +9,28 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-07
+
+The after-action release: the record you kept during the event turns into
+forms, hours and lessons that follow the event to next year.
+
+### Added
+- **After action** page (`/aar`): a two-minute feedback form for operators
+  (optionally anonymous), linked from the packet after checkout; for
+  planners, the review assembled from check-ins, the log, hours and
+  feedback, with an AAR draft to copy or download as Markdown.
+- **Lessons** per deployment with category, position and status. Open
+  lessons are carried forward automatically when you duplicate a
+  deployment and appear on Staffing as "From last time" until marked
+  addressed.
+- **Duplicate** now copies operational periods, positions, shifts, the
+  comms plan and (optionally) re-offers the same people; pick a new start
+  date and every time moves with it.
+- **ICS 214** (activity log) and **ICS 205A** (communications list) PDFs
+  from the Net control board.
+- **Hours** page for planners: the whole group per operator and month in
+  ARRL report buckets, with CSV export.
+
 ## [2.0.0] - 2026-09-07
 
 The staffable-plan release: positions, operator packet, communications
