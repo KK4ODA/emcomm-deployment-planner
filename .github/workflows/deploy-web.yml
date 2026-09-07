@@ -100,7 +100,9 @@ jobs:
           LFTP_PASSWORD: ${{ secrets.WEB_DEPLOY_PASSWORD }}
         run: |
           PROTO="${WEB_DEPLOY_PROTOCOL:-sftp}"
-          cat > lftp.rc <<'EOF'
+          # One script file: lftp rejects -f together with -e.
+          # --env-password reads LFTP_PASSWORD, so the password is never in argv or in this file.
+          cat > deploy.lftp <<EOF
           set net:timeout 30
           set net:max-retries 3
           set net:reconnect-interval-base 5
@@ -109,15 +111,12 @@ jobs:
           set ftp:ssl-protect-data true
           set ssl:verify-certificate yes
           set mirror:parallel-transfer-count 4
+          open --env-password -u "$WEB_DEPLOY_USER" $PROTO://$WEB_DEPLOY_HOST
+          mirror --reverse --delete --verbose=1 --exclude '^\.well-known/' --exclude '^logs/' site/ "$WEB_DEPLOY_PATH"
+          bye
           EOF
-          # --env-password reads LFTP_PASSWORD, so the password never appears in argv or logs.
-          lftp -f lftp.rc -e "
-            open --env-password -u \"$WEB_DEPLOY_USER\" $PROTO://$WEB_DEPLOY_HOST;
-            mirror --reverse --delete --verbose=1 \
-              --exclude '^\.well-known/' \
-              --exclude '^logs/' \
-              site/ \"$WEB_DEPLOY_PATH\";
-            bye"
+          lftp -f deploy.lftp
+          rm -f deploy.lftp
 
       - name: Verify live site
         if: env.WEB_PUBLIC_URL != ''
