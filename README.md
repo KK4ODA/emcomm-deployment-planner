@@ -156,7 +156,8 @@ user would notice. Bug reports and feature requests go to the
 
 ## Credits and license
 
-Built and maintained by KK4ODA. Map tiles © OpenStreetMap contributors and
-Esri. ICS 205 follows the FEMA/NIMS form layout.
+Built and maintained by KK4ODA, with Claude (Anthropic) as pair programmer for
+the 2026 modernization. Map tiles © OpenStreetMap contributors and Esri.
+ICS 205 follows the FEMA/NIMS form layout.
 
 Private project. All rights reserved unless a license file is added.
