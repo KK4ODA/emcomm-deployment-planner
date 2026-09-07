@@ -9,6 +9,8 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-07
+
 ### Added
 - "About" tab on the profile page and an *About EmComm Planner* entry in the
   account menu: version, update channel, platform, release notes, issue
