@@ -23,6 +23,9 @@ export function DeploymentSwitcher({ className, dark = false }) {
   };
 
   const value = status === 'ready' ? deploymentId : '';
+  // Archived deployments stay out of the switcher unless one is currently open.
+  const options = deployments.filter(d => d.status !== 'archived' || d.id === deploymentId);
+  const hidden = deployments.length - options.length;
 
   return (
     <Select value={value ?? ''} onValueChange={handleChange}>
@@ -34,7 +37,7 @@ export function DeploymentSwitcher({ className, dark = false }) {
         <SelectValue placeholder="Select deployment" />
       </SelectTrigger>
       <SelectContent>
-        {deployments.map(d => (
+        {options.map(d => (
           <SelectItem key={d.id} value={d.id}>
             <span className="flex items-center gap-2">
               <span className="truncate">{d.name}</span>
@@ -43,7 +46,7 @@ export function DeploymentSwitcher({ className, dark = false }) {
           </SelectItem>
         ))}
         <SelectSeparator />
-        <SelectItem value={MANAGE}>Manage deployments…</SelectItem>
+        <SelectItem value={MANAGE}>{hidden > 0 ? `Manage deployments… (${hidden} archived)` : 'Manage deployments…'}</SelectItem>
       </SelectContent>
     </Select>
   );

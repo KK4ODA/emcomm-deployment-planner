@@ -7,6 +7,20 @@ export const DEPLOYMENT_STATUS = Object.freeze({
   archived: { label: 'Archived', tone: 'muted' },
 });
 
+/** Display order for deployment lists: what needs attention first. */
+export const DEPLOYMENT_STATUS_ORDER = Object.freeze(['active', 'planning', 'completed', 'archived']);
+
+/**
+ * Lifecycle actions offered on a deployment card, per current status.
+ * @type {Readonly<Record<string, ReadonlyArray<{ to: string, label: string }>>>}
+ */
+export const DEPLOYMENT_TRANSITIONS = Object.freeze({
+  planning: [{ to: 'active', label: 'Mark active' }, { to: 'archived', label: 'Archive' }],
+  active: [{ to: 'completed', label: 'Mark completed' }, { to: 'planning', label: 'Back to planning' }],
+  completed: [{ to: 'archived', label: 'Archive' }, { to: 'active', label: 'Reopen as active' }],
+  archived: [{ to: 'planning', label: 'Unarchive' }],
+});
+
 export const TASK_STATUS = Object.freeze({
   pending: { label: 'Pending', tone: 'neutral', rank: 1 },
   in_progress: { label: 'In progress', tone: 'info', rank: 2 },
@@ -55,6 +69,9 @@ export const STORAGE_KEYS = Object.freeze({
   currentLocationId: 'currentLocationId',
   cookieConsent: 'cookieConsent',
   sidebarCollapsed: 'emcomm_sidebar_collapsed',
+  showArchivedDeployments: 'emcomm_show_archived',
+  /** Prefix; the full key is `${prefix}${deploymentId}:${callSign}`. */
+  goKitChecked: 'emcomm_gokit:',
 });
 
 /** Personal go-kit checklist appended to deployment exports. */

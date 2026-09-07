@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { useDeployments } from '@/hooks/useEntities';
-import { canAccessDeployment, visibleDeployments } from '@/lib/deployments';
+import { canAccessDeployment, visibleDeployments, sortDeployments } from '@/lib/deployments';
 import { STORAGE_KEYS } from '@/lib/constants';
 
 /**
@@ -26,7 +26,8 @@ export function DeploymentProvider({ children }) {
   const [deploymentId, setDeploymentId] = useState(readStoredId);
   const { data: allDeployments = [], isLoading, isError } = useDeployments();
 
-  const deployments = useMemo(() => visibleDeployments(user, allDeployments), [user, allDeployments]);
+  // Visible to this user, active first (see sortDeployments).
+  const deployments = useMemo(() => sortDeployments(visibleDeployments(user, allDeployments)), [user, allDeployments]);
   const stored = allDeployments.find(d => d.id === deploymentId) ?? null;
 
   let status = /** @type {DeploymentState['status']} */ ('none');
@@ -46,9 +47,11 @@ export function DeploymentProvider({ children }) {
     setDeploymentId(id);
   }, []);
 
-  // If nothing is selected but the user can see exactly one deployment, open it.
+  // If nothing is selected but the user can see exactly one live deployment, open it.
   useEffect(() => {
-    if (!deploymentId && !isLoading && deployments.length === 1) selectDeployment(deployments[0].id);
+    if (deploymentId || isLoading) return;
+    const live = deployments.filter(d => d.status !== 'archived');
+    if (live.length === 1) selectDeployment(live[0].id);
   }, [deploymentId, isLoading, deployments, selectDeployment]);
 
   const value = useMemo(() => ({
