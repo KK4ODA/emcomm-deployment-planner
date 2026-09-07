@@ -111,11 +111,19 @@ jobs:
           set ftp:ssl-protect-data true
           set ssl:verify-certificate yes
           set mirror:parallel-transfer-count 4
+          set cmd:fail-exit yes
           open --env-password -u "$WEB_DEPLOY_USER" $PROTO://$WEB_DEPLOY_HOST
-          mirror --reverse --delete --verbose=1 --exclude '^\.well-known/' --exclude '^logs/' site/ "$WEB_DEPLOY_PATH"
+          # The target folder must already exist (it is the domain's web root).
+          # Refusing to create it catches a mistyped WEB_DEPLOY_PATH.
+          cd "$WEB_DEPLOY_PATH"
+          mirror --reverse --delete --verbose=1 --exclude '^\.well-known/' --exclude '^logs/' site/ .
           bye
           EOF
-          lftp -f deploy.lftp
+          if ! lftp -f deploy.lftp; then
+            echo "::error::Upload failed. If the log says 'No such file or directory', WEB_DEPLOY_PATH does not exist on the host: use the folder the domain points to (IONOS › Domains & SSL › domain › Adjust destination)."
+            rm -f deploy.lftp
+            exit 1
+          fi
           rm -f deploy.lftp
 
       - name: Verify live site
