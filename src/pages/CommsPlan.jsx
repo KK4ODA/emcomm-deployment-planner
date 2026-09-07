@@ -234,7 +234,7 @@ function CommsPlanContent() {
         onSubmit={(data) => mutations.addChannels.mutate({ planId: plan.id, startOrder: rows.length, ...data }, { onSuccess: () => setAddOpen(false) })}
         submitting={mutations.addChannels.isPending}
       />
-      <PublishPlanDialog open={publishOpen} deployment={deployment} onClose={() => setPublishOpen(false)} onPublish={(note) => publish.mutate({ deployment, note }, { onSuccess: () => setPublishOpen(false) })} submitting={publish.isPending} />
+      <PublishPlanDialog open={publishOpen} deployment={deployment} onClose={() => setPublishOpen(false)} onPublish={(note, extra) => publish.mutate({ deployment, note, ...extra }, { onSuccess: () => setPublishOpen(false) })} submitting={publish.isPending} />
       {dialog}
     </QueryState>
   );

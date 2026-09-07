@@ -57,14 +57,23 @@ can resume without re-deriving state.
   to feedback after checkout. Tests: icsForms (3), aar (3), LessonsList
   (3), FeedbackForm (3). 188 tests total. Released as v2.1.0.
 
+- 2026-09-07 **Release v2.1.0** published.
+- 2026-09-07 **Phase 4b, targeted publish** (migrations `013`, `014`,
+  applied): per-position packet snapshots; `publish_plan` RPC notifies only
+  affected operators with a per-position diff and auto-acknowledges
+  unaffected packets; dialog shows the diff and recipient count. Probing the
+  RPC found `has_role()`/`is_admin()`/`deployment_visible()` returning NULL
+  for a caller without a profile row; fixed in `014` (verified: unknown
+  caller denied, admin path works, probes rolled back). Tests: planDiff
+  (7). 195 tests total.
+
 ## In Progress
 
 - Nothing mid-flight.
 
 ## Next
 
-Phase 4 remainder in roadmap order: notify only affected operators with a
-diff on publish; map KML/GPX import; asset registry with custody;
+Phase 4 remainder in roadmap order: map KML/GPX import; asset registry with custody;
 objectives; open-shift board; task outbox retry/dead-letter parity with the
 intents outbox; `syncEngine` tests. Housekeeping still on the user: delete
 the `export-ics205` and `get-what3words` Edge Functions in the dashboard and

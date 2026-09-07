@@ -9,6 +9,18 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Changed
+- **Publish plan** now tells you what changed since the last publication,
+  position by position, and notifies only the operators whose packet
+  changed, with their changes in the notification. Operators whose packet
+  did not change see no banner. Tick "Notify everyone assigned" for notes
+  that concern the whole deployment.
+
+### Security
+- Server role helpers now return false, never NULL, for a caller without a
+  profile row; row-level security already treated NULL as deny, but guard
+  clauses inside server functions now do too.
+
 ## [2.1.0] - 2026-09-07
 
 The after-action release: the record you kept during the event turns into

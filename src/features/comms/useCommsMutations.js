@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { db } from '@/api/db';
+import { publishPlan } from '@/api/plans';
 import { reportMutationError } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { snapshotFromChannel } from '@/lib/comms';
@@ -101,15 +102,13 @@ export function useCommsPlanMutations(deploymentId) {
 export function usePublishPlan() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (/** @type {{ deployment: Object, note: string }} */ { deployment, note }) =>
-      db.deployments.update(deployment.id, {
-        plan_version: (deployment.plan_version || 1) + 1,
-        plan_published_at: new Date().toISOString(),
-        plan_change_note: note.trim() || null,
-      }),
-    onSuccess: (d) => {
+    mutationFn: (/** @type {{ deployment: Object, note: string, changes?: Object[], notifyAll?: boolean }} */ { deployment, note, changes = [], notifyAll = false }) =>
+      publishPlan({ deploymentId: deployment.id, note, changes, notifyAll }),
+    onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.deployments });
-      toast.success(`Plan v${d.plan_version} published`, { description: 'Everyone assigned has been notified.' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments });
+      toast.success(`Plan v${r.version} published`, { description: r.notified ? `${r.notified} operator${r.notified === 1 ? '' : 's'} notified.` : 'Nobody needed a notification.' });
     },
     onError: reportMutationError('Publish plan'),
   });

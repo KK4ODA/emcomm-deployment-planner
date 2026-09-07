@@ -121,10 +121,15 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
   wrap. The per-site `ics205_forms` editor was removed (table kept, unused).
 - Plan rows are **snapshots**: editing the library flags stale rows on the
   plan page ("Update from library") instead of changing a published plan.
-- **Publishing**: `deployments.plan_version` is bumped by "Publish plan"
-  (Staffing and Comms pages) with a change note; a trigger notifies everyone
-  assigned; `assignments.packet_version_seen` drives the packet's change
-  banner until the operator taps "Got it".
+- **Publishing**: "Publish plan" (Staffing and Comms pages) diffs every
+  position's packet against the snapshot stored at the last publication
+  (`src/lib/planDiff.js`: `packetSnapshot`, `diffSnapshots`, `planChanges`)
+  and shows the per-position changes in the dialog. The `publish_plan` RPC
+  bumps `deployments.plan_version`, stores the new snapshots, notifies only
+  the operators on changed positions with those changes (or everyone, when
+  "Notify everyone assigned" is ticked, the default when nothing changed),
+  and keeps unaffected operators current. `assignments.packet_version_seen`
+  drives the packet's change banner until the operator taps "Got it".
 - **Packet** (`/packet`, `/packet/:assignmentId`): `src/lib/packet.js`
   projects one assignment into the operator view (`buildPacket`), picking
   the running or next assignment by default (`pickCurrentAssignment`).

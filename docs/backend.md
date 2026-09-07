@@ -50,13 +50,28 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `activity_log` | Append-only record: check-ins, status changes, notes, incidents; `intent_id` unique for idempotent replay; source for ICS-214 (011) |
 | `hour_entries` | Participation hours per operator: derived from released assignments (`estimated` when a check-in or check-out time is missing) or manual; `activity_type` emergency/public_service/training/net/admin/maintenance (011) |
 
+| `feedback` | Post-event feedback, one per user per deployment, or anonymous (`user_id` NULL): rating 1–5, went well, problems, comms worked yes/partly/no, comms and equipment notes, one change (012) |
+| `lessons` | Lessons learned per group and deployment, optional position/site, category staffing/comms/equipment/logistics/safety/process, finding, recommendation, status open/carried_forward/addressed/wont_fix, `carried_from_lesson_id` (012) |
+| `notifications` | Per-user notifications produced by triggers |
+
 RPC `set_assignment_status(assignment, status, at, note, intent_id)`
 (011): the only write path the offline outbox uses. Operators may only move
 their own assignment forward; planners and admins may set any status; the
 call is idempotent per `intent_id`.
-| `feedback` | Post-event feedback, one per user per deployment, or anonymous (`user_id` NULL): rating 1–5, went well, problems, comms worked yes/partly/no, comms and equipment notes, one change (012) |
-| `lessons` | Lessons learned per group and deployment, optional position/site, category staffing/comms/equipment/logistics/safety/process, finding, recommendation, status open/carried_forward/addressed/wont_fix, `carried_from_lesson_id` (012) |
-| `notifications` | Per-user notifications produced by triggers |
+
+RPC `publish_plan(deployment, note, changes, notify_all)` (013): bumps
+`plan_version`, stores each position's packet snapshot
+(`positions.packet_snapshot`), notifies only operators on positions whose
+`changes` array is non-empty (message = note + their position's changes),
+and marks unaffected assignments as having seen the new version so no
+change banner appears for them. `notify_all` sends to everyone assigned.
+The broadcast trigger `deployments_notify_plan` stands down while the RPC
+runs (GUC `emcomm.publishing`) and still covers direct updates.
+
+Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
+`location_visible()` return `false`, never NULL, for a caller without a
+`users` row (014), so PL/pgSQL guards of the form `IF NOT ... THEN RAISE`
+are safe as well as RLS.
 
 Triggers: `handle_new_user` creates the `users` row on sign-up;
 `assignments_notify` writes a notification to the operator on offer and to
