@@ -78,6 +78,8 @@ jobs:
       # and store the PRIVATE key (file contents) in this secret.
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      # secrets cannot be used in step-level if:, so surface presence as an env flag
+      HAS_CODESIGN_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -99,7 +101,7 @@ jobs:
       # injected into tauri.conf.json so the installer and exe are signed.
       # Without them the build is unsigned (SmartScreen will warn users).
       - name: Import code-signing certificate
-        if: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+        if: env.HAS_CODESIGN_CERT == 'true'
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
@@ -137,6 +139,8 @@ jobs:
     name: Publish GitHub Release
     needs: [verify, web, windows]
     runs-on: ubuntu-latest
+    env:
+      HAS_CODESIGN_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -168,7 +172,7 @@ jobs:
           V="${{ needs.verify.outputs.version }}"
           awk -v ver="$V" 'BEGIN{p=0} /^## \[/{ if (p) exit; if (index($0, "[" ver "]")) { p=1; next } } p' CHANGELOG.md > notes.md
           if [ ! -s notes.md ]; then echo "Release v${V}" > notes.md; fi
-          printf '\n\n### Verify downloads\n\nCompare against `SHA256SUMS.txt`. Windows builds are %s.\n' "${{ secrets.WINDOWS_CERTIFICATE != '' && 'Authenticode-signed' || 'unsigned (expect a SmartScreen prompt on first run)' }}" >> notes.md
+          printf '\n\n### Verify downloads\n\nCompare against `SHA256SUMS.txt`. Windows builds are %s.\n' "$([ \"$HAS_CODESIGN_CERT\" = true ] && echo Authenticode-signed || echo 'unsigned (expect a SmartScreen prompt on first run)')" >> notes.md
       - uses: softprops/action-gh-release@v2
         with:
           name: EmComm Planner v${{ needs.verify.outputs.version }}
