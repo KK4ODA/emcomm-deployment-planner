@@ -61,7 +61,7 @@ Secrets:
 | `WEB_DEPLOY_HOST` | `access-1234567890.webspace-host.com` | IONOS › Hosting › SFTP & SSH access |
 | `WEB_DEPLOY_USER` | `u123456789` | same page |
 | `WEB_DEPLOY_PASSWORD` | | same page (set or reset it there) |
-| `WEB_DEPLOY_PATH` | `/emcommplanner` | the folder the domain points to (IONOS › Domains & SSL › domain › *Adjust destination*), as an SFTP client shows it after login (the path is taken relative to the login directory). **Must contain only this app**: the mirror deletes anything else in it, except `.well-known/` and `logs/`. The folder must already exist. |
+| `WEB_DEPLOY_PATH` | `/` | the domain's web root relative to where the SFTP login lands. For emcommplanner.org the SFTP user logs in directly into the web root, so the value is `/`. If your login lands one level up, use the folder name (e.g. `/emcommplanner`). The run log prints the login directory and the target listing, so a wrong value is visible at once. **Must contain only this app**: the mirror deletes anything else in it, except `.well-known/` and `logs/`. The folder must already exist. |
 | `WEB_DEPLOY_PROTOCOL` | `sftp` | optional; `ftps` if SFTP is unavailable |
 
 Optional repository *variable* `WEB_PUBLIC_URL` (`https://emcommplanner.org`)

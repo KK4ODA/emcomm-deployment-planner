@@ -9,10 +9,12 @@ name: Deploy web
 #   WEB_DEPLOY_HOST      e.g. access-1234567890.webspace-host.com
 #   WEB_DEPLOY_USER      e.g. u123456789
 #   WEB_DEPLOY_PASSWORD  the SFTP/SSH password for that user
-#   WEB_DEPLOY_PATH      the domain's web root as shown by an SFTP client after
-#                        login, e.g. /emcommplanner (relative to the login
-#                        directory). Everything in it not present in the build
-#                        is DELETED, so it must be dedicated to this app.
+#   WEB_DEPLOY_PATH      the domain's web root relative to the SFTP login
+#                        directory: "/" when the login lands in the web root
+#                        (IONOS default for emcommplanner.org), otherwise the
+#                        folder name, e.g. /emcommplanner. Everything in it not
+#                        present in the build is DELETED, so it must be
+#                        dedicated to this app.
 # Optional:
 #   WEB_DEPLOY_PROTOCOL  sftp (default) or ftps
 # Optional repository variable (Settings › Secrets and variables › Actions › Variables):
