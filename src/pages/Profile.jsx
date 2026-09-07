@@ -49,7 +49,7 @@ async function resizeImageFile(file, maxSize = 512, quality = 0.9) {
 }
 
 export default function Profile() {
-  const { user, checkAppState } = useAuth();
+  const { user, refreshProfile: checkAppState } = useAuth();
   const fileInputRef = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [form, setForm] = useState({

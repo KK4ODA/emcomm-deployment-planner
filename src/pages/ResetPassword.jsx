@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
+import { updatePassword } from '@/api/auth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,8 +69,7 @@ export default function ResetPassword() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      await updatePassword(newPassword);
 
       toast.success('Password updated. You are now signed in.');
       // Small delay so the toast renders before the navigation

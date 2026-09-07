@@ -31,3 +31,5 @@ dist-ssr
 
 # Supabase CLI local link state
 supabase/.temp/
+# Claude Code local launch config
+.claude/

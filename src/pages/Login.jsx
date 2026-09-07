@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '@/api/supabaseClient';
+import { signIn, signUp, requestPasswordReset } from '@/api/auth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,35 +30,8 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Raw fetch bypasses the Supabase JS client's Web Locks deadlock.
-    // We persist the session in localStorage in the canonical shape that
-    // @supabase/supabase-js expects so that on the next page load the SDK
-    // hydrates it and sets up the auto-refresh timer naturally.
     try {
-      const url = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const projectRef = url.replace(/^https:\/\//, '').split('.')[0];
-
-      const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: { apikey: anonKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.msg || data.error_description || 'Invalid login credentials');
-      }
-      if (!data.access_token) throw new Error('No access token returned');
-
-      localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_at: data.expires_at,
-        expires_in: data.expires_in,
-        token_type: data.token_type,
-        user: data.user,
-      }));
-
+      await signIn(loginEmail, loginPassword);
       window.location.href = '/';
     } catch (error) {
       toast.error(error.message || 'Failed to sign in');
@@ -70,25 +43,8 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Raw fetch keeps us off the Supabase JS client's lock paths during auth flows
     try {
-      const url = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const redirectTo = `${window.location.origin}/reset-password`;
-
-      // Supabase expects redirect_to as a query parameter, not a body field
-      const recoverUrl = `${url}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`;
-      const response = await fetch(recoverUrl, {
-        method: 'POST',
-        headers: { apikey: anonKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.msg || data.error_description || 'Failed to send reset email');
-      }
-
+      await requestPasswordReset(resetEmail, `${window.location.origin}/reset-password`);
       setResetSent(true);
       toast.success('Reset email sent — check your inbox');
     } catch (error) {
@@ -114,17 +70,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: signupEmail,
-        password: signupPassword,
-        options: {
-          data: {
-            full_name: signupFullName,
-          }
-        }
-      });
-
-      if (error) throw error;
+      await signUp({ email: signupEmail, password: signupPassword, fullName: signupFullName });
 
       toast.success('Account created! Check your email for a confirmation link, or sign in if email confirmation is disabled.');
     } catch (error) {
