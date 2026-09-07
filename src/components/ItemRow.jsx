@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, User, GripVertical, Copy } from "lucide-react";
+import { Pencil, Trash2, GripVertical, Copy } from "lucide-react";
 import { motion } from "framer-motion";
 
 const priorityStyles = {

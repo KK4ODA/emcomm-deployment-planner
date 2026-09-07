@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Plus, Users, Shield, Pencil, Trash2, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import ARESGroupForm from "@/components/ARESGroupForm";
 import { toast } from "sonner";
-import { hasPermission } from "@/components/permissions.jsx";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function ARESGroups() {

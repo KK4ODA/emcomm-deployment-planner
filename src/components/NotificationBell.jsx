@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Bell, CheckCheck, Trash2, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 
 const typeIcons = {
   task_assigned: AlertCircle,

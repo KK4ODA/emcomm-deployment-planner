@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Globe, Package, Pencil, Trash2, ArrowRight, Clock, Save, FileDown, FileText, CheckSquare } from "lucide-react";
+import { Plus, Calendar, Globe, Package, Pencil, Trash2, ArrowRight, Clock, Save, FileDown, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,

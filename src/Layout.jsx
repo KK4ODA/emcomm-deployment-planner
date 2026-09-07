@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from '@tanstack/react-query';
-import { Radio, User, Menu, LayoutDashboard, Users, Package, LogOut, Settings, FolderOpen, MapPin, FileText, UserCog } from "lucide-react";
+import { Radio, Menu, LayoutDashboard, Users, Package, LogOut, Settings, FolderOpen, MapPin, FileText, UserCog } from "lucide-react";
 import { OfflineProvider } from '@/components/OfflineProvider';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import UserAvatar from '@/components/UserAvatar';

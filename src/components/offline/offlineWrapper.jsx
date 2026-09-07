@@ -1,5 +1,4 @@
 // Wrapper for React Query to work with offline storage
-import { base44 } from '@/api/base44Client';
 import { offlineStorage } from './storage';
 import { syncManager } from './syncManager';
 

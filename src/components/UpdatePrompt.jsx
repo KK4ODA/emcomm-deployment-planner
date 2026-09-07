@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button } from './ui/button';
 import { RefreshCw } from 'lucide-react';

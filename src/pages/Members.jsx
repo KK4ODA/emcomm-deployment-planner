@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, User, Radio, Phone, Mail, Package, ArrowLeft, Shield, Eye, Settings as SettingsIcon, Edit, Settings, Trash2, UserPlus } from "lucide-react";
+import { Search, User, Radio, Phone, Mail, Package, ArrowLeft, Shield, Eye, Edit, Settings, Trash2, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
-import { hasPermission, getRoleLabel, ROLES } from "@/components/permissions.jsx";
+import { hasPermission, getRoleLabel } from "@/components/permissions.jsx";
 import RoleChangeDialog from "@/components/RoleChangeDialog";
 import UserEditDialog from "@/components/UserEditDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
