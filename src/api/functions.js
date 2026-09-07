@@ -40,11 +40,13 @@ export function exportDeployment({ deploymentId, includeGoKit = true }) {
 }
 
 /**
- * Invite a new member by email. Requires admin or operator role.
- * @param {{ email: string, role?: string, aresGroupIds?: string[] }} params
+ * Invite a new member by email, or add an existing member to groups.
+ * Requires admin or planner role. Profile fields fill empty columns only.
+ * @param {{ email: string, role?: string, aresGroupIds?: string[], call_sign?: string|null, full_name?: string|null, phone?: string|null, license_class?: string|null }} params
+ * @returns {Promise<{ success: boolean, existing?: boolean, message: string }>}
  */
-export function inviteUser({ email, role, aresGroupIds }) {
-  return invokeFunction('invite-user', { email, role, aresGroupIds });
+export function inviteUser({ email, role, aresGroupIds, call_sign, full_name, phone, license_class }) {
+  return invokeFunction('invite-user', { email, role, aresGroupIds, call_sign, full_name, phone, license_class });
 }
 
 /**

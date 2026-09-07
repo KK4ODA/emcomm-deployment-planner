@@ -35,7 +35,7 @@ started**. The version is the release the row first shipped in.
 
 | Feature (design doc) | Status | What exists / what is missing |
 |---|---|---|
-| Readiness / viability checklist | Partial | Deployment cards show slots covered, unassigned items, tasks done, comms-plan coverage; comms page has a plan check. No single checklist screen that turns gaps into a worklist. |
+| Readiness / viability checklist | Shipped v2.3.0 | `/readiness`: plan, staffing, comms, sites and logistics checks (open slots, unanswered offers, unmet requirements, double-booked operators, missing tactical calls, no net control, nets without a primary, stale channels, unpublished changes, unacknowledged packets, sites without pins or arrival notes, essential items nobody brings, overdue tasks) as a worklist with a link per line; dashboard card for planners. |
 | NCS live board (staffed / uncovered / released, offline) | Shipped v2.0.0 | `/ncs`, worst-first rows, on-behalf check-in, log notes, works from cache. |
 | Change notification to affected operators only, with a diff | Shipped v2.2.0 | Per-position packet snapshots; `publish_plan` notifies only changed positions with their changes; unaffected packets show no banner. |
 | Deployment cloning with lessons carried forward | Shipped v2.1.0 | Copies periods, positions, shifts, people, comms plan, map layers; shifts dates; open lessons carry over and show on Staffing. |
@@ -45,11 +45,11 @@ started**. The version is the release the row first shipped in.
 | Map view with layers, GPX/KML import, static map in the packet | Partial (v2.2.0) | Layers and KML / GPX / GeoJSON import shipped, waypoints become sites. No static map image in the packet. |
 | Shared asset registry with custody state | Not started | Equipment lists per site as before. |
 | Objectives (claimable, with completion) | Not started | |
-| Open-shift board + notify qualified operators | Partial (v2.2.0) | Board with qualification and overlap reasons, server-enforced capacity, coordinator told on sign-up. No proactive notification to qualified operators when a shift opens. |
+| Open-shift board + notify qualified operators | Shipped v2.3.0 | Board (v2.2.0) plus "Notify N qualified" in the assign dialog: `notify_open_shift` RPC restricts to group members, skips people already on the shift and anyone told in the last 24 hours. |
 | Notification preferences (email / SMS / push) | Not started | In-app notifications only. |
 | CHIRP CSV export from the comms plan | Shipped v2.0.0 | |
 | Served agency / tasking / authorization fields | Shipped v2.0.0 | Deployment form and packet header. |
-| Roster CSV import | Not started | Invitations one at a time through the invite function. |
+| Roster CSV import | Shipped v2.3.0 | Members > Import roster: tolerant headers (email, call sign, name or first/last, phone, licence class, role), per-row validation and preview, sequential invitations with progress; existing members are added to the groups instead of failing; profile fields fill empty columns only (`invite-user` v3). |
 | Light theme, type-scale control, mobile UX pass (§12) | Partial | Light and dark themes, phone-first packet with mobile redirect. No type-scale control, no systematic mobile pass over planner screens. |
 | Code signing for Windows builds | Not done (by instruction) | No certificate; updater artifacts are minisign-signed, installers unsigned. |
 | Outbox reliability: retry, backoff, dead-letter UI; `syncEngine` tests | Partial (v2.2.0) | Retry, dead-letter list with retry / discard for both outboxes, sync-engine tests. No exponential backoff (fixed 30 s cycle). |
@@ -82,8 +82,9 @@ Followed as written: event sourcing limited to tasks, no Ed25519 / OR-set
 work, What3Words and `export-ics205` removed from the repo (the two Edge
 Functions still need deleting in the Supabase dashboard).
 
-**Count (2026-09-07):** P0 12/12 shipped. P1 10 shipped, 5 partial, 3 not
-started, 1 not done by instruction. P2 1 partial, 10 not started. P3 0/6.
+**Count (2026-09-07, after P1 part 1):** P0 12/12 shipped. P1 13 shipped,
+3 partial, 2 not started, 1 not done by instruction. P2 1 partial, 10 not
+started. P3 0/6.
 
 ## Completed
 
@@ -170,6 +171,11 @@ started, 1 not done by instruction. P2 1 partial, 10 not started. P3 0/6.
   tests total.
 
 - 2026-09-07 **Release v2.2.0** (Phase 4a-4e).
+- 2026-09-07 **P1 sweep, part 1** (migration `017`, applied; `invite-user`
+  v3 deployed): readiness checklist page and dashboard card; notify
+  qualified operators about an open shift (verified with a rollback probe:
+  notifies once, skips within 24 h, filters non-members); roster CSV import
+  with preview. Tests: readiness (3), roster (5). 226 tests total.
 
 ## In Progress
 

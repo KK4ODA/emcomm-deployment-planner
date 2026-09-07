@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Package, Users, Layers, PackageX, ListTodo, FolderPlus, MapPin, UserCheck, ClipboardList } from 'lucide-react';
+import { Plus, Package, Users, Layers, PackageX, ListTodo, FolderPlus, MapPin, UserCheck, ClipboardList, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
@@ -28,6 +28,7 @@ import { useCategoryMutations, useItemMutations } from '@/features/items/useItem
 import { SiteOverview } from '@/features/dashboard/SiteOverview';
 import { SiteFilter, SiteFilterBanner } from '@/features/dashboard/SiteFilter';
 import { PacketBanner } from '@/features/packet/PacketBanner';
+import { useReadiness } from '@/features/readiness/useReadiness';
 import { isPlanner } from '@/lib/permissions';
 import { occupies } from '@/lib/staffing';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -99,6 +100,7 @@ function DashboardContent() {
     if (isMobile && myAssignment && !isPlanner(user?.app_role) && !siteFilter) navigate(ROUTES.packet, { replace: true });
   }, [isMobile, myAssignment, user?.app_role, siteFilter, navigate]);
 
+  const readiness = useReadiness(isPlanner(user?.app_role) ? deployment : null).result;
   const staffing = useMemo(() => {
     const positions = (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId && (!siteFilter || p.site_id === siteFilter));
     const ids = new Set(positions.map(p => p.id));
@@ -209,7 +211,9 @@ function DashboardContent() {
             <StatCard label="Items" value={items.length} icon={Package} tone="info" />
             <StatCard label="Unassigned" value={unassignedCount} icon={PackageX} tone={unassignedCount ? 'critical' : 'success'} onClick={unassignedCount ? () => jumpToUnassigned() : undefined} hint={unassignedCount ? 'Click to locate' : 'All items covered'} />
             <StatCard label="Tasks done" value={<>{taskSummary.completed}<span className="text-sm font-normal text-muted-foreground">/{taskSummary.total}</span></>} icon={ListTodo} tone={taskSummary.total && taskSummary.completed === taskSummary.total ? 'success' : 'accent'} onClick={openTasks} hint={siteFilter ? 'Open site tasks' : 'Open sites'} />
-            <StatCard label="Categories" value={categories.length} icon={Layers} />
+            {readiness
+              ? <StatCard label="Readiness" value={readiness.todo + readiness.warn} icon={ListChecks} tone={readiness.todo ? 'critical' : readiness.warn ? 'warning' : 'success'} onClick={() => navigate(ROUTES.readiness)} hint={readiness.ready ? 'Nothing outstanding' : `${readiness.todo} to fix, ${readiness.warn} to check`} />
+              : <StatCard label="Categories" value={categories.length} icon={ListChecks} />}
             <StatCard label="Operators" value={usersWithCallSign.length} icon={Users} hint="Members with a call sign" />
           </div>
 

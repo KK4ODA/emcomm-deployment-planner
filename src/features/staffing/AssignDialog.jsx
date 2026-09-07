@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { UserPlus, Check, X, AlertTriangle, Clock, HelpCircle, Trash2 } from 'lucide-react';
+import { UserPlus, Check, X, AlertTriangle, Clock, HelpCircle, Trash2, BellRing } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +21,10 @@ import { cn } from '@/lib/utils';
  *   users: Object[], assignments: Object[], shifts: Object[],
  *   onOffer: (userId: string, status: 'offered'|'accepted') => void,
  *   onSetStatus: (assignmentId: string, status: string) => void,
- *   onRemove: (assignmentId: string) => void, busy?: boolean
+ *   onRemove: (assignmentId: string) => void, onNotify?: (userIds: string[]) => void, busy?: boolean
  * }} props
  */
-export function AssignDialog({ open, onClose, position, shift, users, assignments, shifts, onOffer, onSetStatus, onRemove, busy }) {
+export function AssignDialog({ open, onClose, position, shift, users, assignments, shifts, onOffer, onSetStatus, onRemove, onNotify, busy }) {
   const [search, setSearch] = useState('');
   const usersById = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
 
@@ -37,6 +37,9 @@ export function AssignDialog({ open, onClose, position, shift, users, assignment
   const candidates = rankCandidates(position, shift, users, assignments, shifts)
     .filter(c => !c.alreadyHere || !occupies(current.find(a => a.user_id === c.user.id)?.status))
     .filter(c => !q || [c.user.call_sign, c.user.full_name, c.user.locality].some(v => v?.toLowerCase().includes(q)));
+  const qualified = rankCandidates(position, shift, users, assignments, shifts)
+    .filter(c => !c.alreadyHere && c.match.unmet.length === 0 && c.overlaps.length === 0)
+    .map(c => c.user.id);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -91,7 +94,14 @@ export function AssignDialog({ open, onClose, position, shift, users, assignment
         <section aria-label="Candidates" className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Who could take it</h3>
-            <SearchInput value={search} onChange={setSearch} placeholder="Call sign or name" className="w-56" />
+            <div className="flex items-center gap-2">
+              {onNotify && coverage.open > 0 && qualified.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => onNotify(qualified)} disabled={busy} title="Send an open-shift notification to everyone who meets the requirements and is free">
+                  <BellRing /> Notify {qualified.length} qualified
+                </Button>
+              )}
+              <SearchInput value={search} onChange={setSearch} placeholder="Call sign or name" className="w-56" />
+            </div>
           </div>
           {candidates.length === 0 ? <p className="text-sm text-muted-foreground">No members with a call sign match.</p> : (
             <ul className="max-h-80 divide-y overflow-y-auto rounded-md border">

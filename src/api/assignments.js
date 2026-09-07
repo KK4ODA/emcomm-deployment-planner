@@ -49,3 +49,15 @@ export async function removeAssignment(assignmentId) {
 export async function volunteerForShift(shiftId, note) {
   return unwrap(await supabase.rpc('volunteer_for_shift', { p_shift_id: shiftId, p_note: note?.trim() || null }));
 }
+
+/**
+ * Tell qualified operators about an open shift (planner). The server keeps
+ * the list to group members, skips people already on the shift and anyone
+ * told in the last 24 hours (migration 017).
+ * @param {string} shiftId
+ * @param {string[]} userIds
+ * @returns {Promise<{ notified: number, skipped_recent: number }>}
+ */
+export async function notifyOpenShift(shiftId, userIds) {
+  return unwrap(await supabase.rpc('notify_open_shift', { p_shift_id: shiftId, p_user_ids: userIds }));
+}

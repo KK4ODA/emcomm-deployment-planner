@@ -53,6 +53,7 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `feedback` | Post-event feedback, one per user per deployment, or anonymous (`user_id` NULL): rating 1–5, went well, problems, comms worked yes/partly/no, comms and equipment notes, one change (012) |
 | `lessons` | Lessons learned per group and deployment, optional position/site, category staffing/comms/equipment/logistics/safety/process, finding, recommendation, status open/carried_forward/addressed/wont_fix, `carried_from_lesson_id` (012) |
 | `map_layers` | Imported course routes, boundaries and waypoints per deployment: `name`, `kind` route/area/points/mixed, `color`, `geojson` (FeatureCollection, < 4 MB), `source_file`, `sort_order` (016). Planners write, group reads |
+| `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
 
 RPC `set_assignment_status(assignment, status, at, note, intent_id)`
@@ -83,6 +84,11 @@ policies evaluate them as the querying role, and the three RPCs
 client's write paths and check role and visibility themselves. Trigger
 functions have EXECUTE revoked. The remaining advisor item, leaked-password
 protection, is an Auth dashboard switch.
+
+RPC `notify_open_shift(shift, user_ids)` (017): planner-only; inserts an
+`open_shift` notification for each listed user who is an active member of
+the deployment's group, not already on the shift, and not notified for it
+in the last 24 hours. Returns `{ notified, skipped_recent }`.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a
@@ -155,7 +161,7 @@ the caller's JWT and use the service role only after checking the caller.
 
 | Slug | Called from | What it does |
 |------|-------------|--------------|
-| `invite-user` | Members › Invite | Admin or planner. `auth.admin.inviteUserByEmail`, sets the initial role (planners: pending/viewer/operator only) and inserts active `memberships` (planners: only their own groups) |
+| `invite-user` (v3: optional `call_sign`, `full_name`, `phone`, `license_class` fill empty profile columns; an existing member is added to the groups instead of failing) | Members › Invite | Admin or planner. `auth.admin.inviteUserByEmail`, sets the initial role (planners: pending/viewer/operator only) and inserts active `memberships` (planners: only their own groups) |
 | `create-or-update-user-profile` | Profile › Add member, Members › Edit | Admin-only upsert of a member profile by email; invites if new |
 | `cleanup-deleted-user` | Members › Remove | Admin-only; clears the call sign from items, sites and tasks. Body: `{ "callSign": "W1ABC" }` |
 | `export-deployment` | Deployments › Export | Plain-text operational summary (+ go-kit list) |

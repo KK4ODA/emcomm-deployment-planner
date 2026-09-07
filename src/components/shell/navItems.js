@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, FileText, MapPin, Package, Users, UserCog, ClipboardList, Radio, BookOpen, Antenna, Headphones, Clock, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, MapPin, Package, Users, UserCog, ClipboardList, Radio, BookOpen, Antenna, Headphones, Clock, ClipboardCheck, ListChecks } from 'lucide-react';
 import { ROUTES } from '@/app/routes';
 
 /**
@@ -12,6 +12,7 @@ export const NAV_ITEMS = Object.freeze([
   { label: 'Dashboard', to: ROUTES.dashboard, icon: LayoutDashboard, end: true, scoped: true },
   { label: 'My packet', to: ROUTES.packet, icon: BookOpen, scoped: true },
   { label: 'Deployments', to: ROUTES.deployments, icon: FolderOpen },
+  { label: 'Readiness', to: ROUTES.readiness, icon: ListChecks, scoped: true },
   { label: 'Staffing', to: ROUTES.staffing, icon: ClipboardList, scoped: true },
   { label: 'Comms plan', to: ROUTES.comms, icon: Radio, scoped: true },
   { label: 'Net control', to: ROUTES.ncs, icon: Headphones, scoped: true },

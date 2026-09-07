@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Users, UserPlus, Mail, Phone, Pencil, Shield, Trash2, MoreHorizontal, Package } from 'lucide-react';
+import { Users, UserPlus, Mail, Phone, Pencil, Shield, Trash2, MoreHorizontal, Package, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,6 +23,7 @@ import { hasPermission, ROLE_ORDER } from '@/lib/permissions';
 import { itemsAssignedTo } from '@/lib/assignments';
 import { pendingRequests } from '@/lib/memberships';
 import { InviteMemberDialog } from '@/features/members/InviteMemberDialog';
+import { RosterImportDialog } from '@/features/members/RosterImportDialog';
 import { MemberEditDialog } from '@/features/members/MemberEditDialog';
 import { MembershipRequests } from '@/features/members/MembershipRequests';
 import { RoleDialog } from '@/features/members/RoleDialog';
@@ -40,6 +41,7 @@ export default function Members() {
 
   const [search, setSearch] = useState('');
   const [invite, setInvite] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [roleFor, setRoleFor] = useState(null);
   const [busyRequest, setBusyRequest] = useState(/** @type {string|null} */ (null));
@@ -137,7 +139,12 @@ export default function Members() {
         icon={Users}
         title="Members"
         description={pendingCount > 0 ? `${pendingCount} member${pendingCount === 1 ? '' : 's'} awaiting role approval` : 'Everyone in your ARES groups'}
-        actions={canInvite && <Button onClick={() => setInvite(true)}><UserPlus /> Invite member</Button>}
+        actions={canInvite && (
+          <>
+            <Button variant="outline" onClick={() => setImportOpen(true)}><FileSpreadsheet /> Import roster</Button>
+            <Button onClick={() => setInvite(true)}><UserPlus /> Invite member</Button>
+          </>
+        )}
       />
       <MembershipRequests
         requests={requests}
@@ -233,6 +240,7 @@ export default function Members() {
         )}
       </QueryState>
 
+      <RosterImportDialog open={importOpen} onClose={() => setImportOpen(false)} existingUsers={usersQ.data ?? []} currentUserRole={role} onDone={invalidateUsers} />
       <InviteMemberDialog open={invite} onClose={() => setInvite(false)} onInvite={(d) => sendInvite.mutate(d)} currentUserRole={role} submitting={sendInvite.isPending} />
       <MemberEditDialog open={!!editing} member={editing} onClose={() => setEditing(null)} onSave={(data) => saveProfile.mutate({ member: editing, data })} submitting={saveProfile.isPending} />
       <RoleDialog open={!!roleFor} member={roleFor} onClose={() => setRoleFor(null)} onChange={(app_role) => changeRole.mutate({ id: roleFor.id, app_role })} submitting={changeRole.isPending} />

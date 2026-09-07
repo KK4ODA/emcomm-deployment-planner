@@ -199,6 +199,25 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
   deployment (and remapped position) when a deployment is duplicated;
   `CarriedLessons` shows them on Staffing until they are marked addressed.
 
+## Readiness checklist
+
+`readinessChecklist()` in `src/lib/readiness.js` turns the plan into a
+worklist (design doc 9.10): each check yields `{ group, state, label,
+detail, to }` with state `todo` / `warn` / `ok`, grouped Plan, Staffing,
+Comms, Sites, Logistics and sorted worst first. `useReadiness()` gathers the
+shared caches (including the unpublished-change count from `planChanges`)
+and feeds both the `/readiness` page and the dashboard card. Not a score:
+every line links to the page where it is fixed.
+
+## Roster import
+
+`src/lib/roster.js` parses a CSV (tolerant headers, quotes, tab or
+semicolon delimiters), validates each row (email, call sign format,
+duplicates in the file, call signs owned by other members, licence class,
+role) and classifies it new / existing / invalid. `RosterImportDialog`
+previews, then calls `invite-user` once per row, sequentially, with
+progress; nothing is sent before the preview is confirmed.
+
 ## Map layers
 
 - `src/lib/geo.js` parses KML (Placemark Point / LineString / Polygon /

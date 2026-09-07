@@ -36,8 +36,9 @@ It is opinionated about a few things:
 
 | Area | What you get |
 |------|--------------|
+| Readiness | One page listing everything still standing between the plan and go time (open slots, unanswered offers, unmet requirements, nets without a primary, unpublished changes, sites without pins, overdue tasks, and more), each line linking to where it is fixed |
 | Deployments | Status lifecycle (planning → active → completed → archived), kind (public service, activation, exercise, Field Day, net, training), served agency and tasking, readiness at a glance (slots covered, unassigned items, tasks done, comms plan), duplicate for recurring events (positions, shifts, people, comms plan and open lessons, with every date shifted to the new start), templates, per-ARES-group visibility |
-| Staffing | Positions (job, site or mobile, tactical call, headcount, requirements), shifts with muster times, operational periods; "X of Y slots covered"; assign dialog ranks operators by capability match and availability; offer / accept / decline with notifications; open shifts appear on every operator's My assignments page as a sign-up sheet (per-position switch, capacity enforced on the server) |
+| Staffing | Positions (job, site or mobile, tactical call, headcount, requirements), shifts with muster times, operational periods; "X of Y slots covered"; assign dialog ranks operators by capability match and availability and can notify every qualified, free operator about an open shift; offer / accept / decline with notifications; open shifts appear on every operator's My assignments page as a sign-up sheet (per-position switch, capacity enforced on the server) |
 | Operator packet | One phone-first page per assignment: where, when, tactical call, primary frequency above the fold; directions, parking and arrival notes, all frequencies by condition, what to bring, who to report to; change banner on republish; prints on one page; works offline once seen |
 | Communications | Channel library per ARES group (ICS-217A shape); per-deployment plan with primary / alternate / contingency roles and Condition 1 / 2 / 3 ladder; ICS 205 PDF and CHIRP CSV generated from it; publish with a change note |
 | Operations | Check in / On position / Check out from the packet (offline-capable); Net control board with who is missing, arriving, on station; activity log; hours recorded automatically, rolled up per operator and per month for the group (ARRL report buckets) with CSV |
@@ -45,7 +46,7 @@ It is opinionated about a few things:
 | Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, course routes / boundaries / waypoints imported from KML, GPX or GeoJSON as map layers (waypoints become sites in one click), parking / arrival / access notes, contact, operator roster consistency check |
 | Equipment | Categories and items per site, drag-and-drop ordering, priorities, assignment to one or more operators, bulk "assign all unassigned" |
 | Tasks | Setup/teardown tasks per site with forward-only status, assignees, due times; work offline and sync via an event log |
-| Members | Roles (admin, planner, operator, viewer, pending), group membership by request and approval, invitations, capability profiles, profile photos, call sign validation |
+| Members | Roles (admin, planner, operator, viewer, pending), group membership by request and approval, invitations one at a time or from a roster CSV with preview, capability profiles, profile photos, call sign validation |
 | My assignments | Offers to answer, confirmed positions, items, tasks and sites for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
 | Notifications | In-app notifications for assignments and changes |
 | Exports | Deployment summary text, ICS 205 (comms plan), ICS 205A (communications list), ICS 214 (activity log), CHIRP CSV, hours CSV, AAR draft in Markdown |

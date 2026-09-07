@@ -12,6 +12,7 @@ export const ROUTES = Object.freeze({
   ncs: '/ncs',
   hours: '/hours',
   aar: '/aar',
+  readiness: '/readiness',
   packetFor: (assignmentId) => `/packet/${assignmentId}`,
   myAssignments: '/my-assignments',
   members: '/members',

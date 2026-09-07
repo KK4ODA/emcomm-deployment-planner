@@ -29,6 +29,9 @@ import { PublishPlanDialog } from '@/features/deployments/PublishPlanDialog';
 import { usePublishPlan } from '@/features/comms/useCommsMutations';
 import { Send } from 'lucide-react';
 import { ROUTES } from '@/app/routes';
+import { useMutation } from '@tanstack/react-query';
+import { notifyOpenShift } from '@/api/assignments';
+import { reportMutationError } from '@/hooks/useEntities';
 
 export default function Staffing() {
   return <DeploymentGate><StaffingContent /></DeploymentGate>;
@@ -61,15 +64,20 @@ function StaffingContent() {
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(searchParams.get('filter') || 'all');
   const [siteFilter, setSiteFilter] = useState(searchParams.get('site') || 'all');
-  useEffect(() => { const s = searchParams.get('site'); if (s) setSiteFilter(s); }, [searchParams]);
+  useEffect(() => { const s = searchParams.get('site'); if (s) setSiteFilter(s); const f = searchParams.get('filter'); if (f) setFilter(f); }, [searchParams]);
   const [positionDialog, setPositionDialog] = useState({ open: false, position: null });
   const [bulkOpen, setBulkOpen] = useState(false);
   const [periodsOpen, setPeriodsOpen] = useState(false);
   const [assignFor, setAssignFor] = useState(/** @type {{ position: Object, shift: Object }|null} */ (null));
   const [publishOpen, setPublishOpen] = useState(false);
   const publish = usePublishPlan();
+  const notify = useMutation({
+    mutationFn: (/** @type {{ shiftId: string, userIds: string[] }} */ { shiftId, userIds }) => notifyOpenShift(shiftId, userIds),
+    onSuccess: (r) => toast.success(r.notified ? `${r.notified} operator${r.notified === 1 ? '' : 's'} notified` : 'Nobody new to notify', { description: r.skipped_recent ? `${r.skipped_recent} already told in the last 24 hours.` : 'They can take the shift from My assignments.' }),
+    onError: reportMutationError('Notify operators'),
+  });
 
   const sites = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
   const positions = useMemo(() => (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId), [positionsQ.data, deploymentId]);
@@ -266,7 +274,8 @@ function StaffingContent() {
         onOffer={(userId, status) => mutations.offer.mutate({ shiftId: assignFor.shift.id, userId, createdBy: user?.id, status }, { onSuccess: () => toast.success(status === 'offered' ? 'Offer sent' : 'Assigned') })}
         onSetStatus={(id, status) => mutations.setStatus.mutate({ id, status })}
         onRemove={(id) => mutations.unassign.mutate(id)}
-        busy={busy}
+        onNotify={(userIds) => notify.mutate({ shiftId: assignFor.shift.id, userIds })}
+        busy={busy || notify.isPending}
       />
       <PublishPlanDialog open={publishOpen} deployment={deployment} onClose={() => setPublishOpen(false)} onPublish={(note, extra) => publish.mutate({ deployment, note, ...extra }, { onSuccess: () => setPublishOpen(false) })} submitting={publish.isPending} />
       {dialog}

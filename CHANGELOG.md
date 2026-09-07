@@ -9,6 +9,24 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- **Readiness** page: every problem that still stands between the plan and
+  go time, grouped and worst first, each line linking to where it is fixed.
+  Open slots, unanswered offers, operators not meeting requirements or on
+  overlapping shifts, positions without a tactical call, no net control,
+  nets without a primary channel, channels changed in the library, packets
+  changed since the last publication, operators who have not seen the
+  latest packet, staffed sites without a map pin or arrival notes, essential
+  items nobody is bringing, overdue tasks. Planners get a readiness card on
+  the dashboard.
+- **Notify qualified operators**: from the assign dialog, tell everyone who
+  meets the requirements and is free that a shift is open. The server keeps
+  it to group members and does not nag the same person twice in a day.
+- **Import roster**: upload or paste a CSV on the Members page, check the
+  preview, and invite everyone in one go. Existing members are added to the
+  groups instead of failing; call sign, name, phone and licence class fill
+  in empty profile fields.
+
 ## [2.2.0] - 2026-09-07
 
 The sign-up sheet release: operators take open shifts themselves, plan
