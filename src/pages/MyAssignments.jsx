@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ListTodo, Printer, Radio, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
+import { Package, ListTodo, Printer, Radio, MapPin, Play, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -8,16 +9,20 @@ import { StatCard } from '@/components/common/StatCard';
 import { Section } from '@/components/common/Section';
 import { QueryState } from '@/components/common/QueryState';
 import { DeploymentGate } from '@/components/common/DeploymentGate';
-import { ItemPriorityBadge, TaskStatusBadge, TaskPriorityBadge } from '@/components/common/Badges';
+import { TaskStatusBadge, TaskPriorityBadge } from '@/components/common/Badges';
 import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
+import { useOffline } from '@/contexts/OfflineContext';
 import { useCategories, useItems, useLocations, useTasks } from '@/hooks/useEntities';
 import { locationsOf, itemsOf } from '@/lib/deployments';
 import { itemsAssignedTo } from '@/lib/assignments';
 import { tasksInDeployment, compareOpenTasks } from '@/lib/tasks';
-import { ITEM_PRIORITY, categoryColor } from '@/lib/constants';
+import { canEdit } from '@/lib/permissions';
+import { NEXT_TASK_STATUS } from '@/lib/constants';
 import { formatDate } from '@/lib/time';
+import { updateTaskEvent } from '@/api/taskEvents';
+import { GoKitList, goKitStorageKey } from '@/features/assignments/GoKitList';
 import { ROUTES } from '@/app/routes';
 
 export default function MyAssignments() {
@@ -27,10 +32,12 @@ export default function MyAssignments() {
 function MyAssignmentsContent() {
   const { user } = useAuth();
   const { deployment, deploymentId } = useCurrentDeployment();
+  const { isOnline } = useOffline();
   const categoriesQ = useCategories();
   const itemsQ = useItems();
   const locationsQ = useLocations();
   const tasksQ = useTasks();
+  const mayAdvance = canEdit(user?.app_role, 'task');
 
   const locations = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
   const siteName = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
@@ -39,12 +46,17 @@ function MyAssignmentsContent() {
   const myTasks = useMemo(() => tasksInDeployment(tasksQ.data ?? [], locations).filter(t => t.assigned_to_call_sign === user?.call_sign).sort(compareOpenTasks), [tasksQ.data, locations, user?.call_sign]);
   const mySites = locations.filter(l => l.assigned_call_signs?.includes(user?.call_sign));
 
-  const grouped = useMemo(() => {
-    const g = {};
-    for (const key of Object.keys(ITEM_PRIORITY)) g[key] = [];
-    for (const i of myItems) (g[i.priority] ??= []).push(i);
-    return g;
-  }, [myItems]);
+  const advance = async (task) => {
+    const next = NEXT_TASK_STATUS[task.status];
+    if (!next) return;
+    try {
+      await updateTaskEvent(task.id, { status: next }, user, deploymentId, isOnline);
+      tasksQ.refetch();
+      if (!isOnline) toast.message('Saved locally', { description: 'The change syncs when you are back online.' });
+    } catch (err) {
+      toast.error(`Could not update task: ${err.message || 'unknown error'}`);
+    }
+  };
 
   if (!user?.call_sign) {
     return (
@@ -53,6 +65,7 @@ function MyAssignmentsContent() {
   }
 
   const openTasks = myTasks.filter(t => t.status !== 'completed').length;
+  const storageKey = goKitStorageKey(deploymentId, user.call_sign);
 
   return (
     <QueryState queries={[categoriesQ, itemsQ, locationsQ]}>
@@ -60,7 +73,7 @@ function MyAssignmentsContent() {
         icon={Package}
         eyebrow={deployment.name}
         title={<span className="flex items-center gap-2">My assignments <CallSign value={user.call_sign} size="md" icon /></span>}
-        description="Everything assigned to you in this deployment. Print it for your go-kit."
+        description="Everything assigned to you in this deployment. Tick items as you pack; print it for your go-kit."
         actions={(myItems.length > 0 || myTasks.length > 0) && <Button variant="outline" className="no-print" onClick={() => window.print()}><Printer /> Print</Button>}
       />
 
@@ -96,51 +109,37 @@ function MyAssignmentsContent() {
               <Section title="My tasks" icon={ListTodo} aside={`${openTasks} open`} bodyClassName="p-0">
                 {myTasks.length === 0 ? <p className="p-4 text-center text-sm text-muted-foreground">No tasks assigned to you.</p> : (
                   <ul className="divide-y">
-                    {myTasks.map(t => (
-                      <li key={t.id} className="px-3 py-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <Link to={ROUTES.siteTasks(t.deployment_location_id)} className={`text-sm font-medium hover:underline ${t.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{t.name}</Link>
-                          <TaskStatusBadge status={t.status} />
-                        </div>
-                        {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
-                        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                          <TaskPriorityBadge priority={t.priority} />
-                          {siteName.get(t.deployment_location_id) && <span>{siteName.get(t.deployment_location_id)}</span>}
-                          {t.due_date && <span>· due {formatDate(t.due_date)}</span>}
-                        </p>
-                      </li>
-                    ))}
+                    {myTasks.map(t => {
+                      const next = NEXT_TASK_STATUS[t.status];
+                      const inProgress = t.status === 'in_progress';
+                      return (
+                        <li key={t.id} className="flex items-start gap-2 px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <Link to={ROUTES.siteTasks(t.deployment_location_id)} className={`text-sm font-medium hover:underline ${t.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{t.name}</Link>
+                              <TaskStatusBadge status={t.status} />
+                            </div>
+                            {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
+                            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                              <TaskPriorityBadge priority={t.priority} />
+                              {siteName.get(t.deployment_location_id) && <span>{siteName.get(t.deployment_location_id)}</span>}
+                              {t.due_date && <span>· due {formatDate(t.due_date)}</span>}
+                            </p>
+                          </div>
+                          {mayAdvance && next && (
+                            <Button size="sm" variant={inProgress ? 'default' : 'outline'} className="no-print h-7 shrink-0 px-2 text-xs" onClick={() => advance(t)} aria-label={`${inProgress ? 'Mark done' : 'Start'}: ${t.name}`}>
+                              {inProgress ? <Check /> : <Play />} {inProgress ? 'Done' : 'Start'}
+                            </Button>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </Section>
             </div>
 
-            <Section title="Equipment to bring" icon={Package} aside={`${myItems.length} items`} bodyClassName="p-0">
-              {myItems.length === 0 ? <p className="p-4 text-center text-sm text-muted-foreground">No equipment assigned to you.</p> : (
-                Object.entries(ITEM_PRIORITY).map(([priority, meta]) => grouped[priority]?.length > 0 && (
-                  <div key={priority}>
-                    <h3 className="flex items-center justify-between border-b bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <span>{meta.label}</span><span className="tnum">{grouped[priority].length}</span>
-                    </h3>
-                    <ul className="divide-y">
-                      {grouped[priority].map(item => {
-                        const cat = categoryById.get(item.category_id);
-                        return (
-                          <li key={item.id} className="flex items-center gap-3 px-3 py-2">
-                            <span className="h-8 w-1 shrink-0 rounded-full" style={{ backgroundColor: categoryColor(cat?.color) }} aria-hidden />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">{item.name}{item.quantity > 1 && <span className="tnum ml-1.5 text-xs text-muted-foreground">×{item.quantity}</span>}</p>
-                              <p className="truncate text-xs text-muted-foreground">{cat?.name || 'Uncategorised'}{siteName.get(item.deployment_location_id) ? ` · ${siteName.get(item.deployment_location_id)}` : ''}{item.description ? ` · ${item.description}` : ''}</p>
-                            </div>
-                            <ItemPriorityBadge priority={item.priority} />
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))
-              )}
-            </Section>
+            <GoKitList key={storageKey} storageKey={storageKey} items={myItems} categoryById={categoryById} siteName={siteName} />
           </div>
         </>
       )}

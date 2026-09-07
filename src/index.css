@@ -157,5 +157,10 @@
     .no-print {
       display: none !important;
     }
+    /* Go-kit checkboxes must keep their state and border on paper. */
+    input[type='checkbox'] {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
   }
 }
