@@ -22,7 +22,7 @@ describe('AuthProvider', () => {
   });
 
   it('loads the profile for a live session and caches it', async () => {
-    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: { user: { id: 'u1', email: 'a@b.c' } } } });
+    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: { user: { id: 'u1', email: 'a@b.c' } } }, error: null });
     mock.setResponse({ data: { id: 'u1', call_sign: 'KK4ODA', app_role: 'admin' }, error: null });
     render(<AuthProvider><Probe /></AuthProvider>);
     expect(await screen.findByText('KK4ODA')).toBeInTheDocument();
@@ -30,20 +30,20 @@ describe('AuthProvider', () => {
   });
 
   it('falls back to the cached identity when there is no session', async () => {
-    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
     saveCachedIdentity({ id: 'u1', call_sign: 'W1AW', app_role: 'operator', ares_group_ids: [] });
     render(<AuthProvider><Probe /></AuthProvider>);
     expect(await screen.findByText('W1AW (offline)')).toBeInTheDocument();
   });
 
   it('requires authentication when there is neither session nor cache', async () => {
-    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
     render(<AuthProvider><Probe /></AuthProvider>);
     await waitFor(() => expect(screen.getByText('error:auth_required')).toBeInTheDocument());
   });
 
   it('uses the cache when the profile fetch fails for the same user', async () => {
-    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } });
+    mock.supabase.auth.getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
     mock.setResponse({ data: null, error: new Error('network down') });
     saveCachedIdentity({ id: 'u1', call_sign: 'N0CALL', app_role: 'viewer', ares_group_ids: [] });
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});

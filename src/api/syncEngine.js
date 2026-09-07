@@ -1,13 +1,14 @@
 import { supabase } from './supabaseClient';
 import { queryClientInstance } from '@/lib/query-client';
-import { offlineStorage } from '@/components/offline/storage';
-import { applyTaskEvent, TASKS_UPDATED_EVENT } from './taskEvents';
+import { offlineStorage } from '@/lib/offline/storage';
+import { applyTaskEvent, TASKS_UPDATED_EVENT, OUTBOX_CHANGED_EVENT } from './taskEvents';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // ─── Tier management ──────────────────────────────────────────────────────────
 
+/** @type {'ONLINE'|'OFFLINE'} */
 let _tier = 'OFFLINE';
 const _tierListeners = new Set();
 
@@ -18,6 +19,7 @@ export function onTierChange(fn) {
   return () => _tierListeners.delete(fn);
 }
 
+/** @param {'ONLINE'|'OFFLINE'} tier */
 function setTier(tier) {
   if (tier === _tier) return;
   _tier = tier;
@@ -41,10 +43,33 @@ async function detectTier() {
     // Any response means the server is reachable
     setTier('ONLINE');
     return 'ONLINE';
-  } catch (_) {
+  } catch {
     setTier('OFFLINE');
     return 'OFFLINE';
   }
+}
+
+// ─── Outbox size (for the UI) ────────────────────────────────────────────────
+
+let _pending = 0;
+const _pendingListeners = new Set();
+
+export function getPendingCount() { return _pending; }
+
+export function onPendingChange(fn) {
+  _pendingListeners.add(fn);
+  return () => _pendingListeners.delete(fn);
+}
+
+export async function refreshPendingCount() {
+  try {
+    const outbox = await offlineStorage.getAllEntities('outbox');
+    if (outbox.length !== _pending) {
+      _pending = outbox.length;
+      _pendingListeners.forEach(fn => fn(_pending));
+    }
+  } catch { /* storage unavailable */ }
+  return _pending;
 }
 
 // ─── Sync state helpers ───────────────────────────────────────────────────────
@@ -81,7 +106,7 @@ async function ensureSeeded() {
 
 async function drainOutbox() {
   const outbox = await offlineStorage.getAllEntities('outbox');
-  if (!outbox.length) return;
+  if (!outbox.length) { await refreshPendingCount(); return; }
 
   // Apply in ULID order (ascending time)
   const sorted = [...outbox].sort((a, b) => a.id.localeCompare(b.id));
@@ -95,6 +120,7 @@ async function drainOutbox() {
       console.warn('Outbox drain: Supabase rejected event', event.id, error.message);
     }
   }
+  await refreshPendingCount();
 }
 
 // ─── Inbox fetch ──────────────────────────────────────────────────────────────
@@ -174,6 +200,7 @@ function subscribeRealtime() {
 
 export async function syncNow() {
   try {
+    await refreshPendingCount();
     const tier = await detectTier();
     if (tier !== 'ONLINE') return;
 
@@ -196,6 +223,7 @@ export async function initSyncEngine() {
 
   // Re-sync immediately when coming back online
   window.addEventListener('online', syncNow);
+  window.addEventListener(OUTBOX_CHANGED_EVENT, refreshPendingCount);
 
   // Flip tier immediately when the browser detects offline (avoids the
   // up-to-30s probe lag on a real network drop). DevTools throttle doesn't

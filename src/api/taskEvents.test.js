@@ -4,7 +4,7 @@ import { createSupabaseMock } from '@/test/supabaseMock';
 const mock = createSupabaseMock();
 vi.mock('@/api/supabaseClient', () => ({ supabase: mock.supabase }));
 
-const { offlineStorage } = await import('@/components/offline/storage.jsx');
+const { offlineStorage } = await import('@/lib/offline/storage');
 const {
   generateULID, getDeviceId, applyTaskEvent, createTaskEvent, updateTaskEvent, deleteTaskEvent, listTasksLocal,
 } = await import('./taskEvents.js');

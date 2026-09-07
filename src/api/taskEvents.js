@@ -1,7 +1,8 @@
 import { supabase } from './supabaseClient';
-import { offlineStorage } from '@/components/offline/storage';
+import { offlineStorage } from '@/lib/offline/storage';
 
 export const TASKS_UPDATED_EVENT = 'emcomm:tasks-updated';
+export const OUTBOX_CHANGED_EVENT = 'emcomm:outbox-changed';
 
 // ─── ULID ─────────────────────────────────────────────────────────────────────
 // Crockford base-32 alphabet (no I, L, O, U to avoid ambiguity)
@@ -113,8 +114,10 @@ async function dispatch(event, isOnline) {
   await applyTaskEvent(event);
   await offlineStorage.saveEntity('events', event);
 
-  const queueToOutbox = () =>
-    offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
+  const queueToOutbox = async () => {
+    await offlineStorage.saveEntity('outbox', { ...event, _queued_at: Date.now() });
+    window.dispatchEvent(new CustomEvent(OUTBOX_CHANGED_EVENT));
+  };
 
   if (!isOnline) {
     await queueToOutbox();
