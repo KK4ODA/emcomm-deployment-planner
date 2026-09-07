@@ -67,6 +67,13 @@ can resume without re-deriving state.
   caller denied, admin path works, probes rolled back). Tests: planDiff
   (7). 195 tests total.
 
+- 2026-09-07 **Phase 4c, open-shift board** (migration `015`, applied):
+  `positions.open_signup`, `volunteer_for_shift` RPC (capacity under row
+  lock, replaces a declined row, notifies creator), `openShifts()` with
+  match/overlap reasons, board on My assignments, switch on the position
+  form. Verified on the live database with rollback probes. Tests:
+  openShifts (3), OpenShiftBoard (3). 201 tests total.
+
 ## In Progress
 
 - Nothing mid-flight.

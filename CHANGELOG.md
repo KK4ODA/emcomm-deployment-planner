@@ -9,6 +9,12 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- **Open shifts**: operators see every open shift in the deployment on My
+  assignments and can take one with a single confirmation; the coordinator
+  is told. Shifts you do not qualify for, or that overlap one you already
+  hold, say why. Planners can turn self sign-up off per position.
+
 ### Changed
 - **Publish plan** now tells you what changed since the last publication,
   position by position, and notifies only the operators whose packet

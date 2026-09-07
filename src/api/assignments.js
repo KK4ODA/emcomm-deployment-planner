@@ -38,3 +38,14 @@ export async function offerAssignment({ shiftId, deploymentId, userId, createdBy
 export async function removeAssignment(assignmentId) {
   unwrap(await supabase.from(TABLES.assignments).delete().eq('id', assignmentId));
 }
+
+/**
+ * Take an open shift as the signed-in operator (server RPC, migration 015).
+ * The server checks capacity, the position's self sign-up switch and the
+ * deployment state.
+ * @param {string} shiftId
+ * @param {string} [note]
+ */
+export async function volunteerForShift(shiftId, note) {
+  return unwrap(await supabase.rpc('volunteer_for_shift', { p_shift_id: shiftId, p_note: note?.trim() || null }));
+}

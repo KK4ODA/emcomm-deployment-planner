@@ -98,7 +98,16 @@ Deployment ─┬─ OperationalPeriod[]      time windows (ICS scope)
   cards with shift chips, position form with requirements and shifts, bulk
   create "AID MILE {n}", assign dialog with ranked candidates, operational
   periods), Profile › "What I can do" (capability chips), My Assignments ›
-  "My positions" (Accept / Decline with reason, withdraw).
+  "My positions" (Accept / Decline with reason, withdraw), My Assignments ›
+  "Open shifts" (the sign-up sheet).
+- **Self sign-up**: `openShifts()` lists shifts with open headcount on
+  positions with `open_signup` (default on), not ended and not already the
+  operator's, each with its requirement match and overlaps; the board
+  disables shifts with unmet mandatory requirements or an overlap and says
+  why. Taking one calls the `volunteer_for_shift` RPC, which re-checks
+  capacity under a row lock, inserts an `accepted` assignment created by the
+  operator, and notifies the deployment creator. Withdrawing is the normal
+  accepted → declined move.
 - **Legacy**: `deployment_locations.assigned_call_signs` remains for the
   equipment/task views; migration 009 created one position per site that had
   a roster so nothing was lost. New staffing goes through positions.

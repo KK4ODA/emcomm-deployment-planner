@@ -231,3 +231,31 @@ export function groupPositionsBySite(positions) {
 export function compareAssignments(a, b) {
   return (ASSIGNMENT_STATUS[a.status]?.rank ?? 9) - (ASSIGNMENT_STATUS[b.status]?.rank ?? 9);
 }
+
+/**
+ * Shifts the signed-in operator could take right now: open headcount, self
+ * sign-up allowed, not yet ended, not already theirs. Each entry carries the
+ * requirement match and any overlap with their other shifts so the board can
+ * say why a shift is or is not a fit.
+ * @param {{ positions: Object[], shifts: Object[], assignments: Object[], user: Object|null, now?: Date }} ctx
+ * @returns {Array<{ shift: Object, position: Object, open: number, headcount: number, match: ReturnType<typeof matchRequirements>, overlaps: Object[], canTake: boolean }>}
+ */
+export function openShifts({ positions, shifts, assignments, user, now = new Date() }) {
+  const positionById = new Map(positions.map(p => [p.id, p]));
+  const shiftById = new Map(shifts.map(s => [s.id, s]));
+  const t = now.getTime();
+  return shifts
+    .map(shift => {
+      const position = positionById.get(shift.position_id);
+      if (!position || position.open_signup === false) return null;
+      if (new Date(shift.ends_at).getTime() <= t) return null;
+      if (assignments.some(a => a.shift_id === shift.id && a.user_id === user?.id && occupies(a.status))) return null;
+      const cov = shiftCoverage(shift, position, assignments);
+      if (cov.open <= 0) return null;
+      const match = matchRequirements(position, shift, user);
+      const overlaps = user ? overlappingAssignments(shift, user.id, assignments, shiftById) : [];
+      return { shift, position, open: cov.open, headcount: cov.headcount, match, overlaps, canTake: match.unmet.length === 0 && overlaps.length === 0 };
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(a.shift.starts_at).localeCompare(String(b.shift.starts_at)) || (a.position.name || '').localeCompare(b.position.name || ''));
+}

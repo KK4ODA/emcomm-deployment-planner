@@ -40,7 +40,7 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `event_acks` | Reserved for multi-peer sync |
 | `deployment_templates` | Saved structure (JSONB) with counts; `ares_group_id` scopes visibility |
 | `operational_periods` | Time windows of a deployment (`sequence`, `label`, `starts_at`, `ends_at`) that shifts and the comms plan can be scoped to (009) |
-| `positions` | A job to staff: `deployment_id`, optional `site_id`, `name`, `tactical_callsign`, `position_type`, `net`, `headcount`, `requirements` JSONB (`[{kind,value,mandatory,notes}]`), `briefing_notes`, `supervisor_position_id` (009) |
+| `positions` | A job to staff: `deployment_id`, optional `site_id`, `name`, `tactical_callsign`, `position_type`, `net`, `headcount`, `requirements` JSONB (`[{kind,value,mandatory,notes}]`), `briefing_notes`, `supervisor_position_id` (009), `open_signup` self sign-up switch (015), `packet_snapshot` + `packet_snapshot_version` as of the last publication (013) |
 | `shifts` | A time window on a position: `starts_at`, `ends_at`, optional `muster_at`, optional `headcount` override, optional `operational_period_id` (009) |
 | `assignments` | One operator on one shift: `status` ladder `offered → accepted/declined → checked_in → on_position → released` (+ `no_show`, `cancelled`), transition timestamps, `decline_reason`, `packet_version_seen`, `notes`. Unique per (shift, user). Trigger `assignments_before_write` lets operators move only their own row along the ladder; planners may do anything; timestamps are stamped server-side (009) |
 | `channels` | The ARES group's channel library (ICS-217A): name, kind (repeater/simplex/digital/talkgroup/phone), RX/TX frequency and tones, bandwidth, mode A/D/M, digital mode, gateway call-SSID, tactical address, owner, phone number, timeout, `active` (010) |
@@ -67,6 +67,12 @@ and marks unaffected assignments as having seen the new version so no
 change banner appears for them. `notify_all` sends to everyone assigned.
 The broadcast trigger `deployments_notify_plan` stands down while the RPC
 runs (GUC `emcomm.publishing`) and still covers direct updates.
+
+RPC `volunteer_for_shift(shift, note)` (015): the signed-in operator (role
+admin/planner/operator) takes an open shift on a position with `open_signup`
+in a planning/active deployment they can see; capacity is checked under a
+row lock; a previous declined row is replaced; the deployment creator is
+notified ("KK4ODA took AID MILE 12"). Idempotent when already assigned.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a

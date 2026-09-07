@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormField } from '@/components/common/FormField';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RequirementsEditor } from './RequirementsEditor';
 import { ShiftsEditor, blankShift } from './ShiftsEditor';
 import { POSITION_TYPES, normalizeRequirements } from '@/lib/capabilities';
 
 const NONE = '__none__';
-const EMPTY = { name: '', tactical_callsign: '', position_type: 'station', site_id: '', headcount: 1, net: '', supervisor_position_id: '', briefing_notes: '', requirements: [] };
+const EMPTY = { name: '', tactical_callsign: '', position_type: 'station', site_id: '', headcount: 1, net: '', supervisor_position_id: '', briefing_notes: '', requirements: [], open_signup: true };
 
 /**
  * Create or edit a position with its requirements and shifts.
@@ -34,6 +35,7 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
         site_id: position.site_id || '', headcount: position.headcount || 1, net: position.net || '',
         supervisor_position_id: position.supervisor_position_id || '', briefing_notes: position.briefing_notes || '',
         requirements: normalizeRequirements(position.requirements),
+        open_signup: position.open_signup !== false,
       });
       setShiftRows(existingShifts.map(s => ({ ...s, headcount: s.headcount ?? '' })));
     } else {
@@ -61,6 +63,7 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
       supervisor_position_id: form.supervisor_position_id || null,
       briefing_notes: form.briefing_notes.trim() || null,
       requirements: form.requirements,
+      open_signup: form.open_signup !== false,
     }, shiftRows);
   };
 
@@ -129,6 +132,11 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
           <FormField label="Briefing notes" hint="Shown to the assigned operator in their packet">
             {({ id }) => <Textarea id={id} rows={3} value={form.briefing_notes} onChange={(e) => set('briefing_notes')(e.target.value)} placeholder="What to do, who to contact, anything specific to this position" />}
           </FormField>
+
+          <label className="flex items-start gap-3 text-sm">
+            <Checkbox checked={form.open_signup !== false} onCheckedChange={(v) => setForm(f => ({ ...f, open_signup: v === true }))} className="mt-0.5" />
+            <span><span className="font-medium">Operators may sign themselves up</span><span className="block text-xs text-muted-foreground">Open shifts on this position appear on every operator's My assignments page. Untick for positions you fill by hand (net control, shadows).</span></span>
+          </label>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>

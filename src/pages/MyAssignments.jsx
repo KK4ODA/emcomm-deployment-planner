@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Package, ListTodo, Printer, Radio, MapPin, Play, Check } from 'lucide-react';
+import { Package, ListTodo, Printer, Radio, MapPin, Play, Check, HandHelping } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -22,12 +22,13 @@ import { tasksInDeployment, compareOpenTasks } from '@/lib/tasks';
 import { canEdit } from '@/lib/permissions';
 import { NEXT_TASK_STATUS } from '@/lib/constants';
 import { queryKeys } from '@/lib/queryKeys';
-import { compareAssignments } from '@/lib/staffing';
+import { compareAssignments, openShifts } from '@/lib/staffing';
 import { formatDate } from '@/lib/time';
 import { updateTaskEvent } from '@/api/taskEvents';
-import { setAssignmentStatus } from '@/api/assignments';
+import { setAssignmentStatus, volunteerForShift } from '@/api/assignments';
 import { GoKitList, goKitStorageKey } from '@/features/assignments/GoKitList';
 import { OfferList } from '@/features/assignments/OfferList';
+import { OpenShiftBoard } from '@/features/assignments/OpenShiftBoard';
 import { ROUTES } from '@/app/routes';
 
 export default function MyAssignments() {
@@ -48,6 +49,7 @@ function MyAssignmentsContent() {
   useRealtimeInvalidation('assignments', queryKeys.assignments);
   const queryClient = useQueryClient();
   const [respondingId, setRespondingId] = useState(/** @type {string|null} */ (null));
+  const [takingId, setTakingId] = useState(/** @type {string|null} */ (null));
   const mayAdvance = canEdit(user?.app_role, 'task');
 
   const locations = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
@@ -78,6 +80,29 @@ function MyAssignmentsContent() {
       setRespondingId(null);
     }
   };
+  const open = useMemo(() => openShifts({
+    positions: (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId),
+    shifts: (shiftsQ.data ?? []).filter(s => s.deployment_id === deploymentId),
+    assignments: assignmentsQ.data ?? [],
+    user,
+  }), [positionsQ.data, shiftsQ.data, assignmentsQ.data, user, deploymentId]);
+  const shiftPositionName = useMemo(() => {
+    const positionById = new Map((positionsQ.data ?? []).map(p => [p.id, p]));
+    return new Map((shiftsQ.data ?? []).map(s => [s.id, positionById.get(s.position_id)?.tactical_callsign || positionById.get(s.position_id)?.name || '']));
+  }, [positionsQ.data, shiftsQ.data]);
+  const take = async (shiftId) => {
+    setTakingId(shiftId);
+    try {
+      await volunteerForShift(shiftId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments });
+      toast.success('It is yours. The coordinator has been told.', { description: 'Your packet is under My packet once the plan is published.' });
+    } catch (err) {
+      toast.error(err?.message || 'Could not take that shift');
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments });
+    } finally {
+      setTakingId(null);
+    }
+  };
   const siteName = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const categoryById = useMemo(() => new Map((categoriesQ.data ?? []).map(c => [c.id, c])), [categoriesQ.data]);
   const myItems = useMemo(() => itemsAssignedTo(itemsOf(itemsQ.data ?? [], locations), user?.call_sign), [itemsQ.data, locations, user?.call_sign]);
@@ -105,7 +130,7 @@ function MyAssignmentsContent() {
   const openTasks = myTasks.filter(t => t.status !== 'completed').length;
   const offers = myPositions.filter(p => p.assignment.status === 'offered').length;
   const storageKey = goKitStorageKey(deploymentId, user.call_sign);
-  const nothing = myItems.length === 0 && myTasks.length === 0 && mySites.length === 0 && myPositions.length === 0;
+  const nothing = myItems.length === 0 && myTasks.length === 0 && mySites.length === 0 && myPositions.length === 0 && open.length === 0;
 
   return (
     <QueryState queries={[categoriesQ, itemsQ, locationsQ, positionsQ, shiftsQ, assignmentsQ]}>
@@ -118,19 +143,20 @@ function MyAssignmentsContent() {
       />
 
       {nothing ? (
-        <EmptyState icon={Package} title="Nothing assigned yet" description="When a coordinator offers you a position or assigns equipment, tasks or a site to your call sign it will show up here." />
+        <EmptyState icon={Package} title="Nothing assigned yet" description="When a coordinator offers you a position, or opens shifts for sign-up, it will show up here. Equipment, tasks and sites assigned to your call sign appear here too." />
       ) : (
         <>
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <StatCard label={offers ? 'Offers to answer' : 'Positions'} value={offers || myPositions.length} icon={Radio} tone={offers ? 'accent' : 'info'} />
             <StatCard label="Items to bring" value={myItems.length} icon={Package} tone="info" />
             <StatCard label="Open tasks" value={openTasks} icon={ListTodo} tone={openTasks ? 'accent' : 'success'} />
-            <StatCard label="Sites" value={mySites.length} icon={MapPin} />
+            {open.length > 0 ? <StatCard label="Open shifts" value={open.filter(o => o.canTake).length} icon={HandHelping} tone="accent" hint={`${open.length} open in this deployment`} /> : <StatCard label="Sites" value={mySites.length} icon={MapPin} />}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-4">
               <OfferList items={myPositions} onRespond={respond} busyId={respondingId} />
+              <OpenShiftBoard items={open} siteName={siteName} positionName={shiftPositionName} onTake={take} busyId={takingId} />
               {mySites.length > 0 && (
                 <Section title="My sites" icon={MapPin} bodyClassName="p-0">
                   <ul className="divide-y">
