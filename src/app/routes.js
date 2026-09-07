@@ -9,6 +9,7 @@ export const ROUTES = Object.freeze({
   comms: '/comms',
   channels: '/channels',
   packet: '/packet',
+  ncs: '/ncs',
   packetFor: (assignmentId) => `/packet/${assignmentId}`,
   myAssignments: '/my-assignments',
   members: '/members',

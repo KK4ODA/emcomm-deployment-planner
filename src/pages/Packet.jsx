@@ -17,6 +17,8 @@ import { buildPacket, pickCurrentAssignment } from '@/lib/packet';
 import { occupies } from '@/lib/staffing';
 import { markPacketSeen } from '@/api/assignments';
 import { PacketView } from '@/features/packet/PacketView';
+import { PacketActions } from '@/features/packet/PacketActions';
+import { useIntents } from '@/hooks/useIntents';
 import { ROUTES } from '@/app/routes';
 import { formatDateTime } from '@/lib/time';
 
@@ -46,6 +48,7 @@ function PacketContent() {
   const isPlanner = hasPermission(user?.app_role, 'MANAGE_ASSIGNMENTS');
   const [acking, setAcking] = useState(false);
   const [pickedId, setPickedId] = useState('');
+  const { intents } = useIntents();
 
   const shiftById = useMemo(() => new Map((shiftsQ.data ?? []).map(s => [s.id, s])), [shiftsQ.data]);
   const mine = useMemo(() => (assignmentsQ.data ?? []).filter(a => a.deployment_id === deploymentId && a.user_id === user?.id), [assignmentsQ.data, deploymentId, user?.id]);
@@ -122,7 +125,14 @@ function PacketContent() {
             </div>
           )}
           {!isMine && <p className="no-print mx-auto mb-3 max-w-2xl rounded-md border border-info/30 bg-info/10 px-3 py-2 text-sm">You are viewing another operator's packet ({(usersQ.data ?? []).find(u => u.id === assignment.user_id)?.call_sign ?? 'unknown'}). This is what they see.</p>}
-          <PacketView packet={packet} asOf={asOf} onAcknowledge={isMine ? acknowledge : undefined} acknowledging={acking} />
+          <PacketView
+            packet={packet}
+            asOf={asOf}
+            onAcknowledge={isMine ? acknowledge : undefined}
+            acknowledging={acking}
+            actions={isMine && ['accepted', 'checked_in', 'on_position', 'released'].includes(assignment.status) ? <PacketActions assignment={assignment} intents={intents} /> : null}
+            statusLine={isMine && assignment.status === 'offered' ? <>You have not answered this offer yet. <Link to={ROUTES.myAssignments} className="underline">Accept or decline</Link>.</> : null}
+          />
         </>
       )}
     </QueryState>

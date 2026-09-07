@@ -9,6 +9,13 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-07
+
+The staffable-plan release: positions, operator packet, communications
+plan, check-in and hours, on top of a security fix that isolates ARES
+groups from each other. See `docs/IMPLEMENTATION_ROADMAP.md` for the
+reasoning and `docs/IMPLEMENTATION_STATUS.md` for what is next.
+
 ### Security
 - Read isolation between ARES groups: sites, equipment, tasks, radio plans,
   templates, the event log and member profiles are now visible only to
@@ -23,6 +30,20 @@ notes and into the desktop updater prompt, so keep entries user-facing.
   anonymous clients.
 
 ### Added
+- **Check in / On position / Check out** on the packet: one tap each,
+  timestamped, works offline (saved on the device and sent when signal
+  returns, with a visible pending state) and confirms in plain words.
+- **Net control board** (`Net control`): every live shift with who is on
+  station, who has not checked in and who is not assigned, worst first;
+  filter by net and time window; record a check-in on an operator's behalf;
+  log notes. Usable from cache when the internet drops, with an "as of"
+  time.
+- **Hours without asking**: checking out records the shift's hours
+  automatically (estimated from the schedule when a time is missing);
+  Profile › My hours lists them by month, takes manual entries for
+  planning, admin and maintenance work in seconds, and exports CSV.
+- **Activity log**: check-ins, status changes and notes are recorded per
+  deployment (the ICS 214 source).
 - **Operator packet** (`My packet`): one phone-first page per assignment
   with the position and tactical call, report time, where to go with a
   Directions button, parking / arrival / access notes, the frequencies for

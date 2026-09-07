@@ -47,6 +47,13 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `comms_plans` | One communications plan per deployment (optionally per operational period): special instructions, prepared by (010) |
 | `comms_plan_channels` | Snapshot of a library channel in a plan plus its use: zone/channel number, function, assignment, net, `condition_level` 1–3, `path_role` primary/alternate/contingency/emergency (010) |
 | `ics205_forms` | Legacy per-site radio plan; unused since 010 (no rows) |
+| `activity_log` | Append-only record: check-ins, status changes, notes, incidents; `intent_id` unique for idempotent replay; source for ICS-214 (011) |
+| `hour_entries` | Participation hours per operator: derived from released assignments (`estimated` when a check-in or check-out time is missing) or manual; `activity_type` emergency/public_service/training/net/admin/maintenance (011) |
+
+RPC `set_assignment_status(assignment, status, at, note, intent_id)`
+(011): the only write path the offline outbox uses. Operators may only move
+their own assignment forward; planners and admins may set any status; the
+call is idempotent per `intent_id`.
 | `notifications` | Per-user notifications produced by triggers |
 
 Triggers: `handle_new_user` creates the `users` row on sign-up;

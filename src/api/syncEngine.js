@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 import { queryClientInstance } from '@/lib/query-client';
 import { offlineStorage } from '@/lib/offline/storage';
 import { applyTaskEvent, TASKS_UPDATED_EVENT, OUTBOX_CHANGED_EVENT } from './taskEvents';
+import { drainIntents, listIntents } from './assignmentIntents';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -64,8 +65,10 @@ export function onPendingChange(fn) {
 export async function refreshPendingCount() {
   try {
     const outbox = await offlineStorage.getAllEntities('outbox');
-    if (outbox.length !== _pending) {
-      _pending = outbox.length;
+    const intents = (await listIntents()).filter(i => !i.error);
+    const total = outbox.length + intents.length;
+    if (total !== _pending) {
+      _pending = total;
       _pendingListeners.forEach(fn => fn(_pending));
     }
   } catch { /* storage unavailable */ }
@@ -206,6 +209,9 @@ export async function syncNow() {
 
     await ensureSeeded();
     await drainOutbox();
+    const drained = await drainIntents();
+    if (drained.sent) queryClientInstance.invalidateQueries({ queryKey: ['assignments'] });
+    await refreshPendingCount();
     await fetchAndApplyInbox();
   } catch (err) {
     console.error('Sync error:', err);

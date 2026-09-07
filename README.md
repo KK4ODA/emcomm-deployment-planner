@@ -36,13 +36,16 @@ It is opinionated about a few things:
 
 | Area | What you get |
 |------|--------------|
-| Deployments | Status lifecycle (planning → active → completed → archived) with one-click transitions, readiness at a glance (unassigned items, tasks done, ICS 205 coverage), duplicate for recurring events, templates, per-ARES-group visibility |
-| Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, contact and access notes, operator roster with a consistency check against assignments |
+| Deployments | Status lifecycle (planning → active → completed → archived), kind (public service, activation, exercise, Field Day, net, training), served agency and tasking, readiness at a glance (slots covered, unassigned items, tasks done, comms plan), duplicate for recurring events, templates, per-ARES-group visibility |
+| Staffing | Positions (job, site or mobile, tactical call, headcount, requirements), shifts with muster times, operational periods; "X of Y slots covered"; assign dialog ranks operators by capability match and availability; offer / accept / decline with notifications |
+| Operator packet | One phone-first page per assignment: where, when, tactical call, primary frequency above the fold; directions, parking and arrival notes, all frequencies by condition, what to bring, who to report to; change banner on republish; prints on one page; works offline once seen |
+| Communications | Channel library per ARES group (ICS-217A shape); per-deployment plan with primary / alternate / contingency roles and Condition 1 / 2 / 3 ladder; ICS 205 PDF and CHIRP CSV generated from it; publish with a change note |
+| Operations | Check in / On position / Check out from the packet (offline-capable); Net control board with who is missing, arriving, on station; activity log; hours recorded automatically and rolled up per month |
+| Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, parking / arrival / access notes, contact, operator roster consistency check |
 | Equipment | Categories and items per site, drag-and-drop ordering, priorities, assignment to one or more operators, bulk "assign all unassigned" |
 | Tasks | Setup/teardown tasks per site with forward-only status, assignees, due times; work offline and sync via an event log |
-| ICS 205 | Incident Radio Communications Plan editor with saved versions and a real PDF export rendered on the device |
-| Members | Roles (admin, operator, viewer, pending), ARES group membership, invitations, profile photos, call sign validation |
-| My assignments | Personal view of every item, task and site for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
+| Members | Roles (admin, planner, operator, viewer, pending), group membership by request and approval, invitations, capability profiles, profile photos, call sign validation |
+| My assignments | Offers to answer, confirmed positions, items, tasks and sites for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
 | Notifications | In-app notifications for assignments and changes |
 | Exports | Deployment summary text export, ICS 205 PDF |
 | Platforms | Web, installable PWA (desktop and mobile), Windows desktop app with signed auto-updates |
@@ -71,10 +74,11 @@ desktop and links to release notes and the issue tracker.
 | Capability | Offline |
 |------------|---------|
 | Open the app, navigate, stay signed in (up to 7 days) | Yes |
-| View deployments, sites, items, members | Last loaded copy |
+| View your packet, the comms plan, the NCS board, deployments, sites, items, members | Last loaded copy, with an "as of" time |
+| Check in / On position / Check out | Yes, queued and sent when signal returns |
 | Create, update, complete tasks | Yes, queued and synced automatically |
-| ICS 205 PDF export | Yes |
-| Edit sites and items, assign, invite, deployment text export | Needs a connection |
+| ICS 205 PDF, packet print | Yes |
+| Plan editing, assigning, inviting, log notes, exports | Needs a connection |
 
 The connectivity badge in the top bar shows the current state and how many
 changes are waiting to sync. Full table in
@@ -144,7 +148,8 @@ Procedure and required repository secrets: [docs/release.md](docs/release.md).
 - [docs/backend.md](docs/backend.md): Supabase schema, RLS, Edge Functions, environment variables
 - [docs/development.md](docs/development.md): prerequisites, commands, conventions, Git workflow, troubleshooting
 - [docs/release.md](docs/release.md): versioning, desktop build, GitHub Actions, auto-updater, code signing
-- [docs/offline-architecture.md](docs/offline-architecture.md): task event log and sync engine
+- [docs/offline-architecture.md](docs/offline-architecture.md): what works offline and how (task event log, status intents, sync engine)
+- [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md): product roadmap, gap analysis and development log
 - [docs/base44-migration.md](docs/base44-migration.md): historical record of the 2026 migration off the original low-code platform
 - [CHANGELOG.md](CHANGELOG.md)
 

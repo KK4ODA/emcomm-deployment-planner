@@ -21,6 +21,7 @@ import Staffing from '@/pages/Staffing';
 import CommsPlan from '@/pages/CommsPlan';
 import Channels from '@/pages/Channels';
 import Packet from '@/pages/Packet';
+import NcsBoard from '@/pages/NcsBoard';
 import MyAssignments from '@/pages/MyAssignments';
 import Members from '@/pages/Members';
 import AresGroups from '@/pages/AresGroups';
@@ -65,6 +66,7 @@ function AuthenticatedApp() {
                 <Route path={ROUTES.channels} element={<Channels />} />
                 <Route path={ROUTES.packet} element={<Packet />} />
                 <Route path="/packet/:assignmentId" element={<Packet />} />
+                <Route path={ROUTES.ncs} element={<NcsBoard />} />
                 <Route path={ROUTES.myAssignments} element={<MyAssignments />} />
                 <Route path={ROUTES.members} element={<Members />} />
                 <Route path={ROUTES.aresGroups} element={<AresGroups />} />

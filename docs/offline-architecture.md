@@ -30,16 +30,17 @@ with the simpler model below. The old draft remains in git history
 | Read deployments, sites, items, members, positions, assignments, comms plan | Last copy loaded while online | Workbox `NetworkFirst` runtime cache of Supabase REST `GET`s (6 s timeout, 14 days) |
 | Map tiles | Previously viewed areas | Workbox `CacheFirst` (30 days) |
 | Create / update / complete setup tasks | Yes | Task event log: events written to IndexedDB first, queued in `outbox`, posted when online; server trigger materialises with a forward-only status machine |
-| ICS-205 PDF, operator packet print | Yes | Rendered client-side with jsPDF |
-| Everything else (planning edits, invitations, exports) | No | Direct Supabase writes; the error is shown |
-
-Phase 3 of the roadmap adds assignment status intents (check in / on
-position / check out) to the offline write set using the same outbox pattern.
+| Check in / On position / Check out (own assignment, or on behalf as NCS) | Yes | Status intents written to the `intents` store first, then sent to the idempotent RPC `set_assignment_status`; retried in order when online; the packet and NCS board show "pending" until sent |
+| ICS-205 PDF, operator packet print | Yes | Rendered client-side with jsPDF / print stylesheet |
+| Everything else (planning edits, invitations, exports, log notes) | No | Direct Supabase writes; the error is shown |
 
 ## Components
 
-- `src/lib/offline/storage.js`: IndexedDB `EmCommPlannerDB` (v4) with stores
-  `events`, `entities.tasks`, `outbox`, `inbox` (reserved), `sync_state`.
+- `src/lib/offline/storage.js`: IndexedDB `EmCommPlannerDB` (v5) with stores
+  `events`, `entities.tasks`, `outbox`, `inbox` (reserved), `sync_state`,
+  `intents`.
+- `src/api/assignmentIntents.js`: queue, send and drain status intents;
+  permanent rejections are kept with an `error` for the operator to dismiss.
 - `src/api/taskEvents.js`: builds and applies task events (ULID ids, per-device
   id, actor call sign), dispatches to Supabase with a 5 s race and falls back
   to the outbox.
@@ -54,8 +55,9 @@ position / check out) to the offline write set using the same outbox pattern.
 
 ## Known limitations (tracked in IMPLEMENTATION_STATUS.md)
 
-- The outbox retries forever without backoff and has no user-visible failed
-  list; a permanently rejected event (for example an RLS denial) stays queued.
+- The task outbox retries forever without backoff and has no user-visible
+  failed list; a permanently rejected event (for example an RLS denial)
+  stays queued. (The newer intents outbox does surface failures.)
 - An `update` event for a task that is not in the local store is dropped
   instead of held in `inbox`.
 - `syncEngine.js` has no automated tests.

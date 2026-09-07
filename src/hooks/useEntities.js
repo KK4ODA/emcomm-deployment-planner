@@ -77,6 +77,19 @@ export function useCommsPlanChannels() {
   return useQuery({ queryKey: queryKeys.commsPlanChannels, queryFn: () => db.commsPlanChannels.list({ orderBy: 'sort_order' }) });
 }
 
+// ─── Operations record ────────────────────────────────────────────────────────
+
+export function useActivityLog(deploymentId) {
+  return useQuery({
+    queryKey: [...queryKeys.activityLog, deploymentId],
+    queryFn: () => db.activityLog.where({ deployment_id: deploymentId }, { orderBy: 'occurred_at', ascending: false }),
+    enabled: !!deploymentId,
+  });
+}
+export function useHourEntries() {
+  return useQuery({ queryKey: queryKeys.hourEntries, queryFn: () => db.hourEntries.list({ orderBy: 'occurred_on', ascending: false }) });
+}
+
 /** Group membership rows visible to the caller (own, same-group, or all for admins). */
 export function useMemberships(options = {}) {
   return useQuery({ queryKey: queryKeys.memberships, queryFn: listMemberships, ...options });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { User, Radio, Phone, Mail, Lock, UserPlus, Save, Info } from 'lucide-react';
+import { User, Radio, Phone, Mail, Lock, UserPlus, Save, Info, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,8 +19,9 @@ import { AvatarUploader } from '@/features/profile/AvatarUploader';
 import { AddMemberPanel } from '@/features/profile/AddMemberPanel';
 import { AboutPanel } from '@/features/about/AboutPanel';
 import { CapabilitiesCard } from '@/features/profile/CapabilitiesCard';
+import { HoursCard } from '@/features/hours/HoursCard';
 
-const TABS = ['profile', 'security', 'add-member', 'about'];
+const TABS = ['profile', 'hours', 'security', 'add-member', 'about'];
 
 export default function Profile() {
   const { user, refreshProfile, isOfflineSession } = useAuth();
@@ -43,6 +44,7 @@ export default function Profile() {
       <Tabs value={tab} onValueChange={selectTab}>
         <TabsList className="mb-2">
           <TabsTrigger value="profile"><User className="h-4 w-4" /> My profile</TabsTrigger>
+          <TabsTrigger value="hours"><Clock className="h-4 w-4" /> My hours</TabsTrigger>
           <TabsTrigger value="security"><Lock className="h-4 w-4" /> Sign-in</TabsTrigger>
           {isAdmin && <TabsTrigger value="add-member"><UserPlus className="h-4 w-4" /> Add member</TabsTrigger>}
           <TabsTrigger value="about"><Info className="h-4 w-4" /> About</TabsTrigger>
@@ -59,6 +61,10 @@ export default function Profile() {
               <CardContent><AvatarUploader user={user} onChanged={refreshProfile} /></CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="hours">
+          <HoursCard user={user} />
         </TabsContent>
 
         <TabsContent value="security">

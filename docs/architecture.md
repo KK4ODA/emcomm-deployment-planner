@@ -136,6 +136,32 @@ Deployment ── comms_plans[] (per deployment, optionally per operational peri
   a phone with an assignment. Everything the packet reads is a Supabase
   `GET` cached by the service worker, so it reopens offline once seen.
 
+## Operations: check-in, NCS board, hours
+
+- **Status intents** (`src/api/assignmentIntents.js`): Check in / On
+  position / Check out write an intent `{ id, assignment_id, status, at }`
+  to IndexedDB (`intents` store) first, then call the idempotent RPC
+  `set_assignment_status`. Offline or on a transient error the intent stays
+  queued; `syncEngine` retries in order and stops at the first network
+  failure. A permanent rejection (permission, unknown status) is kept with
+  `error` so the operator can see and dismiss it. `useIntents()` exposes the
+  queue; `effectiveStatus()` merges it into the server row so the UI never
+  regresses.
+- **Server rules** (migration 011): the RPC enforces the monotonic ladder
+  for operators (a late-arriving earlier status only backfills a missing
+  timestamp), lets planners record on anyone's behalf, stamps the time the
+  button was pressed (`p_at`), and logs once per intent to `activity_log`.
+- **NCS board** (`/ncs`): `buildNcsBoard()` turns shifts live in a time
+  window into rows sorted worst-first (not checked in, nobody assigned,
+  arriving, expected, on station, released), with per-operator status,
+  time, phone and on-behalf buttons; a log panel shows and appends
+  `activity_log` notes. Works from cache when offline with an "as of" stamp.
+- **Hours**: `derive_hours_for_assignment` writes one `hour_entries` row per
+  released assignment (actual check-in to check-out, or the scheduled shift
+  flagged *estimated*), activity type from the deployment kind. Manual
+  entries (admin, planning, maintenance) are added on Profile › My hours;
+  CSV export per operator. `hoursByMonth()` groups for the monthly report.
+
 ## Deployment lifecycle
 
 `planning → active → completed → archived`, with "back to planning",

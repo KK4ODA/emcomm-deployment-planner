@@ -27,25 +27,37 @@ can resume without re-deriving state.
   deployment-card staffing counts. Tests: staffing logic (17), memberships,
   permissions, OfferList, PositionCard.
 
+- 2026-09-07 **Phase 2, packet and comms plan** (migration `010`, applied):
+  channel library page and editor; communications plan page (add from
+  library, PACE roles, condition levels 1–3, inline editing, stale snapshot
+  sync, plan check, CHIRP CSV, ICS 205 PDF from the plan with wrapping
+  cells); Publish plan with change note and notifications; operator packet
+  (`/packet`, `/packet/:id`) with change banner and acknowledgement,
+  printable, dashboard banner and mobile redirect. Per-site ICS 205 editor
+  and dead Edge Functions removed. Tests: comms (10), packet (7),
+  PacketView (3). 165 tests total.
+
+- 2026-09-07 **Phase 3, operations and the record** (migration `011`,
+  applied): `activity_log`, `hour_entries`, idempotent RPC
+  `set_assignment_status` (verified on the live database: applies once,
+  replay is a no-op, probe data removed); intents outbox in IndexedDB v5
+  drained by `syncEngine`; Check in / On position / Check out on the packet
+  with pending and failed states; NCS board `/ncs` with on-behalf recording
+  and log notes; hours derived on release plus manual entries and CSV on
+  Profile › My hours. Tests: operations (9). 174 tests total.
+
 ## In Progress
 
-- Nothing mid-flight. Next unit is Phase 2.
+- Nothing mid-flight. Releasing v2.0.0 next, then Phase 4.
 
 ## Next
 
-1. **Phase 2, packet and comms plan**: migration 010 (`channels`,
-   `comms_plans`, `comms_plan_channels`); channel library page; comms plan
-   page with PACE roles and condition levels; ICS-205 PDF generated from the
-   plan (wrapping cells; replaces the per-site editor); operator packet
-   route `/packet` (above the fold: position, TAC, site, report time,
-   primary frequency; then map link, parking/arrival/access, supervisor,
-   frequencies for every condition, equipment, briefing notes; printable;
-   change banner from `plan_version` vs `packet_version_seen`); "Publish
-   changes" action on the deployment.
-2. **Phase 3, operations**: migration 011 (`activity_log`, `hour_entries`,
-   RPC `set_assignment_status`); intents outbox in `syncEngine`; check in /
-   on position / check out on the packet; NCS board `/ncs`; hours on profile.
-3. Phase 4 items in roadmap order.
+Phase 4 in roadmap order: notify only affected operators with a diff on
+publish; lessons carried forward on duplicate; post-event feedback form and
+AAR assembly; ICS-214 (per person and unit) and ICS-205A from the activity
+log; group-wide hours rollup (ARRL Form 2 buckets); map KML/GPX import;
+asset registry with custody; objectives; open-shift board; task outbox
+retry/dead-letter parity with the intents outbox; `syncEngine` tests.
 
 ## Deferred
 

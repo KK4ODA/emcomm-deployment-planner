@@ -1,6 +1,6 @@
 // IndexedDB wrapper for the local event log and materialised views.
 const DB_NAME = 'EmCommPlannerDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 // Per-operation timeout. If an IDB transaction can't even progress within this
 // window something is very wrong (stale connection, blocked upgrade, etc.).
@@ -14,6 +14,7 @@ export const STORES = {
   outbox: 'outbox',            // events waiting to be sent upstream
   inbox: 'inbox',              // reserved: events received but not yet applied
   syncState: 'sync_state',     // high-water marks per peer
+  intents: 'intents',          // assignment status intents waiting to be sent (v5)
 };
 
 // Stores created by the pre-event-log offline layer. They are no longer read
@@ -66,6 +67,7 @@ class OfflineStorage {
     if (!db.objectStoreNames.contains(STORES.outbox)) db.createObjectStore(STORES.outbox, { keyPath: 'id' });
     if (!db.objectStoreNames.contains(STORES.inbox)) db.createObjectStore(STORES.inbox, { keyPath: 'id' });
     if (!db.objectStoreNames.contains(STORES.syncState)) db.createObjectStore(STORES.syncState, { keyPath: 'peer' });
+    if (!db.objectStoreNames.contains(STORES.intents)) db.createObjectStore(STORES.intents, { keyPath: 'id' });
   }
 
   /** Open the database once so the schema upgrade runs eagerly at startup. */

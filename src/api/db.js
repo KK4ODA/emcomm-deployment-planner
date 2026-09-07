@@ -21,6 +21,8 @@ export const TABLES = Object.freeze({
   channels: 'channels',
   commsPlans: 'comms_plans',
   commsPlanChannels: 'comms_plan_channels',
+  activityLog: 'activity_log',
+  hourEntries: 'hour_entries',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -142,4 +144,6 @@ export const db = Object.freeze({
   channels: createRepository(TABLES.channels),
   commsPlans: createRepository(TABLES.commsPlans),
   commsPlanChannels: createRepository(TABLES.commsPlanChannels),
+  activityLog: createRepository(TABLES.activityLog),
+  hourEntries: createRepository(TABLES.hourEntries),
 });
