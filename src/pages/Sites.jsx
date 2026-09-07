@@ -13,7 +13,7 @@ import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useLocations, useItems, useUsers, useIcs205Forms, useTasks, useEntityMutations, useRealtimeInvalidation } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { canCreate, canEdit, canDelete } from '@/lib/permissions';
-import { locationsOf, locationItemStats } from '@/lib/deployments';
+import { locationsOf, locationItemStats, missingSiteOperators } from '@/lib/deployments';
 import { summarizeTasks } from '@/lib/tasks';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SiteCard } from '@/features/sites/SiteCard';
@@ -59,6 +59,15 @@ function SitesContent() {
     else mutations.create.mutate(payload, { onSuccess: () => { close(); toast.success('Site created'); } });
   };
 
+  const [rosterBusyId, setRosterBusyId] = useState(null);
+  const addToRoster = (location, callSigns) => {
+    setRosterBusyId(location.id);
+    mutations.update.mutate(
+      { id: location.id, data: { assigned_call_signs: [...(location.assigned_call_signs || []), ...callSigns] } },
+      { onSettled: () => setRosterBusyId(null), onSuccess: () => toast.success(`${callSigns.join(', ')} added to ${location.name}`) },
+    );
+  };
+
   const remove = async (location) => {
     if (await confirm({ title: `Delete “${location.name}”?`, description: 'All items, tasks and the ICS 205 form for this site will be deleted.', destructive: true })) {
       mutations.remove.mutate(location.id, { onSuccess: () => toast.success('Site deleted') });
@@ -90,20 +99,26 @@ function SitesContent() {
           </TabsList>
           <TabsContent value="list">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {locations.map(loc => (
+              {locations.map(loc => {
+                const missing = missingSiteOperators(loc, items, tasks);
+                return (
                 <SiteCard
                   key={loc.id}
                   location={loc}
                   itemStats={locationItemStats(items, loc.id)}
                   taskSummary={summarizeTasks(tasks.filter(t => t.deployment_location_id === loc.id))}
                   hasIcs205={forms.some(f => f.deployment_location_id === loc.id)}
+                  missingOperators={missing}
+                  onAddOperators={() => addToRoster(loc, missing)}
+                  addingOperators={rosterBusyId === loc.id}
                   canEdit={mayEdit}
                   canDelete={mayDelete}
                   onEdit={() => setForm({ open: true, location: loc })}
                   onDelete={() => remove(loc)}
                   onIcs205={() => setIcs205Site(loc)}
                 />
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
           <TabsContent value="map">

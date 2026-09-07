@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Pencil, Trash2, ListTodo, Package, FileText, User, Navigation } from 'lucide-react';
+import { MapPin, Pencil, Trash2, ListTodo, Package, FileText, User, Navigation, AlertTriangle, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Hint } from '@/components/ui/tooltip';
@@ -15,10 +15,11 @@ import { cn } from '@/lib/utils';
  * @param {{
  *   location: Object, itemStats: { itemCount: number, assigneeCount: number, unassignedCount: number },
  *   taskSummary: { total: number, completed: number }, hasIcs205: boolean,
+ *   missingOperators?: string[], onAddOperators?: () => void, addingOperators?: boolean,
  *   canEdit: boolean, canDelete: boolean, onEdit: () => void, onDelete: () => void, onIcs205: () => void
  * }} props
  */
-export function SiteCard({ location, itemStats, taskSummary, hasIcs205, canEdit, canDelete, onEdit, onDelete, onIcs205 }) {
+export function SiteCard({ location, itemStats, taskSummary, hasIcs205, missingOperators = [], onAddOperators, addingOperators, canEdit, canDelete, onEdit, onDelete, onIcs205 }) {
   const coords = parseCoordinates(location.address);
   const mapsHref = coords ? `https://www.google.com/maps?q=${coords[0]},${coords[1]}` : null;
   return (
@@ -62,6 +63,25 @@ export function SiteCard({ location, itemStats, taskSummary, hasIcs205, canEdit,
           </div>
         )}
 
+        {missingOperators.length > 0 && (
+          <div role="note" className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">
+            <p className="flex items-start gap-1.5">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+              <span>
+                {missingOperators.length === 1 ? 'An operator has' : `${missingOperators.length} operators have`} equipment or tasks here but {missingOperators.length === 1 ? 'is' : 'are'} not on the site roster:
+              </span>
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-5">
+              <CallSignList values={missingOperators} max={6} />
+              {canEdit && onAddOperators && (
+                <Button size="sm" variant="outline" className="ml-auto h-6 px-2 text-[11px]" onClick={onAddOperators} loading={addingOperators}>
+                  <UserPlus /> Add to roster
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="mt-auto space-y-2 border-t pt-3">
           <div className="flex items-center justify-between text-xs">
             <span className="tnum text-muted-foreground">{itemStats.itemCount} items · {itemStats.assigneeCount} operators</span>
@@ -77,7 +97,7 @@ export function SiteCard({ location, itemStats, taskSummary, hasIcs205, canEdit,
             <ProgressBar value={taskSummary.completed} max={taskSummary.total} tone={taskSummary.total && taskSummary.completed === taskSummary.total ? 'success' : 'info'} label={`${location.name} task progress`} />
           </div>
           <div className="grid grid-cols-3 gap-1.5 pt-1">
-            <Button asChild variant="outline" size="sm"><Link to={`${ROUTES.dashboard}?site=${location.id}`}><Package /> Items</Link></Button>
+            <Button asChild variant="outline" size="sm"><Link to={`${ROUTES.dashboard}?site=${location.id}`} title="Equipment board filtered to this site"><Package /> Equipment</Link></Button>
             <Button asChild variant="outline" size="sm"><Link to={ROUTES.siteTasks(location.id)}><ListTodo /> Tasks</Link></Button>
             <Button variant={hasIcs205 ? 'outline' : 'secondary'} size="sm" onClick={onIcs205}><FileText /> ICS 205</Button>
           </div>
