@@ -88,14 +88,20 @@ can resume without re-deriving state.
   waypoints to sites; layers copied on duplicate. Tests: geo (10). 218
   tests total.
 
+- 2026-09-07 **Release v2.2.0** (Phase 4a-4e).
+
 ## In Progress
 
 - Nothing mid-flight.
 
 ## Next
 
-Phase 4 remainder in roadmap order: asset registry with custody;
-objectives. Housekeeping still on the user: delete
+Phase 4 remainder, both marked "later" in the roadmap and not started:
+asset registry with custody (roadmap V 9.13); objectives (V 9.16). Then
+roadmap section H deferrals. Field verification with real operators is the
+most valuable next step: the live database still holds only the owner
+account and one test deployment, so every workflow above has been verified
+by unit tests and rollback probes, not by a second person. Housekeeping still on the user: delete
 the `export-ics205` and `get-what3words` Edge Functions in the dashboard and
 turn on leaked-password protection under Auth.
 

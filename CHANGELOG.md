@@ -9,6 +9,12 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-07
+
+The sign-up sheet release: operators take open shifts themselves, plan
+changes reach only the people they affect, the course map comes in from
+KML/GPX, and nothing queued offline is lost in silence.
+
 ### Added
 - **Open shifts**: operators see every open shift in the deployment on My
   assignments and can take one with a single confirmation; the coordinator

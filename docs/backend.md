@@ -75,6 +75,15 @@ in a planning/active deployment they can see; capacity is checked under a
 row lock; a previous declined row is replaced; the deployment creator is
 notified ("KK4ODA took AID MILE 12"). Idempotent when already assigned.
 
+The Supabase security advisor flags every `SECURITY DEFINER` function that
+`authenticated` may execute. This is intentional for all of them: the
+helper predicates must be executable by `authenticated` because RLS
+policies evaluate them as the querying role, and the three RPCs
+(`set_assignment_status`, `publish_plan`, `volunteer_for_shift`) are the
+client's write paths and check role and visibility themselves. Trigger
+functions have EXECUTE revoked. The remaining advisor item, leaked-password
+protection, is an Auth dashboard switch.
+
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a
 `users` row (014), so PL/pgSQL guards of the form `IF NOT ... THEN RAISE`
