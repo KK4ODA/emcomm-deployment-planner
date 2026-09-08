@@ -9,6 +9,13 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- **User guide** at emcommplanner.org/guide, also in the user menu, on the
+  sign-in page and under About: getting started, operator tasks, building
+  and staffing a deployment, net control, after action, administration,
+  offline and troubleshooting, glossary. It is built from the repository
+  and always matches the version you are running.
+
 ## [2.5.0] - 2026-09-08
 
 ### Added

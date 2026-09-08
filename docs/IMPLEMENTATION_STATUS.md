@@ -202,6 +202,11 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-08 **User guide** (`docs/USER_GUIDE.md`, rendered at `/guide` by
+  `src/pages/Guide.jsx` through the small reader in `src/lib/markdown.js`;
+  linked from sign-in, the user menu and About). Rule: any change a user can
+  see updates the guide in the same commit, next to the feature matrix
+  above. Tests: markdown (4).
 - 2026-09-08 **P3 batch** (v2.5.0; migration `021`, applied; `aprs-ingest`
   deployed; `deliver-notification` v4): full APRS integration through
   Graywolf (positions in, check-ins in, notifications out, objects out),

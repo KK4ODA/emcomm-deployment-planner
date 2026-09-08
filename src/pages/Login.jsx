@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ export default function Login() {
     <AuthLayout
       title="Sign in"
       description="Use the account your ARES group admin set up for you."
-      footer={<span>Trouble signing in? Contact your group administrator.</span>}
+      footer={<span>New here? Read the <Link to={ROUTES.guide} className="underline underline-offset-4 hover:text-foreground">user guide</Link>. Trouble signing in? Contact your group administrator.</span>}
     >
       <Tabs value={mode} onValueChange={(v) => setMode(/** @type {any} */ (v))}>
         <TabsList className="mb-4 grid w-full grid-cols-2">

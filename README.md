@@ -64,6 +64,10 @@ It is opinionated about a few things:
 |----------|-----|
 | Windows 10/11 | Download `EmComm-Planner_<version>_x64-setup.exe` from the [latest release](https://github.com/KK4ODA/emcomm-deployment-planner/releases/latest). Installs per user (no admin rights), adds a Start Menu entry and updates itself. A portable `.exe` is also attached. |
 | Any browser | https://emcommplanner.org (same version as the desktop app; `/version.json` shows which). Use the browser's *Install app* option to get an icon and offline start. |
+
+New users start with the [user guide](https://emcommplanner.org/guide)
+([source](docs/USER_GUIDE.md)): basic and advanced tasks for operators,
+coordinators and admins, updated with every release.
 | Self-host | Deploy the `emcomm-planner-web-<version>.zip` from a release (or `dist/` from `npm run build`) to any static host; `public/.htaccess` covers Apache. The *Deploy web* workflow does this automatically for the official site. Point it at your Supabase project via the build-time environment variables below. |
 
 Windows builds are currently **unsigned**: SmartScreen shows "Windows
@@ -151,6 +155,7 @@ Procedure and required repository secrets: [docs/release.md](docs/release.md).
 
 ## Documentation
 
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md): the user guide, rendered in the app at `/guide`; update it in the same change as any user-visible feature
 - [docs/architecture.md](docs/architecture.md): structure, data flow, state, offline design, design system
 - [docs/backend.md](docs/backend.md): Supabase schema, RLS, Edge Functions, environment variables
 - [docs/development.md](docs/development.md): prerequisites, commands, conventions, Git workflow, troubleshooting

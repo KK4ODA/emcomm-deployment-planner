@@ -8,8 +8,7 @@ import { isDesktopApp, openExternal, platformLabel } from '@/lib/platform';
 import { APP_NAME } from '@/lib/constants';
 import {
   APP_VERSION, UPDATE_CHANNEL, COPYRIGHT, REPO_URL, LATEST_RELEASE_URL, ISSUES_URL, DOCS_URL, CHANGELOG_URL,
-  releaseNotesUrl, isPrerelease,
-} from '@/lib/appInfo';
+  releaseNotesUrl, isPrerelease, GUIDE_URL } from '@/lib/appInfo';
 import { requestUpdateCheck } from '@/features/desktop/DesktopUpdater';
 
 const PLATFORM = {
@@ -71,6 +70,7 @@ export function AboutPanel() {
         </CardHeader>
         <CardContent>
           <ul className="divide-y text-sm">
+            <ResourceLink icon={BookOpen} href={GUIDE_URL} title="User guide" detail="How to do the basic and advanced tasks, matched to this version" />
             <ResourceLink icon={Bug} href={ISSUES_URL} title="Report a problem or request a feature" detail="GitHub issue tracker" />
             <ResourceLink icon={BookOpen} href={DOCS_URL} title="Documentation" detail="Architecture, offline behaviour, backend, releases" />
             <ResourceLink icon={FileText} href={CHANGELOG_URL} title="Change log" detail="All versions" />
