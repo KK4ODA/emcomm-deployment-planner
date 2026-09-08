@@ -245,6 +245,16 @@ Phase 2 packet), CSV export of the staffing board.
 
 ## Issues
 
+- 2026-09-08 Reported: switching pages sometimes left the page on its
+  loading skeleton until a manual reload. Cause not reproduced directly;
+  the pattern (intermittent, cleared by reload, all pages) matches a
+  Supabase request that never settles, which then blocks every later
+  call. Fixed defensively in v2.3.2: `fetchWithTimeout` (20 s) on the
+  Supabase client, slow-load fallback with retry/reload in `QueryState`,
+  no awaited server call inside `onAuthStateChange`, shared Realtime
+  channel per table. If it recurs, the "taking longer than usual" panel
+  now appears instead of a silent hang; report what it shows.
+
 - Not verified end-to-end in a browser with real data (no credentials in the
   development session). Verified by unit/component tests, typecheck, build
   and SQL probes against the live database.

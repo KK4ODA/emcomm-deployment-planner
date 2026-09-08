@@ -64,6 +64,9 @@ export function stripReadOnly(data) {
   return copy;
 }
 
+/** Live Realtime channels by table: { channel, listeners }. */
+const channels = new Map();
+
 /**
  * Create a small repository for one table. Every method throws the Supabase
  * error on failure so React Query surfaces it through `onError`.
@@ -120,13 +123,30 @@ export function createRepository(table) {
      * @returns {() => void} unsubscribe
      */
     subscribe(callback) {
-      const channel = supabase
-        .channel(`${table}-changes-${Math.random().toString(36).slice(2)}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
-          callback({ type: payload.eventType, data: payload.new ?? null, oldData: payload.old ?? null });
-        })
-        .subscribe();
-      return () => { supabase.removeChannel(channel); };
+      // One Realtime channel per table, shared by every page that listens.
+      // Opening and tearing down a channel on every navigation churned the
+      // websocket; now the channel lives while anyone is subscribed.
+      let entry = channels.get(table);
+      if (!entry) {
+        const listeners = new Set();
+        const channel = supabase
+          .channel(`${table}-changes`)
+          .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+            const event = { type: payload.eventType, data: payload.new ?? null, oldData: payload.old ?? null };
+            for (const fn of listeners) { try { fn(event); } catch (err) { console.error('Realtime listener failed:', err); } }
+          })
+          .subscribe();
+        entry = { channel, listeners };
+        channels.set(table, entry);
+      }
+      entry.listeners.add(callback);
+      return () => {
+        entry.listeners.delete(callback);
+        if (entry.listeners.size === 0) {
+          channels.delete(table);
+          supabase.removeChannel(entry.channel);
+        }
+      };
     },
   };
 }

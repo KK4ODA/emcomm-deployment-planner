@@ -75,9 +75,12 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkSession();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Never await Supabase calls inside this callback: it runs while the
+      // auth client is mid-update and awaiting here can wedge later requests.
+      // Defer the profile load to the next tick instead.
       if (event === 'SIGNED_IN' && session) {
-        await loadUserProfile(session.user);
+        setTimeout(() => { loadUserProfile(session.user); }, 0);
       } else if (event === 'SIGNED_OUT') {
         clearCachedIdentity();
         setUser(null);

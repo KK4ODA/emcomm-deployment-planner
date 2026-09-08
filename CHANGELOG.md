@@ -10,6 +10,14 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ## [Unreleased]
 
 ### Fixed
+- Pages no longer sit on their loading skeleton after the connection
+  stalls (typically a token refresh that never finished after the laptop
+  woke up). Every server request now has a 20-second deadline, a stalled
+  page offers Try again / Reload after 10 seconds, the sign-in listener
+  no longer blocks on a server call, and Realtime uses one shared channel
+  per table instead of reconnecting on every page change.
+
+### Fixed
 - Mobile audit at phone width (390 px) on the live site, every page and
   the main dialogs: Profile tabs no longer push the page sideways; the
   packet map now shows for sites whose coordinates live only in the
