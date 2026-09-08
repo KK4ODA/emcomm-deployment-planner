@@ -72,9 +72,14 @@ started**. The version is the release the row first shipped in.
 
 ### P3 — Experimental
 
-All six rows (RF / VARA-BBS sync, APRS ingestion, AREDN, propagation
-prediction, mutual aid, community channel sharing): not started, per the
-document's validation gates.
+| Feature (design doc) | Status | Owner decision (2026-09-08) and notes |
+|---|---|---|
+| RF / VARA-BBS status sync | Removed | Collapses into LAN mode (waitlisted); offline packet and queued check-ins cover the common case. |
+| APRS position ingestion into the NCS board | Shipped v2.5.0 as a full Graywolf integration | Owner widened the scope. `aprs_bridges` tokens per group (SHA-256 stored); `aprs-ingest` Edge Function: stations up, Graywolf Actions webhook for `@@#checkin / #onpos / #checkout / #status` (applied through the same assignment ladder and log, source APRS), APRS outbox for notifications, sites as APRS objects. `/aprs` page (bridges, stations heard, check-ins, outbox, setup steps); NCS board shows each operator's last APRS fix and distance to the site; Sites map overlay by age; Profile > Notifications gains an APRS channel. Bridge implemented in the owner's emcomm-objects (PR on `feature/emcomm-planner-bridge`). Positions remain display; check-in still requires an explicit command. |
+| AREDN / mesh-native deployment | Removed | A deployment scenario of LAN mode, not a feature. |
+| Automated propagation / coverage prediction | Removed | Superseded by the empirical coverage map (v2.4.0). |
+| Cross-organization mutual aid | Waitlisted | Needs a second group and a privacy rule for operator data across groups; joining a second group covers borrowed operators today. |
+| Community channel-library sharing | Shipped v2.5.0 (file exchange) | Channels page: Export the library as a JSON file, Import another group's file with a preview; duplicates by name and frequency are skipped. The shared community database stays waitlisted (licensing, data quality). |
 
 ### Explicitly deferred or dropped
 
@@ -87,7 +92,10 @@ shipped; the one exception is Windows code signing, not done by instruction
 (no certificate). P2 4 shipped (coverage map, ICS 204, safety checklist,
 naming schemes), 7 waitlisted or dropped by the owner's decision of
 2026-09-08 (credentials, Field Day profile, Winlink ingest, LAN mode, AI AAR,
-AI import: waitlist; section rollups: dropped for now). P3 0/6.
+AI import: waitlist; section rollups: dropped for now). P3: APRS and channel
+library exchange shipped; mutual aid waitlisted; RF sync, mesh-native and
+propagation prediction removed. Every row of the design document is now
+shipped, waitlisted with a trigger, or removed with a reason.
 
 ## Completed
 
@@ -194,6 +202,14 @@ AI import: waitlist; section rollups: dropped for now). P3 0/6.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-08 **P3 batch** (v2.5.0; migration `021`, applied; `aprs-ingest`
+  deployed; `deliver-notification` v4): full APRS integration through
+  Graywolf (positions in, check-ins in, notifications out, objects out),
+  channel library export/import. Every `aprs-ingest` route probed live with
+  a throwaway bridge token (ping, bad token 401, station upsert, status and
+  check-in actions with the correct replies, unknown call sign refused,
+  outbox, objects CSV); probe rows removed. Bridge side in emcomm-objects
+  with Go tests. Tests here: aprs (6), channelLibrary (3). 266 total.
 - 2026-09-08 **P2 batch 1** (v2.4.0; migration `020`, applied): coverage
   log and map overlay, ICS 204, signed safety checklist, naming schemes.
   Verified with rollback probes: a signed checklist refuses edits and the
@@ -217,12 +233,12 @@ AI import: waitlist; section rollups: dropped for now). P3 0/6.
 
 ## Next
 
-P1 complete except Windows code signing; P2 batch 1 shipped. The owner
-waitlisted the remaining P2 rows until a real event has run through the
-app (credentials, Field Day profile, Winlink ingest, LAN mode, AI-assisted
-AAR and import) and dropped section rollups for now. SMS switches on
-whenever the Twilio secrets are set on `deliver-notification`. Next: a
-walk-through of one real event with a second operator account. Field verification with real operators is the
+The design document is fully dispositioned. Open items are owner actions,
+not code: merge the emcomm-objects bridge PR and try it against a Graywolf
+station; configure Graywolf Actions for APRS check-ins; walk one real event
+through the app with a second operator account. Waitlisted rows (P2:
+credentials, Field Day profile, Winlink ingest, LAN mode, AI AAR, AI import;
+P3: mutual aid) wait for that event. Field verification with real operators is the
 most valuable next step: the live database still holds only the owner
 account and one test deployment, so every workflow above has been verified
 by unit tests and rollback probes, not by a second person. Housekeeping still on the user: delete

@@ -75,6 +75,7 @@ export const PERMISSIONS = Object.freeze({
   LOG_COVERAGE: [A, P, O],
   MANAGE_SAFETY: [A, P],
   MANAGE_NAMING: [A, P],
+  MANAGE_APRS: [A, P],
 
   MANAGE_USERS: [A],
   INVITE_USERS: [A, P],

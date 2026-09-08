@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { db } from '@/api/db';
+import { listLatestPositions } from '@/api/aprs';
 import { queryKeys } from '@/lib/queryKeys';
 import { listTasksLocal, TASKS_UPDATED_EVENT } from '@/api/taskEvents';
 import { listMemberships } from '@/api/memberships';
@@ -111,6 +112,19 @@ export function useSafetyChecklists() {
 }
 export function useNamingSchemes() {
   return useQuery({ queryKey: queryKeys.namingSchemes, queryFn: () => db.namingSchemes.list({ orderBy: 'sort_order' }) });
+}
+export function useAprsBridges() {
+  return useQuery({ queryKey: queryKeys.aprsBridges, queryFn: () => db.aprsBridges.list({ orderBy: 'created_at' }) });
+}
+/** Latest APRS fix per station; refreshed every 30 s while a page uses it. */
+export function useAprsLatest(enabled = true) {
+  return useQuery({ queryKey: queryKeys.aprsLatest, queryFn: listLatestPositions, refetchInterval: 30_000, enabled });
+}
+export function useAprsActions() {
+  return useQuery({ queryKey: queryKeys.aprsActions, queryFn: () => db.aprsActions.list({ orderBy: 'received_at', ascending: false }), refetchInterval: 30_000 });
+}
+export function useAprsOutbox() {
+  return useQuery({ queryKey: queryKeys.aprsOutbox, queryFn: () => db.aprsOutbox.list({ orderBy: 'created_at', ascending: false }), refetchInterval: 30_000 });
 }
 export function useMapLayers() {
   return useQuery({ queryKey: queryKeys.mapLayers, queryFn: () => db.mapLayers.list({ orderBy: 'sort_order' }) });

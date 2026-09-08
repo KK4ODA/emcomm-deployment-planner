@@ -9,6 +9,21 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-09-08
+
+### Added
+- **APRS through Graywolf**: an APRS page for planners with per-group bridge
+  tokens; the stations Graywolf hears appear on the net control board (last
+  fix, distance to the site) and the Sites map (coloured by age); operators
+  check in over APRS with `@@#checkin`, `@@#onpos`, `@@#checkout` and ask
+  `@@#status` from any APRS radio, through Graywolf Actions; operators can
+  choose APRS as a notification channel and receive offers and packet
+  changes as APRS messages; the deployment's sites export as APRS objects
+  for Emcomm Objects (CSV from the Sites map, or pulled by the bridge). The
+  bridge itself lives in Emcomm Objects (Settings > EmComm Planner).
+- **Channel library exchange**: export your channel library as a file and
+  import another group's, with a preview that skips what you already have.
+
 ## [2.4.0] - 2026-09-08
 
 ### Added

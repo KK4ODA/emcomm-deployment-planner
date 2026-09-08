@@ -31,5 +31,9 @@ export const queryKeys = Object.freeze({
   coverageLog: ['coverage-log'],
   safetyChecklists: ['safety-checklists'],
   namingSchemes: ['naming-schemes'],
+  aprsBridges: ['aprs-bridges'],
+  aprsLatest: ['aprs-latest'],
+  aprsActions: ['aprs-actions'],
+  aprsOutbox: ['aprs-outbox'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });

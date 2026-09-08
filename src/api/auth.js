@@ -13,7 +13,7 @@ import { TABLES } from './db';
  * @property {string[]} ares_group_ids server-maintained mirror of active memberships (read-only)
  * @property {string|null} [profile_image_url]
  * @property {string|null} [license_class]
- * @property {{ push?: boolean, email?: boolean, sms?: boolean }} [notification_prefs]
+ * @property {{ push?: boolean, email?: boolean, sms?: boolean, aprs?: boolean }} [notification_prefs]
  * @property {string[]} [capabilities]
  * @property {string[]} [station_types]
  * @property {number|null} [power_hours]

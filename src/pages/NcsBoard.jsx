@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Headphones, RefreshCw, LogIn, MapPinCheck, LogOut, CloudOff, MessageSquarePlus, Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { Headphones, RefreshCw, LogIn, MapPinCheck, LogOut, CloudOff, MessageSquarePlus, Users, AlertTriangle, CheckCircle2, Clock, RadioTower } from 'lucide-react';
+import { positionsByUser, ageMinutes, ageBucket, nearSite } from '@/lib/aprs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useRealtimeInvalidation, useLocations, useCommsPlanChannels } from '@/hooks/useEntities';
+import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useRealtimeInvalidation, useLocations, useCommsPlanChannels, useAprsLatest } from '@/hooks/useEntities';
 import { useIntents } from '@/hooks/useIntents';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
@@ -49,6 +50,7 @@ function NcsContent() {
   const assignmentsQ = useAssignments();
   const locationsQ = useLocations();
   const planRowsQ = useCommsPlanChannels();
+  const aprsQ = useAprsLatest();
   const usersQ = useUsers();
   const logQ = useActivityLog(deploymentId);
   const { intents } = useIntents();
@@ -67,6 +69,8 @@ function NcsContent() {
   const shifts = useMemo(() => (shiftsQ.data ?? []).filter(s => s.deployment_id === deploymentId), [shiftsQ.data, deploymentId]);
   const assignments = useMemo(() => (assignmentsQ.data ?? []).filter(a => a.deployment_id === deploymentId), [assignmentsQ.data, deploymentId]);
   const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
+  const aprsByUser = useMemo(() => positionsByUser((aprsQ.data ?? []).filter(p => p.ares_group_id === deployment.ares_group_id), usersQ.data ?? []), [aprsQ.data, usersQ.data, deployment.ares_group_id]);
+  const siteById = useMemo(() => new Map((locationsQ.data ?? []).map(l => [l.id, l])), [locationsQ.data]);
   const nets = useMemo(() => [...new Set(positions.map(p => p.net).filter(Boolean))].sort(), [positions]);
   const rows = useMemo(() => buildNcsBoard({ positions, shifts, assignments, usersById, intents, now, windowHours: Number(windowHours), net: net === 'all' ? null : net }), [positions, shifts, assignments, usersById, intents, now, windowHours, net]);
   const summary = ncsSummary(rows);
@@ -180,6 +184,7 @@ function NcsContent() {
                                 {p.pending && <span className="ml-1 inline-flex items-center gap-0.5 text-warning"><CloudOff className="h-3 w-3" /> pending</span>}
                               </span>
                               {p.user?.phone && <a href={`tel:${p.user.phone}`} className="font-mono text-xs text-primary underline-offset-4 hover:underline">{p.user.phone}</a>}
+                              {(() => { const fix = aprsByUser.get(p.user?.id); if (!fix) return null; const b = ageBucket(ageMinutes(fix.heard_at, now)); const near = nearSite(fix, siteById.get(r.position.site_id)); return <span className="inline-flex items-center gap-1 text-xs" title={`APRS ${fix.callsign} heard ${b.label}${near ? `, ${near.distanceM} m from the site` : ''}`}><RadioTower className="h-3 w-3" style={{ color: b.color }} /> <span className="font-mono">{fix.callsign}</span> {b.label}{near?.onSite ? <span className="text-success"> · on site</span> : near ? <span className="text-muted-foreground"> · {near.distanceM >= 1000 ? `${(near.distanceM / 1000).toFixed(1)} km` : `${near.distanceM} m`} away</span> : null}</span>; })()}
                               {canRecord && actions.length > 0 && (
                                 <span className="ml-auto flex gap-1">
                                   {actions.map(a => { const Icon = ICONS[a.status]; return <Button key={a.status} size="sm" variant={a.primary ? 'default' : 'outline'} className="h-7 px-2 text-xs" onClick={() => record(p.assignment, a.status)} loading={busyId === p.assignment.id} title={`Record on behalf of ${p.user?.call_sign ?? 'operator'}`}><Icon /> {a.label}</Button>; })}

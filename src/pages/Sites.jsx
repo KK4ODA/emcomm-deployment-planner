@@ -10,11 +10,12 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
+import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useAprsLatest, usePositions, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/db';
 import { hasPermission } from '@/lib/permissions';
 import { coverageGeoJson, coverageSummary, filterCoverage, coverageCsv, COVERAGE_RESULTS } from '@/lib/coverage';
+import { aprsGeoJson, positionsByUser, sitesToAprsObjects, aprsObjectsCsv } from '@/lib/aprs';
 import { downloadBlob } from '@/lib/download';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CoverageReportDialog } from '@/features/coverage/CoverageReportDialog';
@@ -41,6 +42,9 @@ function SitesContent() {
   const tasksQ = useTasks();
   const layersQ = useMapLayers();
   const coverageQ = useCoverageLog();
+  const aprsQ = useAprsLatest();
+  const positionsQ = usePositions();
+  const [aprsAge, setAprsAge] = useState('180');
   const queryClient = useQueryClient();
   useRealtimeInvalidation('locations', queryKeys.locations);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -65,6 +69,14 @@ function SitesContent() {
   const allSitesById = useMemo(() => new Map((locationsQ.data ?? []).map(l => [l.id, l])), [locationsQ.data]);
   const coverageGeo = useMemo(() => coverageGeoJson(coverageEntries, allSitesById), [coverageEntries, allSitesById]);
   const coverageStats = useMemo(() => coverageSummary(coverageEntries), [coverageEntries]);
+  const aprsLatest = useMemo(() => (aprsQ.data ?? []).filter(p => p.ares_group_id === deployment.ares_group_id), [aprsQ.data, deployment.ares_group_id]);
+  const aprsGeo = useMemo(() => {
+    const byUser = positionsByUser(aprsLatest, usersQ.data ?? []);
+    const userByCall = new Map();
+    for (const [uid, p] of byUser) userByCall.set(p.callsign, (usersQ.data ?? []).find(u => u.id === uid));
+    return aprsGeoJson(aprsLatest, { maxAgeMinutes: Number(aprsAge), userByCall, usersById: new Map((usersQ.data ?? []).map(u => [u.id, u])) });
+  }, [aprsLatest, usersQ.data, aprsAge]);
+  const depPositions = useMemo(() => (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId), [positionsQ.data, deploymentId]);
   const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
   const logCoverage = useMutation({
     mutationFn: (/** @type {Object} */ data) => db.coverageLog.create({ ...data, ares_group_id: deployment.ares_group_id, deployment_id: deploymentId, reported_by: user.id, occurred_at: new Date().toISOString() }),
@@ -162,7 +174,19 @@ function SitesContent() {
               {hasPermission(role, 'LOG_COVERAGE') && <Button size="sm" variant="outline" onClick={() => setCoverageOpen(true)}><RadioTower /> Log a check</Button>}
               {coverageEntries.length > 0 && <Button size="sm" variant="ghost" onClick={() => downloadBlob(coverageCsv(coverageEntries, usersById, allSitesById), 'coverage-log.csv', 'text/csv;charset=utf-8')}><Download /> CSV</Button>}
             </div>
-            <SiteMap locations={locations} items={items} layers={layers} coverage={coverageGeo} onSelect={mayEdit ? (loc) => setForm({ open: true, location: loc }) : undefined} />
+            {(aprsLatest.length > 0 || mayEdit) && (
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                <RadioTower className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">APRS</span>
+                <span className="text-muted-foreground">{aprsGeo.features.length ? `${aprsGeo.features.length} station${aprsGeo.features.length === 1 ? '' : 's'} on the map` : 'no stations heard in this window'}</span>
+                <Select value={aprsAge} onValueChange={setAprsAge}>
+                  <SelectTrigger className="h-8 w-28" aria-label="APRS age"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="30">30 min</SelectItem><SelectItem value="180">3 h</SelectItem><SelectItem value="720">12 h</SelectItem><SelectItem value="1440">24 h</SelectItem></SelectContent>
+                </Select>
+                {mayEdit && <Button size="sm" variant="ghost" onClick={() => downloadBlob(aprsObjectsCsv(sitesToAprsObjects({ sites: locations, positions: depPositions, deploymentName: deployment.name })), `aprs-objects-${deployment.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`, 'text/csv;charset=utf-8')} title="Sites as APRS objects for Emcomm Objects (CSV import)"><Download /> APRS objects</Button>}
+              </div>
+            )}
+            <SiteMap locations={locations} items={items} layers={layers} coverage={coverageGeo} aprs={aprsGeo} onSelect={mayEdit ? (loc) => setForm({ open: true, location: loc }) : undefined} />
             {coverageStats.byChannel.length > 0 && (
               <ul className="mt-2 flex flex-wrap gap-2 text-xs">
                 {coverageStats.byChannel.map(c => <li key={c.label} className="rounded-md border px-2 py-1"><span className="font-mono">{c.label}</span>: <span className="text-success">{c.direct} ok</span>, <span className="text-warning">{c.relay} relay</span>, <span className="text-destructive">{c.fail} fail</span></li>)}

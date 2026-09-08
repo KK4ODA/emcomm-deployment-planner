@@ -232,6 +232,20 @@ Notifications. The server side is a trigger + pg_net + the
 `deliver-notification` Edge Function (see backend.md). The desktop app's
 webview has no push; the card says so and points to the web app.
 
+## APRS through Graywolf
+
+APRS is display and convenience, never the source of truth: an APRS
+check-in goes through the same assignment ladder and activity log as a tap
+on the packet. `src/lib/aprs.js` matches heard stations to operators
+(profile APRS call first, then any SSID of the base call), buckets fix age,
+measures distance to the assigned site (`nearSite`), builds the map overlay,
+and turns sites into APRS objects for Emcomm Objects. Screens: `/aprs`
+(bridges with one-time tokens, stations heard, APRS check-ins, outbound
+messages, Graywolf setup steps), the NCS board line per operator, the Sites
+map overlay, and the APRS channel on Profile > Notifications. The server
+side is the `aprs-ingest` Edge Function (backend.md). The bridge that sits
+next to Graywolf is a feature of the owner's Emcomm Objects app.
+
 ## Coverage log, safety checklist, naming schemes
 
 - **Coverage** (`src/lib/coverage.js`): `coverageGeoJson()` turns log rows

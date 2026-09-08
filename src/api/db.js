@@ -33,6 +33,10 @@ export const TABLES = Object.freeze({
   coverageLog: 'coverage_log',
   safetyChecklists: 'safety_checklists',
   namingSchemes: 'naming_schemes',
+  aprsBridges: 'aprs_bridges',
+  aprsPositions: 'aprs_positions',
+  aprsActions: 'aprs_actions',
+  aprsOutbox: 'aprs_outbox',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -186,4 +190,8 @@ export const db = Object.freeze({
   coverageLog: createRepository(TABLES.coverageLog),
   safetyChecklists: createRepository(TABLES.safetyChecklists),
   namingSchemes: createRepository(TABLES.namingSchemes),
+  aprsBridges: createRepository(TABLES.aprsBridges),
+  aprsPositions: createRepository(TABLES.aprsPositions),
+  aprsActions: createRepository(TABLES.aprsActions),
+  aprsOutbox: createRepository(TABLES.aprsOutbox),
 });

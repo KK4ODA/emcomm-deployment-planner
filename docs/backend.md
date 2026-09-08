@@ -61,6 +61,10 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `coverage_log` | Radio path attempts per group: from / to (site or coordinates or label), channel, frequency, mode, power, antenna, result direct/relay/fail, reporter, time (020). Members insert their own rows; planners edit any |
 | `safety_checklists` | One per deployment: template name, items `[{id,text,state,note}]`, notes, signature; trigger stamps `signed_by`/`signed_at` and refuses any change once signed (020). Planners write; group reads |
 | `naming_schemes` | Saved position patterns per group: position pattern, tactical pattern, type, net, requirements (020). Planners write; group reads |
+| `aprs_bridges` | Per-group bridge tokens (SHA-256 only), last report, station call, revoked_at (021). Planners manage |
+| `aprs_positions` | Heard stations: callsign, base call, fix, symbol, comment, via, heard_at; 14-day history; `aprs_positions_latest` view gives the newest per callsign (021). Group reads; written by `aprs-ingest` |
+| `aprs_actions` | Audit of APRS commands received: sender, action, matched user and assignment, result, reply (021) |
+| `aprs_outbox` | APRS messages for the bridge to send: recipient, 67-char text, status pending/sent/failed/expired, attempts (021) |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
 
@@ -111,6 +115,11 @@ Trigger `notifications_deliver` (019): after every insert of a deliverable
 type (`assignment_offered/accepted/declined`, `plan_published`, `open_shift`,
 `info`), `net.http_post` sends the row to `deliver_url` with the
 `x-emcomm-hook` secret; failures never block the insert.
+
+Function `apply_aprs_status(user, status, at, note)` (021, service role only):
+finds the operator's live assignment, applies checked_in / on_position /
+released along the same ladder as the app, logs it ("via APRS") with an
+idempotency key, and returns a short reply for the radio.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a
@@ -184,6 +193,7 @@ the caller's JWT and use the service role only after checking the caller.
 | Slug | Called from | What it does |
 |------|-------------|--------------|
 | `deliver-notification` | database trigger (POST), Profile > Notifications (GET) | `verify_jwt` off; POST is authenticated by the `x-emcomm-hook` secret from `app_config`. Delivers a notification to the recipient's enabled channels: web push (VAPID keys generated on first use and kept in `app_config`; dead subscriptions removed on 404/410), email via Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set, SMS via Twilio when `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM` are set; `APP_URL` for links. GET returns which channels are configured and the push public key. Push (iPhone via Safari home-screen install) and email (Resend, verified domain) confirmed end to end on 2026-09-08 |
+| `aprs-ingest` | the Graywolf bridge and Graywolf Actions | `verify_jwt` off; every route requires a bridge token (`Authorization: Bearer` or `?token=`), matched by SHA-256 against `aprs_bridges`. `POST /stations` upserts heard stations; `POST /action` is the Graywolf Action webhook (form fields `action`, `sender-callsign`, `arg.*`), matches the sender by APRS call then base call, requires group membership, applies the status and replies in plain text; `GET /outbox` + `POST /outbox/ack` drive outbound APRS messages; `GET /objects?deployment=active&format=json|csv` returns sites as Pinpoint-shaped objects; `GET /ping` checks the token |
 | `invite-user` (v3: optional `call_sign`, `full_name`, `phone`, `license_class` fill empty profile columns; an existing member is added to the groups instead of failing) | Members › Invite | Admin or planner. `auth.admin.inviteUserByEmail`, sets the initial role (planners: pending/viewer/operator only) and inserts active `memberships` (planners: only their own groups) |
 | `create-or-update-user-profile` | Profile › Add member, Members › Edit | Admin-only upsert of a member profile by email; invites if new |
 | `cleanup-deleted-user` | Members › Remove | Admin-only; clears the call sign from items, sites and tasks. Body: `{ "callSign": "W1ABC" }` |

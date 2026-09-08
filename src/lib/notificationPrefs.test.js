@@ -3,8 +3,8 @@ import { normalizePrefs, channelAvailability } from './notificationPrefs';
 
 describe('normalizePrefs', () => {
   it('defaults push on and the rest off', () => {
-    expect(normalizePrefs(null)).toEqual({ push: true, email: false, sms: false });
-    expect(normalizePrefs({ push: false, email: true, sms: 'yes' })).toEqual({ push: false, email: true, sms: false });
+    expect(normalizePrefs(null)).toEqual({ push: true, email: false, sms: false, aprs: false });
+    expect(normalizePrefs({ push: false, email: true, sms: 'yes', aprs: true })).toEqual({ push: false, email: true, sms: false, aprs: true });
   });
 });
 
@@ -17,6 +17,9 @@ describe('channelAvailability', () => {
     expect(channelAvailability('email', { status }).reason).toMatch(/not configured/);
     expect(channelAvailability('sms', { status, phone: null }).reason).toMatch(/phone number/);
     expect(channelAvailability('sms', { status, phone: '404-555-0100' })).toEqual({ ok: true });
+    expect(channelAvailability('aprs', { aprsCall: null }).reason).toMatch(/APRS call/);
+    expect(channelAvailability('aprs', { aprsCall: 'KK4ODA-7', aprsBridge: false }).reason).toMatch(/bridge/);
+    expect(channelAvailability('aprs', { aprsCall: 'KK4ODA-7' })).toEqual({ ok: true });
   });
   it('is permissive before the server status is known', () => {
     expect(channelAvailability('email', {})).toEqual({ ok: true });

@@ -146,9 +146,9 @@ Deno.serve(async (req) => {
   try {
     const { record } = await req.json()
     if (!record?.user_email) return json({ skipped: 'no recipient' })
-    const { data: user } = await admin.from('users').select('id, phone, notification_prefs, call_sign').eq('email', record.user_email).maybeSingle()
+    const { data: user } = await admin.from('users').select('id, phone, notification_prefs, call_sign, aprs_call_sign, ares_group_ids').eq('email', record.user_email).maybeSingle()
     if (!user) return json({ skipped: 'unknown user' })
-    const prefs = { push: true, email: false, sms: false, ...(user.notification_prefs || {}) }
+    const prefs = { push: true, email: false, sms: false, aprs: false, ...(user.notification_prefs || {}) }
     const title = record.title || 'EmComm Planner'
     const body = record.message || ''
     const url = `${APP_URL}${URL_FOR[record.type] || '/'}`
@@ -156,6 +156,16 @@ Deno.serve(async (req) => {
     if (prefs.push) result.push = await sendPush(user.id, { title, body, url, tag: `${record.type}:${record.id}` })
     if (prefs.email) result.email = await sendEmail(record.user_email, `[EmComm] ${title}`, `${body}\n\n${url}`)
     if (prefs.sms) result.sms = await sendSms(user.phone, `${title}: ${body}`.slice(0, 300))
+    if (prefs.aprs && user.aprs_call_sign) {
+      // One APRS message per group bridge the operator belongs to; the bridge sends it through Graywolf.
+      const groups: string[] = Array.isArray(user.ares_group_ids) ? user.ares_group_ids : []
+      const { data: bridges } = groups.length ? await admin.from('aprs_bridges').select('ares_group_id').in('ares_group_id', groups).is('revoked_at', null) : { data: [] }
+      const groupIds = [...new Set((bridges ?? []).map((b: { ares_group_id: string }) => b.ares_group_id))]
+      const short = `${title}${body ? `: ${body}` : ''}`.replace(/\s+/g, ' ').trim()
+      const msg = short.length <= 67 ? short : short.slice(0, 66) + '~'
+      for (const gid of groupIds) await admin.from('aprs_outbox').insert({ ares_group_id: gid, to_callsign: String(user.aprs_call_sign).toUpperCase(), text: msg, notification_id: record.id })
+      result.aprs = groupIds.length
+    }
     return json({ ok: true, ...result })
   } catch (err) {
     console.error('deliver failed', err)

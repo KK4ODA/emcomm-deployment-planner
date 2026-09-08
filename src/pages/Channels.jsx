@@ -16,6 +16,7 @@ import { hasPermission } from '@/lib/permissions';
 import { channelSummary, CHANNEL_CONFIGS, digitalModeLabel } from '@/lib/comms';
 import { ChannelForm } from '@/features/comms/ChannelForm';
 import { useChannelMutations } from '@/features/comms/useCommsMutations';
+import { ChannelLibraryTransfer } from '@/features/comms/ChannelLibraryTransfer';
 import { cn } from '@/lib/utils';
 
 /** The ARES group's channel library (ICS-217A). Deployments pick from it. */
@@ -58,7 +59,12 @@ export default function Channels() {
         icon={Radio}
         title="Channel library"
         description="Repeaters, simplex channels, digital gateways and phone numbers your group uses. Every communications plan picks from here."
-        actions={canEdit && activeGroup && <Button onClick={() => setForm({ open: true, channel: null })}><Plus /> Channel</Button>}
+        actions={activeGroup && (
+          <>
+            <ChannelLibraryTransfer channels={(channelsQ.data ?? []).filter(c => c.ares_group_id === activeGroup)} groupId={activeGroup} groupName={myGroups.find(g => g.id === activeGroup)?.name} exportedBy={user?.call_sign || ''} canEdit={canEdit} />
+            {canEdit && <Button onClick={() => setForm({ open: true, channel: null })}><Plus /> Channel</Button>}
+          </>
+        )}
       />
       <QueryState queries={[groupsQ, channelsQ]}>
         {myGroups.length === 0 ? (

@@ -11,7 +11,7 @@ import { getDeliveryStatus, savePushSubscription, removePushSubscription, listPu
 import { isPushSupported, notificationPermission, currentSubscription, subscribePush, unsubscribePush } from '@/lib/push';
 import { CHANNELS, normalizePrefs, channelAvailability } from '@/lib/notificationPrefs';
 import { formatDateTime } from '@/lib/time';
-import { reportMutationError } from '@/hooks/useEntities';
+import { reportMutationError, useAprsBridges } from '@/hooks/useEntities';
 
 /**
  * Profile › Notifications: which channels carry assignment changes, plan
@@ -24,6 +24,8 @@ export function NotificationsCard({ user, onSaved }) {
   const prefs = normalizePrefs(user?.notification_prefs);
   const statusQ = useQuery({ queryKey: ['delivery-status'], queryFn: getDeliveryStatus, staleTime: 5 * 60_000, retry: 1 });
   const devicesQ = useQuery({ queryKey: ['push-subscriptions', user?.id], queryFn: () => listPushSubscriptions(user.id), enabled: !!user?.id });
+  const bridgesQ = useAprsBridges();
+  const hasBridge = (bridgesQ.data ?? []).some(b => !b.revoked_at);
   const [thisDevice, setThisDevice] = useState(/** @type {string|null} */ (null));
   const supported = isPushSupported();
   useEffect(() => { currentSubscription().then(s => setThisDevice(s?.endpoint ?? null)).catch(() => {}); }, []);
@@ -56,7 +58,7 @@ export function NotificationsCard({ user, onSaved }) {
   });
 
   const toggle = (id, on) => save.mutate({ ...prefs, [id]: on });
-  const ctx = { status: statusQ.data ?? null, pushSupported: supported, permission: notificationPermission(), phone: user?.phone || null };
+  const ctx = { status: statusQ.data ?? null, pushSupported: supported, permission: notificationPermission(), phone: user?.phone || null, aprsCall: user?.aprs_call_sign || null, aprsBridge: bridgesQ.isLoading ? true : hasBridge };
 
   return (
     <Card>

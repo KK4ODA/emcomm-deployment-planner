@@ -13,9 +13,9 @@ ensureLeafletIcons();
  * All sites with coordinates on one map, over any imported layers (course
  * route, boundaries, waypoints). Tiles need a network connection; the map,
  * markers and layers work offline.
- * @param {{ locations: Object[], items: Object[], layers?: Object[], coverage?: Object|null, onSelect?: (location: Object) => void, className?: string }} props
+ * @param {{ locations: Object[], items: Object[], layers?: Object[], coverage?: Object|null, aprs?: Object|null, onSelect?: (location: Object) => void, className?: string }} props
  */
-export function SiteMap({ locations, items, layers = [], coverage = null, onSelect, className }) {
+export function SiteMap({ locations, items, layers = [], coverage = null, aprs = null, onSelect, className }) {
   const located = useMemo(
     () => locations.map(l => ({ ...l, coords: parseCoordinates(l.address) })).filter(l => l.coords),
     [locations],
@@ -37,6 +37,16 @@ export function SiteMap({ locations, items, layers = [], coverage = null, onSele
               <TileLayer url={layer.url} attribution={layer.attribution} maxZoom={layer.maxZoom} />
             </LayersControl.BaseLayer>
           ))}
+          {aprs && aprs.features?.length > 0 && (
+            <LayersControl.Overlay checked name="APRS stations">
+              <GeoJSON
+                key={`aprs-${aprs.features.map(f => `${f.properties?.id}:${f.properties?.age}`).join('.')}`}
+                data={aprs}
+                pointToLayer={(f, latlng) => L.marker(latlng, { icon: L.divIcon({ className: '', html: `<div style="transform:rotate(45deg);width:12px;height:12px;background:${f?.properties?.color || '#6b7280'};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)"></div><div style="font:600 10px system-ui;color:#111;background:rgba(255,255,255,.85);padding:0 3px;border-radius:3px;white-space:nowrap;margin-top:2px">${f?.properties?.callsign || ''}</div>`, iconSize: [12, 12], iconAnchor: [6, 6] }) })}
+                onEachFeature={(f, l) => { if (f.properties?.name) l.bindTooltip(String(f.properties.name), { direction: 'top', offset: [0, -8] }); }}
+              />
+            </LayersControl.Overlay>
+          )}
           {coverage && coverage.features?.length > 0 && (
             <LayersControl.Overlay checked name="Coverage checks">
               <GeoJSON
