@@ -50,7 +50,7 @@ started**. The version is the release the row first shipped in.
 | CHIRP CSV export from the comms plan | Shipped v2.0.0 | |
 | Served agency / tasking / authorization fields | Shipped v2.0.0 | Deployment form and packet header. |
 | Roster CSV import | Shipped v2.3.0 | Members > Import roster: tolerant headers (email, call sign, name or first/last, phone, licence class, role), per-row validation and preview, sequential invitations with progress; existing members are added to the groups instead of failing; profile fields fill empty columns only (`invite-user` v3). |
-| Light theme, type-scale control, mobile UX pass (§12) | Shipped v2.3.0 | Light and dark themes; text size (Compact / Default / Large / Larger) in the user menu, applied before first paint and remembered per device; phone-first packet with mobile redirect; dialogs cap at the viewport and scroll, tables scroll sideways, page headers stack. Not verified on a physical phone by a second person. |
+| Light theme, type-scale control, mobile UX pass (§12) | Shipped v2.3.0; audited v2.3.1 | Light and dark themes; text size in the user menu; phone-first packet with mobile redirect. Mobile audit 2026-09-08 at 390 px on the live site (all 18 routes rendered in a 390 px frame with a programmatic overflow scan, plus nav drawer, position / assign / publish / map-layers dialogs, map tab): one page-level overflow (Profile tabs) fixed, packet map fallback for address-only coordinates, Readiness labels, assign dialog header. Members table scrolls sideways by design. iPhone home-screen install verified by the owner. |
 | Code signing for Windows builds | Not done (by instruction) | No certificate; updater artifacts are minisign-signed, installers unsigned. |
 | Outbox reliability: retry, backoff, dead-letter UI; `syncEngine` tests | Shipped v2.3.0 | Retry, dead-letter list with retry / discard for both outboxes, sync-engine tests (v2.2.0); exponential backoff per entry (30 s doubling to 30 min, queue order kept) for task events and check-ins; coming back online or clicking the badge forces past the backoff. |
 
@@ -192,6 +192,11 @@ certificate). P2 1 partial, 10 not started. P3 0/6.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-08 **Mobile audit** (v2.3.1): live site rendered at 390 px per
+  route with an overflow scan and dialog checks; four fixes (Profile tabs
+  overflow, packet map for address-only coordinates, Readiness labels,
+  assign dialog header). No other layout defects found; Members table
+  scrolls horizontally by design.
 - 2026-09-08 **Delivery verified on real devices**: owner added Resend
   secrets (domain verified); a test notification arrived by email and, after
   a Safari home-screen install on an iPhone, as a push notification (Apple

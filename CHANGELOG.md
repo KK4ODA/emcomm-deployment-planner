@@ -9,6 +9,13 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- Mobile audit at phone width (390 px) on the live site, every page and
+  the main dialogs: Profile tabs no longer push the page sideways; the
+  packet map now shows for sites whose coordinates live only in the
+  address text; Readiness counters read Fix / Check / Fine instead of
+  truncating; the assign dialog's candidate header wraps on phones.
+
 ## [2.3.0] - 2026-09-07
 
 The P1 sweep: every high-value row of the design document except Windows

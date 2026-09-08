@@ -92,15 +92,15 @@ export function AssignDialog({ open, onClose, position, shift, users, assignment
         </section>
 
         <section aria-label="Candidates" className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Who could take it</h3>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {onNotify && coverage.open > 0 && qualified.length > 0 && (
                 <Button size="sm" variant="outline" onClick={() => onNotify(qualified)} disabled={busy} title="Send an open-shift notification to everyone who meets the requirements and is free">
                   <BellRing /> Notify {qualified.length} qualified
                 </Button>
               )}
-              <SearchInput value={search} onChange={setSearch} placeholder="Call sign or name" className="w-56" />
+              <SearchInput value={search} onChange={setSearch} placeholder="Call sign or name" className="w-full sm:w-56" />
             </div>
           </div>
           {candidates.length === 0 ? <p className="text-sm text-muted-foreground">No members with a call sign match.</p> : (

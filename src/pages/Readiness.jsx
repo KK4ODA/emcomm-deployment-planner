@@ -36,8 +36,8 @@ function ReadinessContent() {
             description={result.ready ? 'Nothing outstanding. Publish the plan and brief the net.' : 'What still stands between this plan and go time, worst first. Each line links to where it is fixed.'}
           />
           <div className="mb-4 grid grid-cols-3 gap-2">
-            <StatCard label="To fix" value={result.todo} icon={CircleAlert} tone={result.todo ? 'critical' : 'success'} />
-            <StatCard label="To check" value={result.warn} icon={TriangleAlert} tone={result.warn ? 'warning' : 'success'} />
+            <StatCard label="Fix" value={result.todo} icon={CircleAlert} tone={result.todo ? 'critical' : 'success'} hint="Blocks go time" />
+            <StatCard label="Check" value={result.warn} icon={TriangleAlert} tone={result.warn ? 'warning' : 'success'} hint="Worth a look" />
             <StatCard label="Fine" value={result.ok} icon={CircleCheck} tone="success" />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

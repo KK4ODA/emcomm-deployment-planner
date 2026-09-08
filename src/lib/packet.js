@@ -6,6 +6,7 @@
 import { channelsForNet, groupByCondition } from './comms';
 import { normalizeRequirements } from './capabilities';
 import { occupies } from './staffing';
+import { parseCoordinates } from './coordinates';
 
 /**
  * Pick the assignment an operator should see by default: the one currently
@@ -54,7 +55,9 @@ export function buildPacket(ctx) {
       period: period ? { label: period.label || `Period ${period.sequence}`, startsAt: period.starts_at, endsAt: period.ends_at } : null,
     },
     site: site ? {
-      id: site.id, name: site.name, address: site.address || null, lat: site.lat ?? null, lon: site.lon ?? null,
+      id: site.id, name: site.name, address: site.address || null,
+      // Older sites carry coordinates only in the address text.
+      lat: site.lat ?? parseCoordinates(site.address)?.[0] ?? null, lon: site.lon ?? parseCoordinates(site.address)?.[1] ?? null,
       parking: site.parking_notes || null, arrival: site.arrival_notes || null, access: site.access_notes || null,
       contact: site.contact_person || null, description: site.description || null,
     } : null,
