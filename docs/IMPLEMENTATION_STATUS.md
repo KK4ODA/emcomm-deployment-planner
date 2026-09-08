@@ -46,7 +46,7 @@ started**. The version is the release the row first shipped in.
 | Shared asset registry with custody state | Shipped v2.3.0 | `/assets` per ARES group: owner, home location, kind, serial; custody state storage / with a person / on site / retired; every move recorded by the `move_asset` RPC (any active member; planners retire); pledges against a deployment; teardown checklist with "mark all returned"; readiness flags assets not back after the event; CSV. |
 | Objectives (claimable, with completion) | Shipped v2.3.0 | `/objectives` per deployment with points and categories; operators claim, release, complete and undo their own through `set_objective_status`; shown on My assignments; counts and points feed the AAR summary and Markdown; copied fresh on duplicate; readiness flags objectives never taken after the event. |
 | Open-shift board + notify qualified operators | Shipped v2.3.0 | Board (v2.2.0) plus "Notify N qualified" in the assign dialog: `notify_open_shift` RPC restricts to group members, skips people already on the shift and anyone told in the last 24 hours. |
-| Notification preferences (email / SMS / push) | Shipped v2.3.0 (email/SMS need a provider) | Profile > Notifications: push, email, SMS switches per operator, in-app always on; only assignment changes, plan changes, open shifts and coordinator notices leave the app. Web push works out of the box (VAPID keys generated server-side on first use, per-device subscriptions, service-worker handlers). A database trigger hands each deliverable notification to the `deliver-notification` Edge Function via pg_net, authenticated with a secret only the service role can read. Email (Resend) and SMS (Twilio) switch on when the owner sets the function secrets; until then the switches explain why they are off. |
+| Notification preferences (email / SMS / push) | Shipped v2.3.0; push and email verified live 2026-09-08 | Profile > Notifications: push, email, SMS switches per operator, in-app always on; only assignment changes, plan changes, open shifts and coordinator notices leave the app. Web push works out of the box (VAPID keys generated server-side on first use, per-device subscriptions, service-worker handlers): verified end to end on an iPhone (Safari home-screen install, Apple push service). Email via Resend verified end to end with the owner's domain. A database trigger hands each deliverable notification to the `deliver-notification` Edge Function via pg_net, authenticated with a secret only the service role can read. SMS (Twilio) is built and switches on when its secrets are set; the owner chose to skip it for now. |
 | CHIRP CSV export from the comms plan | Shipped v2.0.0 | |
 | Served agency / tasking / authorization fields | Shipped v2.0.0 | Deployment form and packet header. |
 | Roster CSV import | Shipped v2.3.0 | Members > Import roster: tolerant headers (email, call sign, name or first/last, phone, licence class, role), per-row validation and preview, sequential invitations with progress; existing members are added to the groups instead of failing; profile fields fill empty columns only (`invite-user` v3). |
@@ -191,8 +191,12 @@ certificate). P2 1 partial, 10 not started. P3 0/6.
   `deliver-notification` deployed): notification preferences and delivery.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
-  through pg_net. Push end-to-end to a real phone is not yet verified (no
-  second device in this session). Tests: notificationPrefs (3). 242 total.
+  through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-08 **Delivery verified on real devices**: owner added Resend
+  secrets (domain verified); a test notification arrived by email and, after
+  a Safari home-screen install on an iPhone, as a push notification (Apple
+  push service accepted, `last_used_at` stamped, zero failures). SMS
+  skipped by choice.
 
 ## In Progress
 
@@ -200,12 +204,12 @@ certificate). P2 1 partial, 10 not started. P3 0/6.
 
 ## Next
 
-P1 is complete except Windows code signing. Owner actions that unlock the
-rest of notification delivery: set `RESEND_API_KEY` + `EMAIL_FROM` and/or
-`TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM` as secrets on the
-`deliver-notification` Edge Function (Dashboard > Edge Functions > Secrets);
-the switches on Profile > Notifications turn themselves on. Then P2 in
-roadmap order (section H deferrals). Field verification with real operators is the
+P1 is complete except Windows code signing; push and email delivery are
+verified on real devices. SMS switches on whenever `TWILIO_ACCOUNT_SID` +
+`TWILIO_AUTH_TOKEN` + `TWILIO_FROM` are set as secrets on the
+`deliver-notification` Edge Function. Next: P2 in roadmap order (section H
+deferrals), and a walk-through of one real event with a second operator
+account. Field verification with real operators is the
 most valuable next step: the live database still holds only the owner
 account and one test deployment, so every workflow above has been verified
 by unit tests and rollback probes, not by a second person. Housekeeping still on the user: delete
