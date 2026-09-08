@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RequirementsEditor } from './RequirementsEditor';
 import { ShiftsEditor, blankShift } from './ShiftsEditor';
 import { POSITION_TYPES, normalizeRequirements } from '@/lib/capabilities';
+import { deriveTactical, matchScheme, schemeDefaults } from '@/lib/naming';
 
 const NONE = '__none__';
 const EMPTY = { name: '', tactical_callsign: '', position_type: 'station', site_id: '', headcount: 1, net: '', supervisor_position_id: '', briefing_notes: '', requirements: [], open_signup: true };
@@ -19,9 +20,10 @@ const EMPTY = { name: '', tactical_callsign: '', position_type: 'station', site_
  *   open: boolean, onClose: () => void, position?: Object|null, shifts?: Object[],
  *   sites: Object[], positions: Object[], periods: Object[], deployment: Object,
  *   onSubmit: (data: Object, shifts: Object[]) => void, submitting?: boolean
+ *   schemes?: Object[]
  * }} props
  */
-export function PositionForm({ open, onClose, position, shifts: existingShifts = [], sites, positions, periods, deployment, onSubmit, submitting }) {
+export function PositionForm({ open, onClose, position, shifts: existingShifts = [], sites, positions, periods, deployment, onSubmit, submitting, schemes = [] }) {
   const [form, setForm] = useState(EMPTY);
   const [shiftRows, setShiftRows] = useState(/** @type {Object[]} */ ([]));
   const [error, setError] = useState('');
@@ -45,6 +47,21 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
   }, [open, position]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (key) => (value) => setForm(f => ({ ...f, [key]: value }));
+  // Naming schemes: typing "AID MILE 12" suggests the tactical call and the
+  // scheme's type, net and requirements when those are still empty.
+  const setName = (value) => setForm(f => {
+    const next = { ...f, name: value };
+    if (position) return next;
+    const hit = matchScheme(value, schemes);
+    if (!hit) return next;
+    const tactical = deriveTactical(value, schemes);
+    if (tactical && (!f.tactical_callsign || f.tactical_callsign === deriveTactical(f.name, schemes))) next.tactical_callsign = tactical;
+    const d = schemeDefaults(hit.scheme);
+    if (d.position_type && f.position_type === 'station') next.position_type = d.position_type;
+    if (d.net && !f.net) next.net = d.net;
+    if (d.requirements && !f.requirements.length) next.requirements = d.requirements;
+    return next;
+  });
 
   const submit = (e) => {
     e.preventDefault();
@@ -79,7 +96,7 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
         <form onSubmit={submit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-[1fr_9rem_6rem]">
             <FormField label="Position name" required>
-              {({ id }) => <Input id={id} value={form.name} onChange={(e) => set('name')(e.target.value)} placeholder="e.g. AID MILE 12, SAG 3, Net Control" required autoFocus />}
+              {({ id }) => <Input id={id} value={form.name} onChange={(e) => setName(e.target.value)} placeholder="e.g. AID MILE 12, SAG 3, Net Control" required autoFocus />}
             </FormField>
             <FormField label="Tactical call" hint="Used on the air">
               {({ id }) => <Input id={id} value={form.tactical_callsign} onChange={(e) => set('tactical_callsign')(e.target.value.toUpperCase())} placeholder="AID 12" className="font-mono uppercase" />}

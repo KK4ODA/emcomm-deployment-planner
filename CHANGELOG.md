@@ -9,6 +9,24 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-09-08
+
+### Added
+- **Coverage checks**: operators report from the packet whether a channel
+  reached net control (direct, via relay, no contact); planners log checks
+  between any two sites from the map. The Sites map draws every check,
+  coloured by result, for this deployment or the group's whole history, so
+  position and relay placement rests on what actually worked.
+- **ICS 204** assignment list from the Net control board: one division per
+  site with resources, leaders, work assignments, special instructions and
+  Condition 1 comms.
+- **Safety checklist** (`/safety`): the standard Field Day safety areas as a
+  per-deployment list you edit, answer and sign. Signing locks it for good;
+  PDF and text export; Readiness nags until it is signed.
+- **Naming schemes**: save "AID MILE {n} / AID {n}" from the bulk-create
+  dialog and reuse it; typing a matching position name fills the tactical
+  call, type, net and requirements.
+
 ### Fixed
 - Pages no longer sit on their loading skeleton after the connection
   stalls (typically a token refresh that never finished after the laptop

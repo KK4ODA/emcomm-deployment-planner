@@ -13,9 +13,9 @@ ensureLeafletIcons();
  * All sites with coordinates on one map, over any imported layers (course
  * route, boundaries, waypoints). Tiles need a network connection; the map,
  * markers and layers work offline.
- * @param {{ locations: Object[], items: Object[], layers?: Object[], onSelect?: (location: Object) => void, className?: string }} props
+ * @param {{ locations: Object[], items: Object[], layers?: Object[], coverage?: Object|null, onSelect?: (location: Object) => void, className?: string }} props
  */
-export function SiteMap({ locations, items, layers = [], onSelect, className }) {
+export function SiteMap({ locations, items, layers = [], coverage = null, onSelect, className }) {
   const located = useMemo(
     () => locations.map(l => ({ ...l, coords: parseCoordinates(l.address) })).filter(l => l.coords),
     [locations],
@@ -37,6 +37,17 @@ export function SiteMap({ locations, items, layers = [], onSelect, className }) 
               <TileLayer url={layer.url} attribution={layer.attribution} maxZoom={layer.maxZoom} />
             </LayersControl.BaseLayer>
           ))}
+          {coverage && coverage.features?.length > 0 && (
+            <LayersControl.Overlay checked name="Coverage checks">
+              <GeoJSON
+                key={`cov-${coverage.features.length}-${coverage.features.map(f => f.properties?.id).join('.')}`}
+                data={coverage}
+                style={(f) => ({ color: f?.properties?.color || '#4b5563', weight: 4, opacity: 0.85, dashArray: f?.properties?.result === 'fail' ? '6 6' : undefined })}
+                pointToLayer={(f, latlng) => L.circleMarker(latlng, { radius: 6, color: f?.properties?.color || '#4b5563', weight: 2, fillOpacity: 0.9 })}
+                onEachFeature={(f, l) => { if (f.properties?.name) l.bindTooltip(String(f.properties.name), { sticky: true }); }}
+              />
+            </LayersControl.Overlay>
+          )}
           {layers.map(layer => {
             const color = layer.color || '#2563eb';
             return (

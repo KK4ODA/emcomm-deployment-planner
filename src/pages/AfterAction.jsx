@@ -12,7 +12,7 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useHourEntries, useFeedback, useLessons, useObjectives, reportMutationError } from '@/hooks/useEntities';
+import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useHourEntries, useFeedback, useLessons, useObjectives, useCoverageLog, useSafetyChecklists, reportMutationError } from '@/hooks/useEntities';
 import { db } from '@/api/db';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
@@ -43,6 +43,8 @@ function AfterActionContent() {
   const feedbackQ = useFeedback(deploymentId);
   const lessonsQ = useLessons();
   const objectivesQ = useObjectives();
+  const coverageQ = useCoverageLog();
+  const safetyQ = useSafetyChecklists();
   const isPlanner = hasPermission(user?.app_role, 'MANAGE_ASSIGNMENTS');
 
   const byDep = (rows) => (rows ?? []).filter(r => r.deployment_id === deploymentId);
@@ -53,8 +55,10 @@ function AfterActionContent() {
   const lessons = useMemo(() => byDep(lessonsQ.data), [lessonsQ.data, deploymentId]); // eslint-disable-line react-hooks/exhaustive-deps
   const feedback = useMemo(() => feedbackQ.data ?? [], [feedbackQ.data]);
   const objectives = useMemo(() => byDep(objectivesQ.data), [objectivesQ.data, deploymentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const coverage = useMemo(() => byDep(coverageQ.data), [coverageQ.data, deploymentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const safety = useMemo(() => (safetyQ.data ?? []).find(c => c.deployment_id === deploymentId) ?? null, [safetyQ.data, deploymentId]);
   const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
-  const summary = useMemo(() => aarSummary({ assignments, positions, shifts, log: logQ.data ?? [], hours, feedback, usersById, objectives }), [assignments, positions, shifts, logQ.data, hours, feedback, usersById, objectives]);
+  const summary = useMemo(() => aarSummary({ assignments, positions, shifts, log: logQ.data ?? [], hours, feedback, usersById, objectives, coverage, safety }), [assignments, positions, shifts, logQ.data, hours, feedback, usersById, objectives, coverage, safety]);
   const myAssignment = assignments.find(a => a.user_id === user?.id && ['checked_in', 'on_position', 'released', 'accepted'].includes(a.status)) ?? null;
   const myFeedback = feedback.find(f => f.user_id === user?.id) ?? null;
 

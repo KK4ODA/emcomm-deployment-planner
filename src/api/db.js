@@ -30,6 +30,9 @@ export const TABLES = Object.freeze({
   assetCustody: 'asset_custody',
   objectives: 'objectives',
   pushSubscriptions: 'push_subscriptions',
+  coverageLog: 'coverage_log',
+  safetyChecklists: 'safety_checklists',
+  namingSchemes: 'naming_schemes',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -180,4 +183,7 @@ export const db = Object.freeze({
   assetCustody: createRepository(TABLES.assetCustody),
   objectives: createRepository(TABLES.objectives),
   pushSubscriptions: createRepository(TABLES.pushSubscriptions),
+  coverageLog: createRepository(TABLES.coverageLog),
+  safetyChecklists: createRepository(TABLES.safetyChecklists),
+  namingSchemes: createRepository(TABLES.namingSchemes),
 });

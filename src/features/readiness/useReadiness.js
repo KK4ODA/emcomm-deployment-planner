@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { usePositions, useShifts, useAssignments, useUsers, useLocations, useItems, useTasks, useOperationalPeriods, useCommsPlans, useCommsPlanChannels, useChannels, useAssets, useObjectives } from '@/hooks/useEntities';
+import { usePositions, useShifts, useAssignments, useUsers, useLocations, useItems, useTasks, useOperationalPeriods, useCommsPlans, useCommsPlanChannels, useChannels, useAssets, useObjectives, useSafetyChecklists } from '@/hooks/useEntities';
 import { readinessChecklist } from '@/lib/readiness';
 import { planChanges } from '@/lib/planDiff';
 import { locationsOf, itemsOf } from '@/lib/deployments';
@@ -23,7 +23,8 @@ export function useReadiness(deployment) {
   const channelsQ = useChannels();
   const assetsQ = useAssets();
   const objectivesQ = useObjectives();
-  const queries = [positionsQ, shiftsQ, assignmentsQ, usersQ, locationsQ, itemsQ, tasksQ, periodsQ, plansQ, rowsQ, channelsQ, assetsQ, objectivesQ];
+  const safetyQ = useSafetyChecklists();
+  const queries = [positionsQ, shiftsQ, assignmentsQ, usersQ, locationsQ, itemsQ, tasksQ, periodsQ, plansQ, rowsQ, channelsQ, assetsQ, objectivesQ, safetyQ];
   const loading = queries.some(q => q.isLoading);
   const result = useMemo(() => {
     if (!deployment || loading) return null;
@@ -37,8 +38,8 @@ export function useReadiness(deployment) {
     return readinessChecklist({
       deployment, positions, shifts, assignments, users: usersQ.data ?? [], locations,
       items: itemsOf(itemsQ.data ?? [], locations), tasks: tasksInDeployment(tasksQ.data ?? [], locations),
-      periods: byDep(periodsQ.data), planRows: byDep(rowsQ.data), channels: channelsQ.data ?? [], assets: assetsQ.data ?? [], objectives: byDep(objectivesQ.data), unpublishedChanges: changes,
+      periods: byDep(periodsQ.data), planRows: byDep(rowsQ.data), channels: channelsQ.data ?? [], assets: assetsQ.data ?? [], objectives: byDep(objectivesQ.data), safety: (safetyQ.data ?? []).find(c => c.deployment_id === id) ?? null, unpublishedChanges: changes,
     });
-  }, [deployment, loading, positionsQ.data, shiftsQ.data, assignmentsQ.data, usersQ.data, locationsQ.data, itemsQ.data, tasksQ.data, periodsQ.data, plansQ.data, rowsQ.data, channelsQ.data, assetsQ.data, objectivesQ.data]);
+  }, [deployment, loading, positionsQ.data, shiftsQ.data, assignmentsQ.data, usersQ.data, locationsQ.data, itemsQ.data, tasksQ.data, periodsQ.data, plansQ.data, rowsQ.data, channelsQ.data, assetsQ.data, objectivesQ.data, safetyQ.data]);
   return { loading, result, queries };
 }

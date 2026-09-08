@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { QueryState } from '@/components/common/QueryState';
 import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { buildPacket, pickCurrentAssignment } from '@/lib/packet';
@@ -18,6 +18,9 @@ import { occupies } from '@/lib/staffing';
 import { markPacketSeen } from '@/api/assignments';
 import { PacketView } from '@/features/packet/PacketView';
 import { PacketMap } from '@/features/packet/PacketMap';
+import { CoverageReportDialog } from '@/features/coverage/CoverageReportDialog';
+import { RadioTower } from 'lucide-react';
+import { db } from '@/api/db';
 import { directionsUrl } from '@/lib/packet';
 import { PacketActions } from '@/features/packet/PacketActions';
 import { useIntents } from '@/hooks/useIntents';
@@ -45,6 +48,12 @@ function PacketContent() {
   const plansQ = useCommsPlans();
   const rowsQ = useCommsPlanChannels();
   const layersQ = useMapLayers();
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const logCoverage = useMutation({
+    mutationFn: (/** @type {Object} */ data) => db.coverageLog.create({ ...data, ares_group_id: deployment.ares_group_id, deployment_id: deploymentId, reported_by: user.id, occurred_at: new Date().toISOString() }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.coverageLog }); setCoverageOpen(false); toast.success('Coverage check recorded. Thank you.'); },
+    onError: reportMutationError('Record coverage check'),
+  });
   const itemsQ = useItems();
   const periodsQ = useOperationalPeriods();
   useRealtimeInvalidation('assignments', queryKeys.assignments);
@@ -136,6 +145,18 @@ function PacketContent() {
             actions={isMine && ['accepted', 'checked_in', 'on_position', 'released'].includes(assignment.status) ? <PacketActions assignment={assignment} intents={intents} /> : null}
             statusLine={isMine && assignment.status === 'offered' ? <>You have not answered this offer yet. <Link to={ROUTES.myAssignments} className="underline">Accept or decline</Link>.</> : null}
             map={<PacketMap site={packet.site} layers={(layersQ.data ?? []).filter(l => l.deployment_id === deploymentId)} directions={directionsUrl(packet.site)} />}
+            coverageAction={isMine && hasPermission(user?.app_role, 'LOG_COVERAGE') ? <Button variant="outline" size="sm" onClick={() => setCoverageOpen(true)}><RadioTower /> Report a coverage check</Button> : null}
+          />
+          <CoverageReportDialog
+            open={coverageOpen}
+            onClose={() => setCoverageOpen(false)}
+            channels={[1, 2, 3].flatMap(l => packet.channelsByCondition[l] ?? [])}
+            defaultFromSiteId={packet.site?.id ?? null}
+            defaultToSiteId={(positionsQ.data ?? []).find(p => p.deployment_id === deploymentId && p.position_type === 'net_control' && p.site_id)?.site_id ?? null}
+            defaultToLabel="Net control"
+            lockEnds
+            onSubmit={(data) => logCoverage.mutate(data)}
+            submitting={logCoverage.isPending}
           />
         </>
       )}

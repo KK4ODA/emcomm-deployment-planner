@@ -85,3 +85,50 @@ export function hoursRollup(entries, month, usersById) {
   totals.operators = rows.size;
   return { rows: [...rows.values()].sort((a, b) => a.callSign.localeCompare(b.callSign) || a.name.localeCompare(b.name)), totals };
 }
+
+/**
+ * ICS 204 (Assignment List): one section per division, which for us is a
+ * site (mobile positions form their own section). Each section lists the
+ * positions as resources with leader, headcount and contact, the work
+ * assignments from the briefing notes, special instructions from the site,
+ * and the Condition 1 channels for the nets those positions use.
+ * @param {{ positions: Object[], shifts: Object[], assignments: Object[], usersById: Map<string, Object>, sites?: Object[], planRows?: Object[], periodId?: string|null }} args
+ */
+export function buildIcs204Sections({ positions, shifts, assignments, usersById, sites = [], planRows = [], periodId = null }) {
+  const siteById = new Map(sites.map(s => [s.id, s]));
+  const groups = new Map();
+  for (const p of positions) {
+    const key = p.site_id && siteById.has(p.site_id) ? p.site_id : '__mobile__';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  }
+  const sections = [];
+  for (const [key, list] of groups) {
+    const site = key === '__mobile__' ? null : siteById.get(key);
+    const resources = [];
+    const nets = new Set();
+    for (const p of list.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name))) {
+      if (p.net) nets.add(p.net.trim().toLowerCase());
+      const own = shifts.filter(s => s.position_id === p.id && (!periodId || !s.operational_period_id || s.operational_period_id === periodId));
+      const shiftIds = new Set(own.map(s => s.id));
+      const people = assignments.filter(a => shiftIds.has(a.shift_id) && occupies(a.status)).map(a => usersById.get(a.user_id)).filter(Boolean);
+      const seen = new Set();
+      const unique = people.filter(u => { if (seen.has(u.id)) return false; seen.add(u.id); return true; });
+      const leader = unique[0] || null;
+      resources.push({
+        resource: `${p.name}${p.tactical_callsign ? ` (${p.tactical_callsign})` : ''}`,
+        leader: leader ? `${leader.full_name || ''}${leader.call_sign ? ` ${leader.call_sign}` : ''}`.trim() : '',
+        persons: String(unique.length || 0),
+        contact: unique.map(u => u.phone).filter(Boolean).slice(0, 2).join(' / '),
+        notes: own.length ? own.map(s => `${s.starts_at.slice(11, 16)}–${s.ends_at.slice(11, 16)}`).join(', ') : '',
+      });
+    }
+    const work = list.filter(p => p.briefing_notes).map(p => `${p.tactical_callsign || p.name}: ${p.briefing_notes}`).join('\n');
+    const special = site ? [site.parking_notes && `Parking: ${site.parking_notes}`, site.arrival_notes && `On arrival: ${site.arrival_notes}`, site.access_notes && `Access: ${site.access_notes}`, site.contact_person && `Site contact: ${site.contact_person}`].filter(Boolean).join('\n') : '';
+    const comms = planRows
+      .filter(r => r.condition_level === 1 && (!r.net || nets.size === 0 || nets.has(String(r.net).trim().toLowerCase())))
+      .map(r => ({ fn: r.function || '', name: r.channel_name || '', freq: r.rx_freq != null ? `${Number(r.rx_freq).toFixed(4)}${r.tx_freq != null && Number(r.tx_freq) !== Number(r.rx_freq) ? ` / ${Number(r.tx_freq).toFixed(4)}` : ''}` : (r.phone_number || ''), tone: r.tx_tone || r.rx_tone || '', role: r.path_role || '' }));
+    sections.push({ division: site ? site.name : 'Mobile / no fixed site', address: site?.address || '', resources, work, special, comms });
+  }
+  return sections;
+}

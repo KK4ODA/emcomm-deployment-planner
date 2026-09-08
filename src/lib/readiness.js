@@ -18,11 +18,11 @@ const n = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many
  * @param {{
  *   deployment: Object, positions?: Object[], shifts?: Object[], assignments?: Object[], users?: Object[],
  *   locations?: Object[], items?: Object[], tasks?: Object[], periods?: Object[], planRows?: Object[],
- *   channels?: Object[], assets?: Object[], objectives?: Object[], unpublishedChanges?: number|null, now?: Date
+ *   channels?: Object[], assets?: Object[], objectives?: Object[], safety?: Object|null, unpublishedChanges?: number|null, now?: Date
  * }} ctx everything already scoped to the deployment except channels and users
  * @returns {{ items: ReadinessItem[], groups: { name: string, items: ReadinessItem[] }[], todo: number, warn: number, ok: number, ready: boolean }}
  */
-export function readinessChecklist({ deployment, positions = [], shifts = [], assignments = [], users = [], locations = [], items = [], tasks = [], periods = [], planRows = [], channels = [], assets = [], objectives = [], unpublishedChanges = null, now = new Date() }) {
+export function readinessChecklist({ deployment, positions = [], shifts = [], assignments = [], users = [], locations = [], items = [], tasks = [], periods = [], planRows = [], channels = [], assets = [], objectives = [], safety = null, unpublishedChanges = null, now = new Date() }) {
   /** @type {ReadinessItem[]} */
   const out = [];
   const add = (group, id, state, label, detail, to, cta) => out.push({ id, group, state, label, detail, to, cta });
@@ -40,6 +40,9 @@ export function readinessChecklist({ deployment, positions = [], shifts = [], as
     if (deployment.authorized_at) add('Plan', 'authorized', 'ok', 'Activation authorized');
     else add('Plan', 'authorized', 'warn', 'Activation not recorded as authorized', 'Record the requesting official and the authorization date before anyone deploys.', ROUTES.deployments, 'Edit deployment');
   }
+  if (safety?.signed_at) add('Plan', 'safety', 'ok', `Safety checklist signed by ${safety.signed_name || 'the Safety Officer'}`);
+  else if (safety) add('Plan', 'safety', 'warn', 'Safety checklist started but not signed', 'Walk the site and sign it before operations begin.', ROUTES.safety, 'Safety');
+  else if (['field_day', 'public_service', 'exercise', 'activation'].includes(deployment.profile)) add('Plan', 'safety', 'warn', 'No safety checklist', 'Fuel, power, antennas, first aid, weather: answer the list and sign it; Field Day scores it.', ROUTES.safety, 'Safety');
   if (periods.length) add('Plan', 'periods', 'ok', n(periods.length, 'operational period'));
   else add('Plan', 'periods', 'warn', 'No operational period', 'ICS forms and per-period comms plans are scoped to periods.', ROUTES.staffing, 'Staffing');
 

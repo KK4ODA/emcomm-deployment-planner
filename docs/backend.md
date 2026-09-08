@@ -58,6 +58,9 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `objectives` | Per-deployment objectives: title, description, category, points, `status` open/claimed/done/dropped, claimed_by/at, completed_by/at, evidence, sort_order (018). Planners write; operators move status through `set_objective_status` |
 | `app_config` | Server-side settings the service role alone can read: `hook_secret`, `deliver_url`, generated `vapid_keys` (019). No policies; RLS on |
 | `push_subscriptions` | Web push subscriptions per device: endpoint (unique), keys, user agent, failures; users manage their own rows (019) |
+| `coverage_log` | Radio path attempts per group: from / to (site or coordinates or label), channel, frequency, mode, power, antenna, result direct/relay/fail, reporter, time (020). Members insert their own rows; planners edit any |
+| `safety_checklists` | One per deployment: template name, items `[{id,text,state,note}]`, notes, signature; trigger stamps `signed_by`/`signed_at` and refuses any change once signed (020). Planners write; group reads |
+| `naming_schemes` | Saved position patterns per group: position pattern, tactical pattern, type, net, requirements (020). Planners write; group reads |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
 

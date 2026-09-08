@@ -72,6 +72,9 @@ export const PERMISSIONS = Object.freeze({
   MOVE_ASSETS: [A, P, O],
   MANAGE_OBJECTIVES: [A, P],
   CLAIM_OBJECTIVES: [A, P, O],
+  LOG_COVERAGE: [A, P, O],
+  MANAGE_SAFETY: [A, P],
+  MANAGE_NAMING: [A, P],
 
   MANAGE_USERS: [A],
   INVITE_USERS: [A, P],

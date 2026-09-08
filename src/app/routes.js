@@ -15,6 +15,7 @@ export const ROUTES = Object.freeze({
   readiness: '/readiness',
   objectives: '/objectives',
   assets: '/assets',
+  safety: '/safety',
   packetFor: (assignmentId) => `/packet/${assignmentId}`,
   myAssignments: '/my-assignments',
   members: '/members',

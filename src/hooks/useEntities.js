@@ -103,6 +103,15 @@ export function useAssetCustody(assetId) {
 export function useObjectives() {
   return useQuery({ queryKey: queryKeys.objectives, queryFn: () => db.objectives.list({ orderBy: 'sort_order' }) });
 }
+export function useCoverageLog() {
+  return useQuery({ queryKey: queryKeys.coverageLog, queryFn: () => db.coverageLog.list({ orderBy: 'occurred_at', ascending: false }) });
+}
+export function useSafetyChecklists() {
+  return useQuery({ queryKey: queryKeys.safetyChecklists, queryFn: () => db.safetyChecklists.list({ orderBy: 'created_at' }) });
+}
+export function useNamingSchemes() {
+  return useQuery({ queryKey: queryKeys.namingSchemes, queryFn: () => db.namingSchemes.list({ orderBy: 'sort_order' }) });
+}
 export function useMapLayers() {
   return useQuery({ queryKey: queryKeys.mapLayers, queryFn: () => db.mapLayers.list({ orderBy: 'sort_order' }) });
 }

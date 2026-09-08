@@ -24,7 +24,7 @@ describe('readinessChecklist', () => {
       { id: 'a1', shift_id: 's1', user_id: 'u1', status: 'accepted', packet_version_seen: 2 },
       { id: 'a2', shift_id: 's9', user_id: 'u2', status: 'accepted', packet_version_seen: 2 },
     ];
-    const r = readinessChecklist({ deployment, positions, shifts, assignments, users, locations, planRows: rows, periods: [{ id: 'op1' }], items: [], tasks: [] });
+    const r = readinessChecklist({ deployment, positions, shifts, assignments, users, locations, planRows: rows, periods: [{ id: 'op1' }], items: [], tasks: [], safety: { signed_at: '2026-03-07T08:00:00Z', signed_name: 'KK4ODA' } });
     expect(r.todo).toBe(0);
     expect(r.warn).toBe(0);
     expect(r.ready).toBe(true);

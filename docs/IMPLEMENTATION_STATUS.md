@@ -58,17 +58,17 @@ started**. The version is the release the row first shipped in.
 
 | Feature (design doc) | Status |
 |---|---|
-| Empirical coverage map | Not started |
+| Empirical coverage map | Shipped v2.4.0: `coverage_log` per group (from, to, channel, frequency, power, antenna, result direct / relay / fail); "Report a coverage check" on the packet (my site to net control, my channels prefilled) and "Log a check" on the Sites map; map overlay coloured by result with group-history or this-deployment scope and result filter, per-channel tallies, CSV; counted in the AAR |
 | Training / credential records with versioned requirement sets | Not started |
-| ICS-204 generation | Not started |
+| ICS-204 generation | Shipped v2.4.0: one division per site (mobile positions grouped), resources with leader / headcount / contact / shift, work assignments from briefing notes, special instructions from site notes, Condition 1 comms for the division's nets; from the Net control board |
 | Field Day / WFD profile | Not started (`field_day` deployment kind is a label only) |
 | Winlink check-in ingestion | Not started |
 | LAN-hosted mode | Not started |
 | Section / district rollups | Not started |
 | AI-assisted AAR drafting | Not started (AAR draft is assembled deterministically) |
 | AI-assisted import of a legacy assignment sheet or email | Not started |
-| Safety Officer checklist as a signed artifact | Not started |
-| Position naming schemes / tactical callsign generation | Partial: bulk create expands "AID MILE {n}" patterns; no saved schemes |
+| Safety Officer checklist as a signed artifact | Shipped v2.4.0: `/safety` per deployment; standard items (ARRL Field Day safety areas in our words), editable lines and notes, OK / N/A per line, sign with name; a database trigger stamps the signer and makes the row immutable once signed; PDF and text export; readiness warns until signed; AAR records it |
+| Position naming schemes / tactical callsign generation | Shipped v2.4.0: `naming_schemes` per group saved from the bulk-create dialog (pattern, tactical pattern, type, net, requirements); bulk create starts from a scheme; the position form fills the tactical call, type, net and requirements as you type a name that matches a scheme |
 
 ### P3 — Experimental
 
@@ -83,9 +83,11 @@ work, What3Words and `export-ics205` removed from the repo (the two Edge
 Functions still need deleting in the Supabase dashboard).
 
 **Count (2026-09-07, after P1 part 4):** P0 12/12 shipped. P1 18 of 19
-shipped (email and SMS delivery wait on provider secrets from the owner);
-the one exception is Windows code signing, not done by instruction (no
-certificate). P2 1 partial, 10 not started. P3 0/6.
+shipped; the one exception is Windows code signing, not done by instruction
+(no certificate). P2 4 shipped (coverage map, ICS 204, safety checklist,
+naming schemes), 7 waitlisted or dropped by the owner's decision of
+2026-09-08 (credentials, Field Day profile, Winlink ingest, LAN mode, AI AAR,
+AI import: waitlist; section rollups: dropped for now). P3 0/6.
 
 ## Completed
 
@@ -192,6 +194,12 @@ certificate). P2 1 partial, 10 not started. P3 0/6.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-08 **P2 batch 1** (v2.4.0; migration `020`, applied): coverage
+  log and map overlay, ICS 204, signed safety checklist, naming schemes.
+  Verified with rollback probes: a signed checklist refuses edits and the
+  signer is stamped server-side; coverage inserts are limited to the
+  reporter's own rows. Tests: coverage (6), naming (3), safety (3), ICS 204
+  builder (1). 257 tests total.
 - 2026-09-08 **Mobile audit** (v2.3.1): live site rendered at 390 px per
   route with an overflow scan and dialog checks; four fixes (Profile tabs
   overflow, packet map for address-only coordinates, Readiness labels,
@@ -209,12 +217,12 @@ certificate). P2 1 partial, 10 not started. P3 0/6.
 
 ## Next
 
-P1 is complete except Windows code signing; push and email delivery are
-verified on real devices. SMS switches on whenever `TWILIO_ACCOUNT_SID` +
-`TWILIO_AUTH_TOKEN` + `TWILIO_FROM` are set as secrets on the
-`deliver-notification` Edge Function. Next: P2 in roadmap order (section H
-deferrals), and a walk-through of one real event with a second operator
-account. Field verification with real operators is the
+P1 complete except Windows code signing; P2 batch 1 shipped. The owner
+waitlisted the remaining P2 rows until a real event has run through the
+app (credentials, Field Day profile, Winlink ingest, LAN mode, AI-assisted
+AAR and import) and dropped section rollups for now. SMS switches on
+whenever the Twilio secrets are set on `deliver-notification`. Next: a
+walk-through of one real event with a second operator account. Field verification with real operators is the
 most valuable next step: the live database still holds only the owner
 account and one test deployment, so every workflow above has been verified
 by unit tests and rollback probes, not by a second person. Housekeeping still on the user: delete

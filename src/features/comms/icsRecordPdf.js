@@ -129,3 +129,56 @@ export async function renderIcs205aPdf({ deployment, period, rows, preparedByNam
   ctx.footer('ICS 205A');
   return ctx.doc.output('blob');
 }
+
+/**
+ * ICS 204 Assignment List: one page block per division (site), with the
+ * resources assigned, work assignments, special instructions and the
+ * communications for that division.
+ * @param {{ deployment: Object, period?: Object|null, sections: ReturnType<import('@/lib/icsForms').buildIcs204Sections>, preparedByName?: string }} params
+ */
+export async function renderIcs204Pdf({ deployment, period, sections, preparedByName = '' }) {
+  const ctx = await openDoc('ASSIGNMENT LIST (ICS 204)', deployment, period, [['3. Branch / Division / Group', sections.length === 1 ? sections[0].division : `${sections.length} divisions`]]);
+  const { doc, margin, contentW, pageH, text } = ctx;
+  let y = ctx.y;
+  const block = (label, body) => {
+    const lines = doc.splitTextToSize(body || '-', contentW - 3);
+    const h = Math.max(10, lines.length * 3.6 + 6);
+    if (y + h > pageH - 24) { doc.addPage(); y = margin; }
+    doc.rect(margin, y, contentW, h);
+    doc.setFont('helvetica', 'bold').setFontSize(7.5);
+    text(label, margin + 1.5, y + 3.5);
+    doc.setFont('helvetica', 'normal').setFontSize(8.5);
+    doc.text(lines, margin + 1.5, y + 8);
+    y += h + 2;
+  };
+  sections.forEach((s, i) => {
+    if (i > 0) { doc.addPage(); y = margin; }
+    doc.setFont('helvetica', 'bold').setFontSize(10);
+    text(`Division / Group: ${s.division}${s.address ? `  -  ${s.address}` : ''}`, margin, y + 4);
+    y += 8;
+    doc.setFont('helvetica', 'bold').setFontSize(8);
+    text('5. Resources Assigned', margin, y + 3);
+    y = drawTable(ctx, [
+      { label: 'Resource / position', width: 32, key: 'resource' },
+      { label: 'Leader', width: 24, key: 'leader' },
+      { label: '# Persons', width: 10, key: 'persons' },
+      { label: 'Contact', width: 20, key: 'contact' },
+      { label: 'Shift(s)', width: 14, key: 'notes' },
+    ], s.resources, y + 5) + 3;
+    block('6. Work Assignments', s.work);
+    block('7. Special Instructions', s.special);
+    doc.setFont('helvetica', 'bold').setFontSize(8);
+    if (y + 12 > pageH - 24) { doc.addPage(); y = margin; }
+    text('8. Communications (Condition 1)', margin, y + 3);
+    y = drawTable(ctx, [
+      { label: 'Function', width: 18, key: 'fn' },
+      { label: 'Channel', width: 24, key: 'name' },
+      { label: 'RX / TX (MHz)', width: 24, key: 'freq' },
+      { label: 'Tone', width: 12, key: 'tone' },
+      { label: 'Role', width: 14, key: 'role' },
+    ], s.comms, y + 5) + 3;
+  });
+  preparedBy(ctx, y + 2, preparedByName, 'Resources Unit / COML');
+  ctx.footer('ICS 204');
+  return doc.output('blob');
+}

@@ -28,5 +28,8 @@ export const queryKeys = Object.freeze({
   assets: ['assets'],
   assetCustody: ['asset-custody'],
   objectives: ['objectives'],
+  coverageLog: ['coverage-log'],
+  safetyChecklists: ['safety-checklists'],
+  namingSchemes: ['naming-schemes'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });

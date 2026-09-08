@@ -232,6 +232,25 @@ Notifications. The server side is a trigger + pg_net + the
 `deliver-notification` Edge Function (see backend.md). The desktop app's
 webview has no push; the card says so and points to the web app.
 
+## Coverage log, safety checklist, naming schemes
+
+- **Coverage** (`src/lib/coverage.js`): `coverageGeoJson()` turns log rows
+  into lines (both ends known) or points, coloured by result;
+  `coverageSummary()` tallies per channel worst first; `CoverageReportDialog`
+  is shared by the packet (ends locked to my site and net control) and the
+  Sites map (ends chosen). `SiteMap` draws the overlay.
+- **ICS 204** (`buildIcs204Sections()` in `src/lib/icsForms.js`,
+  `renderIcs204Pdf()`): one section per site; mobile positions form their
+  own section; comms rows are the Condition 1 channels of the nets the
+  section's positions use.
+- **Safety** (`src/lib/safety.js`, `/safety`): `newChecklistItems()` from the
+  default template, `checklistProgress()` gates signing; the server trigger
+  owns the signature stamp and immutability. `readinessChecklist()` warns
+  until signed; `aarSummary()` records it.
+- **Naming schemes** (`src/lib/naming.js`): `matchScheme()` /
+  `deriveTactical()` on the position form, `schemeDefaults()` for type, net
+  and requirements, `schemeFromBulk()` when saving from the bulk dialog.
+
 ## Assets and objectives
 
 - **Assets** (`/assets`, `src/lib/assets.js`): the ARES group's shared

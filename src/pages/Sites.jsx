@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, MapPin, List, Map as MapIcon, Layers } from 'lucide-react';
+import { Plus, MapPin, List, Map as MapIcon, Layers, RadioTower, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -10,7 +10,14 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useItems, useUsers, useTasks, useMapLayers, useEntityMutations, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { db } from '@/api/db';
+import { hasPermission } from '@/lib/permissions';
+import { coverageGeoJson, coverageSummary, filterCoverage, coverageCsv, COVERAGE_RESULTS } from '@/lib/coverage';
+import { downloadBlob } from '@/lib/download';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CoverageReportDialog } from '@/features/coverage/CoverageReportDialog';
 import { queryKeys } from '@/lib/queryKeys';
 import { canCreate, canEdit, canDelete } from '@/lib/permissions';
 import { locationsOf, locationItemStats, missingSiteOperators } from '@/lib/deployments';
@@ -33,8 +40,12 @@ function SitesContent() {
   const usersQ = useUsers();
   const tasksQ = useTasks();
   const layersQ = useMapLayers();
+  const coverageQ = useCoverageLog();
+  const queryClient = useQueryClient();
   useRealtimeInvalidation('locations', queryKeys.locations);
   const [layersOpen, setLayersOpen] = useState(false);
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const [coverageFilter, setCoverageFilter] = useState({ result: 'all', scope: 'group' });
 
   const [view, setView] = useLocalStorage('emcomm_sites_view', 'list');
   const [form, setForm] = useState({ open: false, location: null });
@@ -50,6 +61,16 @@ function SitesContent() {
   const items = itemsQ.data ?? [];
   const tasks = tasksQ.data ?? [];
   const layers = useMemo(() => (layersQ.data ?? []).filter(l => l.deployment_id === deploymentId), [layersQ.data, deploymentId]);
+  const coverageEntries = useMemo(() => filterCoverage((coverageQ.data ?? []).filter(e => e.ares_group_id === deployment.ares_group_id), { result: coverageFilter.result, deploymentId: coverageFilter.scope === 'deployment' ? deploymentId : null }), [coverageQ.data, coverageFilter, deployment.ares_group_id, deploymentId]);
+  const allSitesById = useMemo(() => new Map((locationsQ.data ?? []).map(l => [l.id, l])), [locationsQ.data]);
+  const coverageGeo = useMemo(() => coverageGeoJson(coverageEntries, allSitesById), [coverageEntries, allSitesById]);
+  const coverageStats = useMemo(() => coverageSummary(coverageEntries), [coverageEntries]);
+  const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
+  const logCoverage = useMutation({
+    mutationFn: (/** @type {Object} */ data) => db.coverageLog.create({ ...data, ares_group_id: deployment.ares_group_id, deployment_id: deploymentId, reported_by: user.id, occurred_at: new Date().toISOString() }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.coverageLog }); setCoverageOpen(false); toast.success('Coverage check recorded'); },
+    onError: reportMutationError('Record coverage check'),
+  });
 
   const usersWithCallSign = useMemo(() => (usersQ.data ?? []).filter(u => u.call_sign), [usersQ.data]);
 
@@ -126,11 +147,32 @@ function SitesContent() {
             </div>
           </TabsContent>
           <TabsContent value="map">
-            <SiteMap locations={locations} items={items} layers={layers} onSelect={mayEdit ? (loc) => setForm({ open: true, location: loc }) : undefined} />
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+              <RadioTower className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Coverage checks</span>
+              <span className="text-muted-foreground">{coverageStats.total ? `${coverageStats.direct} direct · ${coverageStats.relay} relay · ${coverageStats.fail} failed` : 'none recorded yet'}</span>
+              <Select value={coverageFilter.scope} onValueChange={(v) => setCoverageFilter(f => ({ ...f, scope: v }))}>
+                <SelectTrigger className="h-8 w-40" aria-label="Coverage scope"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="group">Whole group history</SelectItem><SelectItem value="deployment">This deployment</SelectItem></SelectContent>
+              </Select>
+              <Select value={coverageFilter.result} onValueChange={(v) => setCoverageFilter(f => ({ ...f, result: v }))}>
+                <SelectTrigger className="h-8 w-32" aria-label="Coverage result"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All results</SelectItem>{Object.entries(COVERAGE_RESULTS).map(([k, r]) => <SelectItem key={k} value={k}>{r.label}</SelectItem>)}</SelectContent>
+              </Select>
+              {hasPermission(role, 'LOG_COVERAGE') && <Button size="sm" variant="outline" onClick={() => setCoverageOpen(true)}><RadioTower /> Log a check</Button>}
+              {coverageEntries.length > 0 && <Button size="sm" variant="ghost" onClick={() => downloadBlob(coverageCsv(coverageEntries, usersById, allSitesById), 'coverage-log.csv', 'text/csv;charset=utf-8')}><Download /> CSV</Button>}
+            </div>
+            <SiteMap locations={locations} items={items} layers={layers} coverage={coverageGeo} onSelect={mayEdit ? (loc) => setForm({ open: true, location: loc }) : undefined} />
+            {coverageStats.byChannel.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-2 text-xs">
+                {coverageStats.byChannel.map(c => <li key={c.label} className="rounded-md border px-2 py-1"><span className="font-mono">{c.label}</span>: <span className="text-success">{c.direct} ok</span>, <span className="text-warning">{c.relay} relay</span>, <span className="text-destructive">{c.fail} fail</span></li>)}
+              </ul>
+            )}
           </TabsContent>
         </Tabs>
       )}
 
+      <CoverageReportDialog open={coverageOpen} onClose={() => setCoverageOpen(false)} channels={[]} sites={locations} defaultToLabel="Net control" onSubmit={(data) => logCoverage.mutate(data)} submitting={logCoverage.isPending} />
       <MapLayersDialog open={layersOpen} onClose={() => setLayersOpen(false)} deployment={deployment} layers={layers} locations={locations} userId={user?.id ?? null} />
       <SiteForm
         open={form.open}

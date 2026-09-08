@@ -15,9 +15,9 @@ const ROLE_VARIANT = { primary: 'success', alternate: 'info', contingency: 'warn
 /**
  * The operator packet, phone-first. Above the fold: where, when, my call,
  * primary frequency. Two primary actions at most. Prints on one page.
- * @param {{ packet: ReturnType<import('@/lib/packet').buildPacket>, asOf?: Date|null, onAcknowledge?: () => void, acknowledging?: boolean, actions?: React.ReactNode, statusLine?: React.ReactNode, map?: React.ReactNode }} props
+ * @param {{ packet: ReturnType<import('@/lib/packet').buildPacket>, asOf?: Date|null, onAcknowledge?: () => void, acknowledging?: boolean, actions?: React.ReactNode, statusLine?: React.ReactNode, map?: React.ReactNode, coverageAction?: React.ReactNode }} props
  */
-export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, actions, statusLine, map = null }) {
+export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, actions, statusLine, map = null, coverageAction = null }) {
   const p = packet;
   const dir = directionsUrl(p.site);
   const primary = p.primaryChannel;
@@ -93,6 +93,7 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
         {!p.channelsByCondition[1]?.length && !p.channelsByCondition[2]?.length && !p.channelsByCondition[3]?.length && (
           <p className="text-sm text-muted-foreground">No frequencies published yet. Ask net control before the event.</p>
         )}
+        {coverageAction && <div className="no-print mt-3">{coverageAction}</div>}
       </Block>
 
       {(p.position.briefing || p.shift.notes) && (

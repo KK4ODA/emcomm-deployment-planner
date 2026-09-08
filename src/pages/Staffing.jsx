@@ -13,7 +13,7 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useOperationalPeriods, useLessons, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useOperationalPeriods, useLessons, useNamingSchemes, useRealtimeInvalidation } from '@/hooks/useEntities';
 import { CarriedLessons } from '@/features/aar/CarriedLessons';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
@@ -29,8 +29,10 @@ import { PublishPlanDialog } from '@/features/deployments/PublishPlanDialog';
 import { usePublishPlan } from '@/features/comms/useCommsMutations';
 import { Send } from 'lucide-react';
 import { ROUTES } from '@/app/routes';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notifyOpenShift } from '@/api/assignments';
+import { db } from '@/api/db';
+import { schemeFromBulk } from '@/lib/naming';
 import { reportMutationError } from '@/hooks/useEntities';
 
 export default function Staffing() {
@@ -54,6 +56,8 @@ function StaffingContent() {
   const assignmentsQ = useAssignments();
   const periodsQ = useOperationalPeriods();
   const lessonsQ = useLessons();
+  const schemesQ = useNamingSchemes();
+  const schemes = useMemo(() => (schemesQ.data ?? []).filter(s => s.ares_group_id === deployment.ares_group_id), [schemesQ.data, deployment.ares_group_id]);
   useRealtimeInvalidation('positions', queryKeys.positions);
   useRealtimeInvalidation('shifts', queryKeys.shifts);
   useRealtimeInvalidation('assignments', queryKeys.assignments);
@@ -73,6 +77,12 @@ function StaffingContent() {
   const [assignFor, setAssignFor] = useState(/** @type {{ position: Object, shift: Object }|null} */ (null));
   const [publishOpen, setPublishOpen] = useState(false);
   const publish = usePublishPlan();
+  const queryClient = useQueryClient();
+  const saveScheme = useMutation({
+    mutationFn: (/** @type {{ pattern: string, tacticalPattern: string, type: string, net: string, requirements: Object[] }} */ data) => db.namingSchemes.create({ ...schemeFromBulk(data, deployment.ares_group_id), sort_order: schemes.length, created_by: user?.id ?? null }),
+    onSuccess: (s) => { queryClient.invalidateQueries({ queryKey: queryKeys.namingSchemes }); toast.success(`Scheme "${s.name}" saved for the group`); },
+    onError: reportMutationError('Save scheme'),
+  });
   const notify = useMutation({
     mutationFn: (/** @type {{ shiftId: string, userIds: string[] }} */ { shiftId, userIds }) => notifyOpenShift(shiftId, userIds),
     onSuccess: (r) => toast.success(r.notified ? `${r.notified} operator${r.notified === 1 ? '' : 's'} notified` : 'Nobody new to notify', { description: r.skipped_recent ? `${r.skipped_recent} already told in the last 24 hours.` : 'They can take the shift from My assignments.' }),
@@ -244,6 +254,7 @@ function StaffingContent() {
         deployment={deployment}
         onClose={() => setPositionDialog({ open: false, position: null })}
         onSubmit={savePosition}
+        schemes={schemes}
         submitting={mutations.savePosition.isPending}
       />
       <BulkPositionsDialog
@@ -253,6 +264,8 @@ function StaffingContent() {
         onClose={() => setBulkOpen(false)}
         onSubmit={(data) => mutations.bulkCreate.mutate({ ...data, startOrder: positions.length }, { onSuccess: () => setBulkOpen(false) })}
         submitting={mutations.bulkCreate.isPending}
+        schemes={schemes}
+        onSaveScheme={canEdit ? (d) => saveScheme.mutate(d) : undefined}
       />
       <OperationalPeriodsDialog
         open={periodsOpen}

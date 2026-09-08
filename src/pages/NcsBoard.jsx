@@ -16,7 +16,7 @@ import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useRealtimeInvalidation, useLocations, useCommsPlanChannels } from '@/hooks/useEntities';
 import { useIntents } from '@/hooks/useIntents';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
@@ -25,8 +25,8 @@ import { queueStatusIntent } from '@/api/assignmentIntents';
 import { db } from '@/api/db';
 import { formatDateTime } from '@/lib/time';
 import { syncNow } from '@/api/syncEngine';
-import { buildIcs205aRows, entriesForIcs214 } from '@/lib/icsForms';
-import { renderIcs214Pdf, renderIcs205aPdf } from '@/features/comms/icsRecordPdf';
+import { buildIcs205aRows, entriesForIcs214, buildIcs204Sections } from '@/lib/icsForms';
+import { renderIcs214Pdf, renderIcs205aPdf, renderIcs204Pdf } from '@/features/comms/icsRecordPdf';
 import { downloadBlob, safeFileName } from '@/lib/download';
 import { FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,8 @@ function NcsContent() {
   const positionsQ = usePositions();
   const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
+  const locationsQ = useLocations();
+  const planRowsQ = useCommsPlanChannels();
   const usersQ = useUsers();
   const logQ = useActivityLog(deploymentId);
   const { intents } = useIntents();
@@ -88,7 +90,9 @@ function NcsContent() {
     try {
       const blob = which === '214'
         ? await renderIcs214Pdf({ deployment, entries: entriesForIcs214(logQ.data ?? []), preparedByName: user?.full_name })
-        : await renderIcs205aPdf({ deployment, rows: buildIcs205aRows({ positions, shifts, assignments, usersById }), preparedByName: user?.full_name });
+        : which === '204'
+          ? await renderIcs204Pdf({ deployment, sections: buildIcs204Sections({ positions, shifts, assignments, usersById, sites: (locationsQ.data ?? []).filter(l => l.deployment_id === deploymentId), planRows: (planRowsQ.data ?? []).filter(r => r.deployment_id === deploymentId) }), preparedByName: user?.full_name })
+          : await renderIcs205aPdf({ deployment, rows: buildIcs205aRows({ positions, shifts, assignments, usersById }), preparedByName: user?.full_name });
       downloadBlob(blob, `ICS${which}_${safeFileName(deployment.name)}.pdf`, 'application/pdf');
     } catch (err) {
       toast.error(`PDF failed: ${err.message || 'unknown error'}`);
@@ -128,6 +132,7 @@ function NcsContent() {
               <SelectTrigger className="w-36" aria-label="Time window"><SelectValue /></SelectTrigger>
               <SelectContent>{WINDOWS.map(w => <SelectItem key={w.v} value={w.v}>{w.l}</SelectItem>)}</SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => exportForm('204')} loading={exporting === '204'} title="Assignment list per site from positions, assignments and the comms plan"><FileDown /> ICS 204</Button>
             <Button variant="outline" size="sm" onClick={() => exportForm('205A')} loading={exporting === '205A'} title="Communications list from the current assignments"><FileDown /> ICS 205A</Button>
             <Button variant="outline" size="sm" onClick={() => exportForm('214')} loading={exporting === '214'} title="Activity log for the deployment"><FileDown /> ICS 214</Button>
             <Button variant="outline" size="sm" onClick={() => { syncNow(); queryClient.invalidateQueries({ queryKey: queryKeys.assignments }); setNow(new Date()); }}><RefreshCw /> Refresh</Button>

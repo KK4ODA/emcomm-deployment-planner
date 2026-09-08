@@ -43,6 +43,8 @@ It is opinionated about a few things:
 | Communications | Channel library per ARES group (ICS-217A shape); per-deployment plan with primary / alternate / contingency roles and Condition 1 / 2 / 3 ladder; ICS 205 PDF and CHIRP CSV generated from it; publish with a change note |
 | Operations | Check in / On position / Check out from the packet (offline-capable); Net control board with who is missing, arriving, on station; activity log; hours recorded automatically, rolled up per operator and per month for the group (ARRL report buckets) with CSV |
 | After action | Two-minute operator feedback form (optionally anonymous) after checkout; per-deployment review assembled from check-ins, log, hours and feedback; lessons with category, position and status that carry forward automatically when the deployment is duplicated and show up on Staffing as "From last time" |
+| Coverage | Operators report whether a channel reached net control from the packet; every check is drawn on the site map by result across the group's history, the empirical coverage map |
+| Safety | Per-deployment safety checklist, edited and answered on site, signed once and locked; PDF |
 | Sites | Locations with coordinates (decimal or DMS entry), map view with OpenStreetMap/Esri tiles, course routes / boundaries / waypoints imported from KML, GPX or GeoJSON as map layers (waypoints become sites in one click), parking / arrival / access notes, contact, operator roster consistency check |
 | Equipment | Categories and items per site, drag-and-drop ordering, priorities, assignment to one or more operators, bulk "assign all unassigned" |
 | Tasks | Setup/teardown tasks per site with forward-only status, assignees, due times; work offline and sync via an event log |
@@ -51,7 +53,7 @@ It is opinionated about a few things:
 | Members | Roles (admin, planner, operator, viewer, pending), group membership by request and approval, invitations one at a time or from a roster CSV with preview, capability profiles, profile photos, call sign validation |
 | My assignments | Offers to answer, confirmed positions, items, tasks and sites for the signed-in operator, with go-kit tick boxes and Start / Done buttons; printable |
 | Notifications | In-app bell plus per-operator push, email and SMS preferences for offers, packet changes, open shifts and coordinator replies (push works out of the box; email and SMS once a provider is connected) |
-| Exports | Deployment summary text, ICS 205 (comms plan), ICS 205A (communications list), ICS 214 (activity log), CHIRP CSV, hours CSV, AAR draft in Markdown |
+| Exports | Deployment summary text, ICS 204 (assignment list), ICS 205 (comms plan), ICS 205A (communications list), ICS 214 (activity log), safety checklist PDF, CHIRP CSV, hours and coverage CSV, AAR draft in Markdown |
 | Platforms | Web, installable PWA (desktop and mobile), Windows desktop app with signed auto-updates |
 | Design | Dense operational layout, light and dark themes, keyboard navigation, screen-reader labels, works from phone to widescreen |
 

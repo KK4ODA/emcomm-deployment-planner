@@ -24,9 +24,9 @@ const round = (n) => Math.round(n * 100) / 100;
 
 /**
  * Attendance and record summary for one deployment.
- * @param {{ assignments: Object[], positions: Object[], shifts: Object[], log: Object[], hours: Object[], feedback: Object[], usersById: Map<string, Object>, objectives?: Object[] }} args
+ * @param {{ assignments: Object[], positions: Object[], shifts: Object[], log: Object[], hours: Object[], feedback: Object[], usersById: Map<string, Object>, objectives?: Object[], coverage?: Object[], safety?: Object|null }} args
  */
-export function aarSummary({ assignments, positions, shifts, log, hours, feedback, usersById, objectives = [] }) {
+export function aarSummary({ assignments, positions, shifts, log, hours, feedback, usersById, objectives = [], coverage = [], safety = null }) {
   const shiftById = new Map(shifts.map(s => [s.id, s]));
   const positionById = new Map(positions.map(p => [p.id, p]));
   const byStatus = {};
@@ -62,6 +62,8 @@ export function aarSummary({ assignments, positions, shifts, log, hours, feedbac
     firstCheckIn,
     lastCheckOut,
     feedbackCount: feedback.length,
+    coverage: { total: coverage.length, direct: coverage.filter(c => c.result === 'direct').length, relay: coverage.filter(c => c.result === 'relay').length, fail: coverage.filter(c => c.result === 'fail').length },
+    safety: safety ? { signed: !!safety.signed_at, signedName: safety.signed_name || null, signedAt: safety.signed_at || null } : null,
     objectives: { total: objectives.filter(o => o.status !== 'dropped').length, done: objectives.filter(o => o.status === 'done').length, open: objectives.filter(o => o.status === 'open').length, points: objectives.filter(o => o.status === 'done').reduce((s, o) => s + (o.points || 0), 0) },
     averageRating: ratings.length ? round(ratings.reduce((s, r) => s + r, 0) / ratings.length) : null,
     commsVotes,
@@ -111,6 +113,16 @@ export function aarMarkdown({ deployment, summary, feedback, lessons, usersById,
     lines.push('- No responses yet');
   }
   lines.push('');
+  if (summary.coverage?.total) {
+    lines.push('## Coverage checks');
+    lines.push(`- ${summary.coverage.total} path checks: ${summary.coverage.direct} direct, ${summary.coverage.relay} via relay, ${summary.coverage.fail} failed`);
+    lines.push('');
+  }
+  if (summary.safety) {
+    lines.push('## Safety');
+    lines.push(summary.safety.signed ? `- Safety checklist signed by ${summary.safety.signedName || 'the Safety Officer'} on ${new Date(summary.safety.signedAt).toLocaleString()}` : '- Safety checklist started but never signed');
+    lines.push('');
+  }
   if (summary.objectives?.total) {
     lines.push('## Objectives');
     lines.push(`- ${summary.objectives.done} of ${summary.objectives.total} done${summary.objectives.points ? ` (${summary.objectives.points} points)` : ''}${summary.objectives.open ? `, ${summary.objectives.open} never taken` : ''}`);
