@@ -6,7 +6,7 @@
 > Audience: a planner or admin building the deployment. Operators can read Steps 7 and 10 to see what they get.
 > Time: about 90 minutes the first year. The second year starts from Duplicate and takes twenty.
 
-Written for EmComm Planner 2.5.3. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.5.4. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 

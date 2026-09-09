@@ -96,7 +96,9 @@ function figure(name, caption, maxWidthIn = 6.9) {
   if (!file) { console.warn('missing screenshot', name); return [para(`[screenshot ${name} missing]`, { run: { color: 'b91c1c' } })]; }
   const buf = fs.readFileSync(file);
   const { width, height, type } = imageSize(buf);
-  const wIn = Math.min(maxWidthIn, 6.9);
+  // Keep at least ~150 dpi: narrow dialog crops are laid out narrower than full-screen frames.
+  const MAX_H = 7.8; // inches: leave room for the caption on a Letter page
+  const wIn = Math.min(maxWidthIn, 6.9, Math.max(3.5, width / 150), MAX_H * width / height);
   const px = Math.round(wIn * 96); const py = Math.round(px * height / width);
   const out = [
     new Paragraph({ children: [new ImageRun({ type, data: buf, transformation: { width: px, height: py } })], alignment: AlignmentType.CENTER, spacing: { before: 120, after: 60 }, keepNext: true }),
