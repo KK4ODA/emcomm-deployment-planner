@@ -5,6 +5,8 @@
   RewriteEngine On
   RewriteBase /
   RewriteRule ^index\.html$ - [L]
+  # The /assets page shares its name with the build's assets/ folder; the bare path is the app, not the folder.
+  RewriteRule ^assets/?$ /index.html [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
