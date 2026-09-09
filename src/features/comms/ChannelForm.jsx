@@ -87,7 +87,7 @@ export function ChannelForm({ open, onClose, channel, groupId, onSubmit, submitt
           <DialogDescription>Enter it once; every deployment picks it from this library. {preview && <span className="font-mono text-foreground">{preview}</span>}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_11rem]">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
             <FormField label="Name" required hint="How people say it on the air or in the plan">
               {({ id }) => <Input id={id} value={form.name} onChange={(e) => set('name')(e.target.value)} placeholder="e.g. W4DOC 146.82, RACE net, Simplex 146.55" required autoFocus />}
             </FormField>

@@ -47,7 +47,7 @@ export function RequirementsEditor({ value, onChange }) {
           ))}
         </ul>
       )}
-      <div className="grid gap-2 sm:grid-cols-[10rem_1fr_auto]">
+      <div className="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
         <Select value={draft.kind} onValueChange={setKind}>
           <SelectTrigger aria-label="Requirement kind"><SelectValue /></SelectTrigger>
           <SelectContent>{REQUIREMENT_KINDS.map(k => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}</SelectContent>

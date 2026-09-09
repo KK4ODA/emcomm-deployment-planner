@@ -71,7 +71,7 @@ Work down the left menu. **Readiness** tells you what is still missing at any po
 For an annual event, **Duplicate** last year's instead. Positions, shifts, comms plan, map layers, objectives and open lessons come along, with every date shifted to the new start. **Templates** hold reusable site, equipment and task structures; save one from any deployment's menu.
 
 ### Sites
-- **Sites › Add site**: name, coordinates (type "lat, lon" or click the map), parking, arrival and access notes, site contact. These notes are the most-read lines on every packet.
+- **Sites › Add site**: name, a street address or "lat, lon", a pin on the map (click to drop or move it), parking, arrival and access notes, site contact. These notes are the most-read lines on every packet.
 - **Map layers** (Sites › Map): import the course KML, GPX or GeoJSON from the served agency, and turn a layer's waypoints into sites in one click.
 - **Dashboard** holds each site's equipment list and setup tasks. Both work offline.
 

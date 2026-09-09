@@ -15,7 +15,7 @@ import { parseCoordinates, formatCoordinates, DEFAULT_MAP_CENTER } from '@/lib/c
 
 ensureLeafletIcons();
 
-const EMPTY = { name: '', description: '', address: '', contact_person: '', assigned_call_signs: [], sort_order: 1, site_type: '', parking_notes: '', arrival_notes: '', access_notes: '' };
+const EMPTY = { name: '', description: '', address: '', contact_person: '', assigned_call_signs: [], sort_order: 1, site_type: '', parking_notes: '', arrival_notes: '', access_notes: '', lat: /** @type {number|null} */ (null), lon: /** @type {number|null} */ (null) };
 
 export const SITE_TYPES = [
   { id: 'aid_station', label: 'Aid / hydration station' },
@@ -31,6 +31,16 @@ export const SITE_TYPES = [
   { id: 'other', label: 'Other' },
 ];
 const NONE = '__none__';
+
+/**
+ * Coordinates typed into the address field win; otherwise the stored pin.
+ * @returns {[number, number]|null}
+ */
+function coordsOf(form) {
+  const typed = parseCoordinates(form.address);
+  if (typed) return typed;
+  return form.lat != null && form.lon != null ? [Number(form.lat), Number(form.lon)] : null;
+}
 
 function ClickToSet({ onPick }) {
   useMapEvents({ click(e) { onPick([e.latlng.lat, e.latlng.lng]); } });
@@ -80,12 +90,13 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
       contact_person: location.contact_person || '', assigned_call_signs: location.assigned_call_signs || [],
       sort_order: location.sort_order ?? allLocations.length + 1,
       site_type: location.site_type || '', parking_notes: location.parking_notes || '', arrival_notes: location.arrival_notes || '', access_notes: location.access_notes || '',
+      lat: location.lat ?? null, lon: location.lon ?? null,
     } : { ...EMPTY, sort_order: allLocations.length + 1 });
   }, [location, open, allLocations.length]);
 
   const submit = (e) => {
     e.preventDefault();
-    const c = parseCoordinates(form.address);
+    const c = coordsOf(form);
     onSubmit({
       ...form,
       site_type: form.site_type || null,
@@ -97,7 +108,8 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
     });
   };
 
-  const coords = parseCoordinates(form.address);
+  const coords = coordsOf(form);
+  const typedCoords = !!parseCoordinates(form.address);
   const assignedElsewhere = new Set(allLocations.filter(l => l.id !== location?.id).flatMap(l => l.assigned_call_signs || []));
   const available = users.map(u => u.call_sign).filter(cs => cs && !form.assigned_call_signs.includes(cs) && !assignedElsewhere.has(cs));
 
@@ -111,7 +123,7 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
       <DialogContent className="sm:max-w-xl">
         <DialogHeader><DialogTitle>{location ? 'Edit site' : 'New site'}</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_11rem_5rem]">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem_5rem]">
             <FormField label="Site name" required>
               {({ id }) => <Input id={id} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., County EOC" required autoFocus />}
             </FormField>
@@ -135,7 +147,7 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
             {({ id }) => <Textarea id={id} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}
           </FormField>
 
-          <FormField label="Location" hint="Type “latitude, longitude” or click the map to drop a pin. Coordinates enable the map view and export.">
+          <FormField label="Location" hint="A street address or “latitude, longitude”. Click the map to drop or move the pin; the pin is what the packet map and exports use.">
             {({ id }) => (
               <div className="space-y-2">
                 <Input id={id} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="30.3322, -81.6557 or a street address" className="font-mono text-xs" />
@@ -149,10 +161,13 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
                       ))}
                     </LayersControl>
                     {coords && <Marker position={coords} />}
-                    <ClickToSet onPick={(c) => setForm(f => ({ ...f, address: formatCoordinates(c) }))} />
+                    <ClickToSet onPick={(c) => setForm(f => (!f.address.trim() || parseCoordinates(f.address) ? { ...f, address: formatCoordinates(c), lat: c[0], lon: c[1] } : { ...f, lat: c[0], lon: c[1] }))} />
                     <LocateMeButton />
                   </MapContainer>
                 </div>
+                {coords && !typedCoords && (
+                  <p className="flex items-center justify-between text-xs text-muted-foreground"><span>Pin: <span className="font-mono">{formatCoordinates(coords)}</span></span><button type="button" className="underline underline-offset-4 hover:text-foreground" onClick={() => setForm(f => ({ ...f, lat: null, lon: null }))}>Remove pin</button></p>
+                )}
               </div>
             )}
           </FormField>

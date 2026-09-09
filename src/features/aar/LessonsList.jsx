@@ -30,7 +30,7 @@ export function LessonsList({ lessons, positions, canEdit, onAdd, onUpdate, onDe
   return (
     <Section title="Lessons" icon={Lightbulb} aside={`${lessons.length}`} bodyClassName="p-0">
       {canEdit && (
-        <form onSubmit={add} className="grid gap-2 border-b p-3 sm:grid-cols-[9rem_1fr_1fr_10rem_auto]">
+        <form onSubmit={add} className="grid gap-2 border-b p-3 sm:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1fr)_10rem_auto]">
           <Select value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v })}>
             <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(LESSON_CATEGORIES).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}</SelectContent>

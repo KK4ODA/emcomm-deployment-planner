@@ -94,7 +94,7 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
           <DialogDescription>A position is a job to staff: where, when, what it needs, and who supervises it.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_9rem_6rem]">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem_6rem]">
             <FormField label="Position name" required>
               {({ id }) => <Input id={id} value={form.name} onChange={(e) => setName(e.target.value)} placeholder="e.g. AID MILE 12, SAG 3, Net Control" required autoFocus />}
             </FormField>

@@ -9,6 +9,10 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- Position, Create several, Site and Channel dialogs no longer overflow sideways on desktop: the date, time and text inputs now shrink to the dialog width.
+- A site can carry a street address and a map pin at the same time. Editing such a site keeps its pin, the map opens on the pin, and the pin can be removed or moved by clicking the map.
+
 ### Added
 - **User guide** at emcommplanner.org/guide, also in the user menu, on the
   sign-in page and under About: getting started, operator tasks, building

@@ -44,7 +44,7 @@ export function ShiftsEditor({ value, onChange, periods, deployment, error }) {
       <ul className="space-y-2">
         {value.map((s, i) => (
           <li key={s.id || `new-${i}`} className="rounded-md border p-2">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_5rem]">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem]">
               <label className="text-xs">
                 <span className="text-muted-foreground">Start</span>
                 <Input type="datetime-local" value={toDateTimeLocal(s.starts_at)} onChange={(e) => update(i, { starts_at: fromDateTimeLocal(e.target.value) })} required />

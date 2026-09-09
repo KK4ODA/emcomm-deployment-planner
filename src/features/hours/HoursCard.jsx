@@ -56,7 +56,7 @@ export function HoursCard({ user }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form onSubmit={(e) => { e.preventDefault(); if (Number(form.hours) > 0) add.mutate(); }} className="grid gap-2 sm:grid-cols-[9rem_1fr_5rem_1fr_auto] sm:items-end">
+        <form onSubmit={(e) => { e.preventDefault(); if (Number(form.hours) > 0) add.mutate(); }} className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_5rem_minmax(0,1fr)_auto] sm:items-end">
           <FormField label="Date">{({ id }) => <Input id={id} type="date" value={form.occurred_on} onChange={(e) => setForm({ ...form, occurred_on: e.target.value })} required />}</FormField>
           <FormField label="Activity">
             {({ id }) => (
