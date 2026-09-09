@@ -10,6 +10,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ## [Unreleased]
 
 ### Fixed
+- The site form's map now opens on the site's pin instead of a continent-wide view.
+
+### Fixed
 - Opening or reloading emcommplanner.org/assets no longer shows the web server's Forbidden page (the route shared its name with the build's assets folder).
 
 ### Fixed

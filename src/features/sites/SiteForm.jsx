@@ -42,6 +42,14 @@ function coordsOf(form) {
   return form.lat != null && form.lon != null ? [Number(form.lat), Number(form.lon)] : null;
 }
 
+/** Keep the map on the pin: the MapContainer props only apply at mount, and the form loads after it. */
+function FollowPin({ coords }) {
+  const map = useMap();
+  const lat = coords ? coords[0] : null; const lon = coords ? coords[1] : null;
+  useEffect(() => { if (lat != null && lon != null) map.setView([lat, lon], Math.max(map.getZoom(), 13)); }, [map, lat, lon]);
+  return null;
+}
+
 function ClickToSet({ onPick }) {
   useMapEvents({ click(e) { onPick([e.latlng.lat, e.latlng.lng]); } });
   return null;
@@ -160,6 +168,7 @@ export function SiteForm({ open, onClose, onSubmit, location, users = [], allLoc
                         </LayersControl.BaseLayer>
                       ))}
                     </LayersControl>
+                    <FollowPin coords={coords} />
                     {coords && <Marker position={coords} />}
                     <ClickToSet onPick={(c) => setForm(f => (!f.address.trim() || parseCoordinates(f.address) ? { ...f, address: formatCoordinates(c), lat: c[0], lon: c[1] } : { ...f, lat: c[0], lon: c[1] }))} />
                     <LocateMeButton />
