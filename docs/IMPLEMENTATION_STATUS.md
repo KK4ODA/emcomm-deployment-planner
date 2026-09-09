@@ -202,6 +202,17 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-09 **Tutorials** (`docs/tutorials`): two step-by-step guides built
+  from real scenarios, the Publix Atlanta Marathon (36 positions, two nets,
+  course KML, three-condition plan) and Winter Field Day (stations, operating
+  periods, twelve objectives, assets). Content lives in
+  `docs/tutorials/content/*.cjs`; `npm run tutorials` renders DOCX, PDF and
+  Markdown with the screenshots in `docs/tutorials/img` (taken headlessly
+  against the live app at 1440x900, light theme). Both scenarios exist as
+  deployments in the owner's group for demos. The pass surfaced and fixed
+  three defects: form dialogs overflowing sideways (v2.5.2), sites losing
+  their pin when edited with a street address (v2.5.2), and the `/assets`
+  route answering 403 on Apache (v2.5.3).
 - 2026-09-08 **User guide** (`docs/USER_GUIDE.md`, rendered at `/guide` by
   `src/pages/Guide.jsx` through the small reader in `src/lib/markdown.js`;
   linked from sign-in, the user menu and About). Rule: any change a user can

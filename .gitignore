@@ -33,3 +33,5 @@ dist-ssr
 supabase/.temp/
 # Claude Code local launch config
 .claude/
+docs/tutorials/*.docx
+docs/tutorials/*.pdf

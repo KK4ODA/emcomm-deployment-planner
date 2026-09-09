@@ -2,7 +2,7 @@
 
 EmComm Planner runs an ARES or emergency-communications deployment from the first request to the after-action review: who goes where, on which frequency, with what, and what happened. This guide is short on purpose. Each section is one task. Do the task, come back when you need the next one.
 
-It lives at **emcommplanner.org/guide** and is updated with every release, so what you read here matches the app you are using.
+It lives at **emcommplanner.org/guide** and is updated with every release, so what you read here matches the app you are using. Two worked examples with screenshots, a marathon and a Winter Field Day, are in the project's docs/tutorials folder.
 
 ---
 
