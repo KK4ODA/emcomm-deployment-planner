@@ -158,6 +158,7 @@ Procedure and required repository secrets: [docs/release.md](docs/release.md).
 ## Documentation
 
 - [docs/USER_GUIDE.md](docs/USER_GUIDE.md): the user guide, rendered in the app at `/guide`; update it in the same change as any user-visible feature
+- [docs/APRS_SETUP.md](docs/APRS_SETUP.md): step-by-step link between Graywolf, Emcomm Objects and the planner (bridge token, Graywolf Actions, operator profile)
 - [docs/tutorials](docs/tutorials): step-by-step tutorials with screenshots (Publix Atlanta Marathon, Winter Field Day) as DOCX, PDF and Markdown; `npm run tutorials` rebuilds them from `docs/tutorials/content`
 - [docs/architecture.md](docs/architecture.md): structure, data flow, state, offline design, design system
 - [docs/backend.md](docs/backend.md): Supabase schema, RLS, Edge Functions, environment variables
