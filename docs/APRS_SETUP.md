@@ -47,11 +47,15 @@ The token is what lets the bridge and Graywolf write into your group. It is show
 
 1. Sign in to emcommplanner.org as a **Planner** or **Admin** and open **APRS** in the left menu.
 2. Under *Bridges*, type a name for this station (for example `EOC Graywolf`) and click **Create bridge**.
-3. A dialog shows two things. Copy both somewhere safe before closing it:
-   - the **bridge token** (a long random string),
-   - the **webhook URL for Graywolf Actions**, which is the token embedded in a URL of the form
-     `https://<planner>/functions/v1/aprs-ingest/action?token=YOUR-TOKEN`.
-4. Also copy the **planner URL** shown in the *Set up Graywolf* section of the same page. It looks like `https://<ref>.supabase.co/functions/v1`.
+3. A dialog shows three strings. Copy all three somewhere safe before closing it; each goes to a different place:
+
+   | String | Looks like | Goes to |
+   |---|---|---|
+   | **Bridge token** | `ebt_…` (long random string) | Emcomm Objects › Settings › EmComm Planner › *Bridge token* |
+   | **Planner URL** | `https://<ref>.supabase.co/functions/v1` | Emcomm Objects › Settings › EmComm Planner › *Planner URL* |
+   | **Webhook URL** | `…/functions/v1/aprs-ingest/action?token=ebt_…` | Graywolf › Actions › handler URL (Step 5). Never into Emcomm Objects. |
+
+   The planner URL is the address only: no `/aprs-ingest`, no `?token=`. If you paste the webhook URL into the Planner URL field, *Test link* fails with `decode /aprs-ingest/ping: invalid character 'o'`.
 
 If you lose the token, revoke the bridge on this page and create a new one; the old token stops working immediately. One bridge per Graywolf station.
 
@@ -128,6 +132,7 @@ Only members of the bridge's ARES group are accepted, and a check-in applies to 
 | Symptom | Check |
 |---|---|
 | Emcomm Objects pill stays red, *Test link* fails | Token pasted with a trailing space or from the wrong bridge; planner URL missing `/functions/v1`; the computer has no internet. |
+| *Test link*: `decode /aprs-ingest/ping: invalid character 'o'` or `no sender` | The Planner URL field holds the webhook URL. Replace it with the planner URL alone (`https://<ref>.supabase.co/functions/v1`). Emcomm Objects 0.3.1 and later trims this automatically. |
 | Stations heard is empty on the planner | Graywolf is not hearing anyone (check Graywolf first); *Forward heard stations* unticked; the bridge's last report on the APRS page is old. |
 | `denied: bad token` on the air | The webhook URL in Graywolf has a typo or belongs to a revoked bridge. Copy it again from the planner (revoke and create a new bridge if needed). |
 | `<CALL> not a member` | The sender's call sign is not on any member's profile and does not match a member's base call, or the member is not in this group. |

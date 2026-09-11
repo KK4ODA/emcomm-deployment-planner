@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Changed
+- APRS › Create bridge now hands out the three strings separately and says where each goes: token and planner URL to Emcomm Objects, webhook URL to Graywolf Actions. A bridge that mistakenly calls the webhook URL gets a clear error instead of a JSON parse failure.
+
 ### Fixed
 - The site form's map now opens on the site's pin instead of a continent-wide view.
 

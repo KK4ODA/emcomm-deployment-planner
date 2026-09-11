@@ -146,8 +146,8 @@ export default function Aprs() {
         <div className="space-y-4">
           <Section title="Set up Graywolf" icon={AlertTriangle}>
             <ol className="list-decimal space-y-2 pl-5 text-sm">
-              <li>Create a bridge above and copy its token.</li>
-              <li>In <strong>Emcomm Objects</strong> (next to Graywolf), open Settings › EmComm Planner, paste <span className="font-mono text-xs">{base}</span> and the token, and enable <em>Forward heard stations</em>. Stations then appear here within a minute.</li>
+              <li>Create a bridge above. The dialog gives you three strings: the token, the planner URL and a webhook URL.</li>
+              <li>In <strong>Emcomm Objects</strong> (next to Graywolf), open Settings › EmComm Planner. <strong>Planner URL</strong> is <span className="font-mono text-xs">{base}</span> and nothing more; <strong>Bridge token</strong> is the token. Enable <em>Forward heard stations</em>, click <em>Test link</em>, save. Stations then appear here within a minute.</li>
               <li>For APRS check-ins, add a Graywolf <strong>Action</strong> per command with a webhook handler. Method POST, URL:
                 <p className="mt-1 break-all rounded bg-muted px-2 py-1 font-mono text-xs">{base}/aprs-ingest/action?token=YOUR-TOKEN</p>
                 Leave the body as the default form fields. Create one Action each for <span className="font-mono">checkin</span>, <span className="font-mono">onpos</span>, <span className="font-mono">checkout</span> and <span className="font-mono">status</span>. Graywolf sends our reply back to the operator.</li>
@@ -195,13 +195,16 @@ export default function Aprs() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Bridge token for {issued?.name}</DialogTitle>
-            <DialogDescription>Copy it now. It is shown once and stored only as a hash; if you lose it, revoke this bridge and create another.</DialogDescription>
+            <DialogDescription>Three things go to two places. The token is shown once and stored only as a hash; if you lose it, revoke this bridge and create another.</DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-2">
-            <Input readOnly value={issued?.token ?? ''} className="font-mono text-xs" aria-label="Bridge token" onFocus={(e) => e.target.select()} />
-            <Button variant="outline" onClick={() => copy(issued?.token ?? '')}><Copy /> Copy</Button>
-          </div>
-          <FormField label="Webhook URL for Graywolf Actions">
+          <FormField label="1. Bridge token" hint="Emcomm Objects › Settings › EmComm Planner › Bridge token">
+            {() => <div className="flex gap-2"><Input readOnly value={issued?.token ?? ''} className="font-mono text-xs" aria-label="Bridge token" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(issued?.token ?? '')}><Copy /></Button></div>}
+          </FormField>
+          <FormField label="2. Planner URL" hint="Emcomm Objects › Settings › EmComm Planner › Planner URL. Just this address: no token, no /aprs-ingest.">
+            {({ id }) => <div className="flex gap-2"><Input id={id} readOnly value={base} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(base)}><Copy /></Button></div>}
+          </FormField>
+
+          <FormField label="3. Webhook URL for Graywolf Actions" hint="Graywolf › Actions › handler URL, for each of checkin, onpos, checkout and status. Not for Emcomm Objects.">
             {({ id }) => <div className="flex items-center gap-2"><Input id={id} readOnly value={`${base}/aprs-ingest/action?token=${issued?.token ?? ''}`} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(`${base}/aprs-ingest/action?token=${issued?.token ?? ''}`)}><Copy /></Button></div>}
           </FormField>
           <DialogFooter><Button onClick={() => setIssued(null)}>Done</Button></DialogFooter>

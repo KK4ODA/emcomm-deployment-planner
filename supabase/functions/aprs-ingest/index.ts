@@ -210,7 +210,11 @@ Deno.serve(async (req) => {
     if (route === 'ping' && req.method === 'GET') return json({ ok: true, bridge: bridge.name, group: bridge.ares_group_id })
     if (route === 'stations' && req.method === 'POST') return json(await ingestStations(bridge, await req.json()))
     if (route === 'action' && req.method === 'POST') return text(await handleAction(bridge, await readActionBody(req)))
-    if (route === 'action' && req.method === 'GET') return text(await handleAction(bridge, Object.fromEntries(url.searchParams)))
+    if (route === 'action' && req.method === 'GET') {
+      const q = Object.fromEntries(url.searchParams)
+      if (!q['sender-callsign'] && !q.sender_callsign && !q.sender && !q.from) return json({ error: 'no sender. If this request came from Emcomm Objects, its Planner URL is set to the webhook URL; it must end in /functions/v1 with no token.' }, 400)
+      return text(await handleAction(bridge, q))
+    }
     if (route === 'outbox' && req.method === 'GET') return json(await listOutbox(bridge))
     if (route === 'outbox/ack' && req.method === 'POST') return json(await ackOutbox(bridge, await req.json()))
     if (route === 'objects' && req.method === 'GET') return objects(bridge, url)
