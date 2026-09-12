@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Changed
+- Staffing › **Google Sheet** is live on emcommplanner.org: the build now carries the Google OAuth client id (project "EmComm Planner"). While the consent screen is in Testing, only Google accounts listed as test users can post; see docs/GOOGLE_DRIVE.md.
+
 ### Fixed
 - Dispatch dialog: typing a free-text From or To kept only the first character (the input remounted on every keystroke).
 - Operations: the Tasks panel and the log stay on screen when the time window holds no shifts, so a desk can dispatch on setup day or with the default window.

@@ -16,6 +16,10 @@ It works from the browser only. Google refuses its sign-in inside embedded webvi
    - Locally: `VITE_GOOGLE_CLIENT_ID=...` in `.env.local`.
    - Releases: repository **Settings › Secrets and variables › Actions › Variables**, new variable `VITE_GOOGLE_CLIENT_ID`. The Release workflow passes it into the build; when it is absent the button explains that Drive is not configured.
 
+## Current state (2026-09-12)
+
+Done for emcommplanner.org: Google Cloud project **EmComm Planner** (id `emcomm-planner`, owner kk4oda@gmail.com), Drive API enabled, consent screen "EmComm Planner" (External), web client "EmComm Planner web" with origins `https://emcommplanner.org` and `http://localhost:5173`, repository variable `VITE_GOOGLE_CLIENT_ID` set. The consent screen is in **Testing**: only the Google accounts listed under *Google Auth Platform › Audience › Test users* can post the sheet (kk4oda@gmail.com so far; add planners there, up to 100). Publishing it for anyone needs a homepage URL and a privacy policy URL on the Branding page; the scope is non-sensitive, so no Google review follows.
+
 ## What operators see
 
 - On the packet, a **Staffing roster** link opens the sheet in Google Sheets (works on phones, prints well, sortable).
