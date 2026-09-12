@@ -6,6 +6,7 @@
 //
 //   POST /aprs-ingest/stations   { stations: [StationDTO...] }  heard stations -> aprs_positions
 //   POST /aprs-ingest/action     Graywolf Action webhook: @@#checkin | #onpos | #checkout | #status
+//                                (Graywolf's default form body: action, sender_callsign, source, otp_verified, plus bare arg keys)
 //   GET  /aprs-ingest/outbox     pending APRS messages for the bridge to send
 //   POST /aprs-ingest/outbox/ack { id, ok, error }             mark sent / failed
 //   GET  /aprs-ingest/objects?deployment=<id|active>&format=json|csv
@@ -104,7 +105,7 @@ async function handleAction(bridge: Bridge, form: Record<string, string>) {
   const action = String(form.action || form.name || '').toLowerCase().replace(/^#/, '')
   const args: Record<string, string> = {}
   for (const [k, v] of Object.entries(form)) if (k.startsWith('arg.')) args[k.slice(4)] = v
-  const note = args.note || args.msg || args.text || null
+  const note = args.note || args.msg || args.text || form.note || form.msg || form.text || null
   const log = async (result: string, reply: string, extra: Record<string, unknown> = {}) => {
     await admin.from('aprs_actions').insert({ ares_group_id: bridge.ares_group_id, bridge_id: bridge.id, from_callsign: sender || '?', action: action || '?', args, result, reply, ...extra })
     return reply

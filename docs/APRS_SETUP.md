@@ -80,27 +80,45 @@ If you lose the token, revoke the bridge on this page and create a new one; the 
 
 ## Step 5. Configure Graywolf Actions for check-ins
 
-Check-ins do not go through Emcomm Objects. Graywolf calls the planner directly when an operator sends a `@@#` message to the station's call sign.
+Check-ins do not go through Emcomm Objects. Graywolf calls the planner directly when an operator sends a `@@#` message to the station's call sign. You create four Actions, identical except for the name.
 
-1. In Graywolf's web UI, open **Actions** and add a new action.
-2. Name it `checkin`. This is what operators will type after `@@#`.
-3. Set the handler to **webhook**, method **POST**, URL = the webhook URL from Step 3 (the one ending in `?token=YOUR-TOKEN`). Leave the request body as Graywolf's default form fields; the planner reads `action`, `sender-callsign` and any `arg.*` fields.
-4. Make sure the action sends the handler's response back to the sender. The planner replies with short text such as `AID 20: checked in` or `no live assignment`, and Graywolf transmits it as an APRS message.
-5. Repeat for three more actions with the same URL and names `onpos`, `checkout` and `status`.
+1. In Graywolf's web UI open **Actions** and click **+ New Action**. The form is long; scroll it top to bottom and fill it as in the table. Anything not listed keeps its default.
+2. **Save changes**. Repeat for the other three names.
 
-Reply texts you will see on the air:
+| Section (in scroll order) | Field | Set it to |
+|---|---|---|
+| Identity | **Name** | `checkin` for the first Action; then `onpos`, `checkout`, `status`. The name is the word operators type after `@@#`; case does not matter on the air. |
+| Identity | **Description** | Optional, e.g. `EmComm Planner check-in`. |
+| Identity | **Type** | **Webhook**. The *Command* section disappears and a *Webhook* section takes its place. |
+| Webhook | **URL** | The webhook URL from Step 3, the one ending in `/aprs-ingest/action?token=ebt_…`. Same URL in all four Actions. |
+| Webhook | **Method** | **POST**. |
+| Webhook | **Headers** | None. |
+| Webhook | **Body template** | Leave empty. Graywolf then posts its default form fields (`action`, `sender_callsign`, `source`, `otp_verified`), which is what the planner reads. |
+| Webhook | **Timeout (s)** | 10, the default. |
+| Arguments | **Argument mode** | *Key/value (default)*. Do **not** add allowed args; the commands take none, and an empty schema rejects stray text after the command. |
+| Security | **Require valid one-time code** | **Off**. Operators would otherwise have to type a six-digit code from an authenticator app in every message. The planner already refuses senders who are not members of the group and check-ins that do not match a live assignment. |
+| Security | **Sender allowlist** | Empty means any call sign. To restrict it to your members, list them comma-separated with a wildcard SSID: `KK4ODA-*, W4XYZ-*`. Anyone else gets `denied`. |
+| Throttling | **Rate limit (s)** | 5, the default: one invocation per five seconds per Action. |
+| Throttling | **Queue depth** | 8, the default. |
+| Throttling | **Max reply lines** | 1, the default. The planner answers with one short line. |
+| Status | **Action is enabled** | On. |
 
-| Message from the operator | Planner reply |
+Graywolf puts its own status word in front of the planner's reply, so a successful check-in reads `ok: AID 20: checked in` on the radio. Anything Graywolf itself rejects arrives without contacting the planner: `unknown` (no Action with that name), `denied` (allowlist), `rate_limited`, `busy`, `timeout`, or `error: http NNN` when the planner could not be reached.
+
+Reply texts from the planner:
+
+| Message from the operator | Reply on the air |
 |---|---|
-| `@@#checkin` | `<TACTICAL>: checked in` |
-| `@@#onpos` | `<TACTICAL>: on position` |
-| `@@#checkout` | `<TACTICAL>: released` |
-| `@@#status` | `<TACTICAL>: <current status>` or `no live assignment` |
-| from a call sign the planner does not know | `<CALL> not a member; set APRS call on your profile` |
-| wrong token in the URL | `denied: bad token` |
+| `@@#checkin` | `ok: <TACTICAL>: checked in` |
+| `@@#onpos` | `ok: <TACTICAL>: on position` |
+| `@@#checkout` | `ok: <TACTICAL>: released` |
+| `@@#status` | `ok: <TACTICAL>: <current status>` or `ok: no live assignment` |
+| from a call sign the planner does not know | `ok: <CALL> not a member; set APRS call on your profile` |
+| wrong token in the URL | `error: http 401` (the planner said `denied: bad token`) |
 
-**You leave this step with:** four actions in Graywolf, all pointing at the same webhook URL.
+Use Graywolf's **Test** button on an Action to fire it without a radio; the planner logs it with source `test` under *APRS check-ins*.
 
+**You leave this step with:** four enabled Webhook Actions, all pointing at the same webhook URL, OTP off.
 ---
 
 ## Step 6. Operators: one profile field
@@ -119,7 +137,7 @@ Only members of the bridge's ARES group are accepted, and a check-in applies to 
 
 ## Step 7. Test the whole chain
 
-1. From a radio or an APRS app on a phone, send `@@#status` to the station call. Expect `no live assignment` or your tactical call and status within a few seconds.
+1. From a radio or an APRS app on a phone, send `@@#status` to the station call. Expect `ok: no live assignment` or `ok:` followed by your tactical call and status within a few seconds.
 2. On the planner's APRS page, the message appears under *APRS check-ins* with the result.
 3. Open **Net control** on the planner. With a live shift, your line shows the last APRS fix and the distance to your site.
 4. Turn on APRS notifications on your profile, have a planner offer you a shift, and watch the offer arrive as an APRS message. It shows under *Outbound messages* on the APRS page as pending, then sent.

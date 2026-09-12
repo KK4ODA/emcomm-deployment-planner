@@ -23,6 +23,28 @@ import { hasPermission } from '@/lib/permissions';
 import { ageMinutes, ageBucket, positionsByUser, newBridgeToken, sha256Hex, APRS_ACTIONS } from '@/lib/aprs';
 import { formatDateTime, relativeTime } from '@/lib/time';
 
+/**
+ * What to type into Graywolf's New Action form, in the order the form shows
+ * its sections. Kept as data so the setup guide and this page agree.
+ */
+const GRAYWOLF_ACTION_FIELDS = Object.freeze([
+  { section: 'Identity', field: 'Name', value: 'checkin (then onpos, checkout, status). This is the word operators type after @@#.' },
+  { section: 'Identity', field: 'Description', value: 'EmComm Planner check-in (optional)' },
+  { section: 'Identity', field: 'Type', value: 'Webhook' },
+  { section: 'Webhook', field: 'URL', value: '__URL__' },
+  { section: 'Webhook', field: 'Method', value: 'POST' },
+  { section: 'Webhook', field: 'Headers', value: 'none' },
+  { section: 'Webhook', field: 'Body template', value: 'leave empty (Graywolf then sends its default form fields: action, sender_callsign, source)' },
+  { section: 'Webhook', field: 'Timeout (s)', value: '10 (default)' },
+  { section: 'Arguments', field: 'Argument mode', value: 'Key/value (default); do not add allowed args' },
+  { section: 'Security', field: 'Require valid one-time code', value: 'Off. The planner checks that the sender is a member with a live assignment; a code per check-in is more than a race day can bear.' },
+  { section: 'Security', field: 'Sender allowlist', value: 'Empty (anyone), or a comma-separated list such as KK4ODA-*, W4XYZ-* to limit it to your members' },
+  { section: 'Throttling', field: 'Rate limit (s)', value: '5 (default)' },
+  { section: 'Throttling', field: 'Queue depth', value: '8 (default)' },
+  { section: 'Throttling', field: 'Max reply lines', value: '1 (default); the planner replies with one short line' },
+  { section: 'Status', field: 'Enabled', value: 'On' },
+]);
+
 /** /aprs: Graywolf bridges, heard stations, APRS check-ins and outbound messages. */
 export default function Aprs() {
   const { user } = useAuth();
@@ -148,9 +170,17 @@ export default function Aprs() {
             <ol className="list-decimal space-y-2 pl-5 text-sm">
               <li>Create a bridge above. The dialog gives you three strings: the token, the planner URL and a webhook URL.</li>
               <li>In <strong>Emcomm Objects</strong> (next to Graywolf), open Settings › EmComm Planner. <strong>Planner URL</strong> is <span className="font-mono text-xs">{base}</span> and nothing more; <strong>Bridge token</strong> is the token. Enable <em>Forward heard stations</em>, click <em>Test link</em>, save. Stations then appear here within a minute.</li>
-              <li>For APRS check-ins, add a Graywolf <strong>Action</strong> per command with a webhook handler. Method POST, URL:
-                <p className="mt-1 break-all rounded bg-muted px-2 py-1 font-mono text-xs">{base}/aprs-ingest/action?token=YOUR-TOKEN</p>
-                Leave the body as the default form fields. Create one Action each for <span className="font-mono">checkin</span>, <span className="font-mono">onpos</span>, <span className="font-mono">checkout</span> and <span className="font-mono">status</span>. Graywolf sends our reply back to the operator.</li>
+              <li>For APRS check-ins, create four Graywolf <strong>Actions</strong> (Graywolf › Actions › New Action), one per command. Every field is the same except the name. Scroll the New Action form top to bottom and set:
+                <Table className="mt-2 text-xs">
+                  <TableHeader><TableRow><TableHead className="w-28">Section</TableHead><TableHead className="w-40">Field</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {GRAYWOLF_ACTION_FIELDS.map((r, i) => (
+                      <TableRow key={i}><TableCell className="font-medium">{r.section}</TableCell><TableCell>{r.field}</TableCell><TableCell>{r.value === '__URL__' ? <span className="break-all font-mono">{base}/aprs-ingest/action?token=YOUR-TOKEN</span> : r.value}</TableCell></TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <p className="mt-2">Save, then repeat with the names <span className="font-mono">onpos</span>, <span className="font-mono">checkout</span> and <span className="font-mono">status</span>. Graywolf sends our reply back to the operator prefixed with <span className="font-mono">ok:</span>.</p>
+              </li>
               <li>Operators then send Graywolf's station an APRS message such as {APRS_ACTIONS.map(a => <span key={a.action} className="mr-1 font-mono">{a.example}</span>)} from any APRS radio or app. Their profile's APRS call, or any SSID of their call sign, identifies them.</li>
               <li>Outbound: operators who turn on <em>APRS</em> under Profile › Notifications get offers and packet changes as APRS messages, sent by the bridge through Graywolf.</li>
             </ol>

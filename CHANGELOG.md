@@ -10,6 +10,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ## [Unreleased]
 
 ### Changed
+- APRS page: the Set up Graywolf section now lists every field of Graywolf's New Action form, section by section, with the value to enter. The check-in webhook also accepts Graywolf's bare argument keys.
+
+### Changed
 - APRS › Create bridge now hands out the three strings separately and says where each goes: token and planner URL to Emcomm Objects, webhook URL to Graywolf Actions. A bridge that mistakenly calls the webhook URL gets a clear error instead of a JSON parse failure.
 
 ### Fixed
