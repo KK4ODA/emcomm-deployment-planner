@@ -10,6 +10,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ## [Unreleased]
 
 ### Fixed
+- iPhone: text fields, selects and text areas are 16px on phones so Safari no longer zooms the page in when one is focused (the zoom used to stick and make every page look too wide afterwards). APRS command examples wrap as whole tokens.
+
+### Fixed
 - Phone layout: Dashboard, Sites, APRS and About no longer scroll sideways (grid columns were widened by one long line; they may now shrink, and the APRS function URL wraps). Site cards fit their three buttons. Larger tap targets on phones for the Operations row buttons, task steps, the packet's Open in Maps chip and the guide's section list.
 
 ### Added

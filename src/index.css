@@ -127,6 +127,18 @@
     min-width: 0;
   }
 
+  /* iOS Safari zooms the page in when a focused text control is set below
+     16px, and stays zoomed after the keyboard closes, so everything looks a
+     little too wide from then on. Phones get 16px controls whatever the
+     utility class says; from sm up the compact sizes apply. */
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
   /* Visible, consistent keyboard focus everywhere. */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
