@@ -75,6 +75,7 @@ Work down the left menu. **Readiness** tells you what is still missing at any po
 ### Sites
 - **Sites › Add site**: name, a street address or "lat, lon", a pin on the map (click to drop or move it), parking, arrival and access notes, site contact. These notes are the most-read lines on every packet.
 - **Map layers** (Sites › Map): import the course KML, GPX or GeoJSON from the served agency, and turn a layer's waypoints into sites in one click.
+- **APRS on the map** (Sites › Map): stations Graywolf heard, coloured by age. The scope defaults to *This deployment*, the operators holding a seat; switch to group members or every station heard when you need context.
 - **Dashboard** holds each site's equipment list and setup tasks. Both work offline.
 
 ### Positions and shifts

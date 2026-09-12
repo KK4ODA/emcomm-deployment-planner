@@ -10,7 +10,8 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useAprsLatest, usePositions, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
+import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useAprsLatest, usePositions, useShifts, useAssignments, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
+import { occupies } from '@/lib/staffing';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/db';
 import { hasPermission } from '@/lib/permissions';
@@ -44,7 +45,10 @@ function SitesContent() {
   const coverageQ = useCoverageLog();
   const aprsQ = useAprsLatest();
   const positionsQ = usePositions();
+  const shiftsQ = useShifts();
+  const assignmentsQ = useAssignments();
   const [aprsAge, setAprsAge] = useState('180');
+  const [aprsScope, setAprsScope] = useLocalStorage('emcomm_sites_aprs_scope', 'deployment');
   const queryClient = useQueryClient();
   useRealtimeInvalidation('locations', queryKeys.locations);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -70,12 +74,20 @@ function SitesContent() {
   const coverageGeo = useMemo(() => coverageGeoJson(coverageEntries, allSitesById), [coverageEntries, allSitesById]);
   const coverageStats = useMemo(() => coverageSummary(coverageEntries), [coverageEntries]);
   const aprsLatest = useMemo(() => (aprsQ.data ?? []).filter(p => p.ares_group_id === deployment.ares_group_id), [aprsQ.data, deployment.ares_group_id]);
+  // Who counts as "on this deployment": anyone holding a seat (offered ones included, they may already be driving in).
+  const deploymentUserIds = useMemo(() => new Set((assignmentsQ.data ?? []).filter(a => a.deployment_id === deploymentId && (occupies(a.status) || a.status === 'offered')).map(a => a.user_id)), [assignmentsQ.data, deploymentId]);
+  const scopedLatest = useMemo(() => {
+    const users = usersQ.data ?? [];
+    if (aprsScope === 'all') return aprsLatest;
+    const pool = aprsScope === 'deployment' ? users.filter(u => deploymentUserIds.has(u.id)) : users;
+    return [...positionsByUser(aprsLatest, pool).values()];
+  }, [aprsLatest, aprsScope, usersQ.data, deploymentUserIds]);
   const aprsGeo = useMemo(() => {
-    const byUser = positionsByUser(aprsLatest, usersQ.data ?? []);
+    const byUser = positionsByUser(scopedLatest, usersQ.data ?? []);
     const userByCall = new Map();
     for (const [uid, p] of byUser) userByCall.set(p.callsign, (usersQ.data ?? []).find(u => u.id === uid));
-    return aprsGeoJson(aprsLatest, { maxAgeMinutes: Number(aprsAge), userByCall, usersById: new Map((usersQ.data ?? []).map(u => [u.id, u])) });
-  }, [aprsLatest, usersQ.data, aprsAge]);
+    return aprsGeoJson(scopedLatest, { maxAgeMinutes: Number(aprsAge), userByCall, usersById: new Map((usersQ.data ?? []).map(u => [u.id, u])) });
+  }, [scopedLatest, usersQ.data, aprsAge]);
   const depPositions = useMemo(() => (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId), [positionsQ.data, deploymentId]);
   const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
   const logCoverage = useMutation({
@@ -178,7 +190,11 @@ function SitesContent() {
               <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
                 <RadioTower className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">APRS</span>
-                <span className="text-muted-foreground">{aprsGeo.features.length ? `${aprsGeo.features.length} station${aprsGeo.features.length === 1 ? '' : 's'} on the map` : 'no stations heard in this window'}</span>
+                <span className="text-muted-foreground">{aprsGeo.features.length ? `${aprsGeo.features.length} station${aprsGeo.features.length === 1 ? '' : 's'} on the map` : aprsScope === 'deployment' ? `none of this deployment's operators heard in this window${aprsLatest.length ? ` (${aprsLatest.length} other stations heard)` : ''}` : 'no stations heard in this window'}</span>
+                <Select value={aprsScope} onValueChange={setAprsScope}>
+                  <SelectTrigger className="h-8 w-40" aria-label="APRS stations to show"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="deployment">This deployment</SelectItem><SelectItem value="members">Group members</SelectItem><SelectItem value="all">All stations heard</SelectItem></SelectContent>
+                </Select>
                 <Select value={aprsAge} onValueChange={setAprsAge}>
                   <SelectTrigger className="h-8 w-28" aria-label="APRS age"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="30">30 min</SelectItem><SelectItem value="180">3 h</SelectItem><SelectItem value="720">12 h</SelectItem><SelectItem value="1440">24 h</SelectItem></SelectContent>

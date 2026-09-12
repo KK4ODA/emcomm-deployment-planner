@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Changed
+- Sites › Map: the APRS overlay now defaults to the operators of this deployment (anyone holding or offered a seat), with Group members and All stations heard as alternatives.
+
 ### Fixed
 - APRS ingest: a station whose comment or call sign carried a NUL or control character made Postgres reject the whole report (`unsupported Unicode escape sequence`, seen in Emcomm Objects as `stations: planner HTTP 500`). Such characters are now stripped and a single bad row no longer loses the batch.
 
