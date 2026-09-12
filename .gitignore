@@ -35,3 +35,4 @@ supabase/.temp/
 .claude/
 docs/tutorials/*.docx
 docs/tutorials/*.pdf
+!.env.example
