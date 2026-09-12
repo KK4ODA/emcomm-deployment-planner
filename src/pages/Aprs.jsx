@@ -212,7 +212,7 @@ export default function Aprs() {
                 </Table>
                 <p className="mt-2">Save, then repeat with the names <span className="font-mono">onpos</span>, <span className="font-mono">checkout</span>, <span className="font-mono">status</span>, and for tasking <span className="font-mono">ack</span>, <span className="font-mono">enroute</span>, <span className="font-mono">onscene</span>, <span className="font-mono">done</span> (those four with Argument mode Freeform). Graywolf sends our reply back to the operator prefixed with <span className="font-mono">ok:</span>.</p>
               </li>
-              <li>Operators then send Graywolf's station an APRS message such as {APRS_ACTIONS.map(a => <span key={a.action} className="mr-1 font-mono">{a.example}</span>)} from any APRS radio or app. Their profile's APRS call, or any SSID of their call sign, identifies them.</li>
+              <li>Operators then send Graywolf's station an APRS message such as {APRS_ACTIONS.map(a => <span key={a.action} className="mr-1.5 inline-block whitespace-nowrap font-mono">{a.example}</span>)} from any APRS radio or app. Their profile's APRS call, or any SSID of their call sign, identifies them.</li>
               <li>Outbound: operators who turn on <em>APRS</em> under Profile › Notifications get offers and packet changes as APRS messages, sent by the bridge through Graywolf.</li>
             </ol>
           </Section>
