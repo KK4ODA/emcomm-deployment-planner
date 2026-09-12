@@ -37,6 +37,7 @@ import NotFound from '@/pages/NotFound';
 
 const Login = lazy(() => import('@/pages/Login'));
 const Guide = lazy(() => import('@/pages/Guide'));
+const Privacy = lazy(() => import('@/pages/Privacy'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 
 /** Legacy /LocationTasks?location=<id> → /sites/<id>/tasks */
@@ -112,6 +113,7 @@ export default function App() {
                 <Route path="/Login" element={<Navigate to={ROUTES.login} replace />} />
                 <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route path={ROUTES.guide} element={<Guide />} />
+                <Route path={ROUTES.privacy} element={<Privacy />} />
                 <Route path="/*" element={<AuthenticatedApp />} />
               </Routes>
             </Suspense>

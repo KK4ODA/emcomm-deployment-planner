@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- **Privacy policy** at emcommplanner.org/privacy (source docs/PRIVACY.md; user menu, About, sign-in page): what is stored, who sees it, processors, retention, and the Google Drive section required for the roster sheet. The Google consent screen now points to it and is published for any Google account.
+
 ### Changed
 - Staffing › **Google Sheet** is live on emcommplanner.org: the build now carries the Google OAuth client id (project "EmComm Planner"). While the consent screen is in Testing, only Google accounts listed as test users can post; see docs/GOOGLE_DRIVE.md.
 

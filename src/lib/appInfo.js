@@ -14,6 +14,8 @@ export const CHANGELOG_URL = `${REPO_URL}/blob/main/CHANGELOG.md`;
 export const DOCS_URL = `${REPO_URL}/tree/main/docs`;
 /** The user guide as published with the web app (docs/USER_GUIDE.md). */
 export const GUIDE_URL = 'https://emcommplanner.org/guide';
+/** The privacy policy as published with the web app (docs/PRIVACY.md). */
+export const PRIVACY_URL = 'https://emcommplanner.org/privacy';
 
 export const PUBLISHER = 'KK4ODA';
 export const COPYRIGHT = `© ${new Date().getFullYear()} ${PUBLISHER}`;

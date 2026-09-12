@@ -34,7 +34,7 @@ export default function Login() {
     <AuthLayout
       title="Sign in"
       description="Use the account your ARES group admin set up for you."
-      footer={<span>New here? Read the <Link to={ROUTES.guide} className="underline underline-offset-4 hover:text-foreground">user guide</Link>. Trouble signing in? Contact your group administrator.</span>}
+      footer={<span>New here? Read the <Link to={ROUTES.guide} className="underline underline-offset-4 hover:text-foreground">user guide</Link>. Trouble signing in? Contact your group administrator. <Link to={ROUTES.privacy} className="underline underline-offset-4 hover:text-foreground">Privacy policy</Link>.</span>}
     >
       <Tabs value={mode} onValueChange={(v) => setMode(/** @type {any} */ (v))}>
         <TabsList className="mb-4 grid w-full grid-cols-2">

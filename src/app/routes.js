@@ -24,6 +24,7 @@ export const ROUTES = Object.freeze({
   profile: '/profile',
   about: '/profile?tab=about',
   guide: '/guide',
+  privacy: '/privacy',
   login: '/login',
   resetPassword: '/reset-password',
 });

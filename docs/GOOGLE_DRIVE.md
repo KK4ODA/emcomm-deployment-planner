@@ -18,7 +18,7 @@ It works from the browser only. Google refuses its sign-in inside embedded webvi
 
 ## Current state (2026-09-12)
 
-Done for emcommplanner.org: Google Cloud project **EmComm Planner** (id `emcomm-planner`, owner kk4oda@gmail.com), Drive API enabled, consent screen "EmComm Planner" (External), web client "EmComm Planner web" with origins `https://emcommplanner.org` and `http://localhost:5173`, repository variable `VITE_GOOGLE_CLIENT_ID` set. The consent screen is in **Testing**: only the Google accounts listed under *Google Auth Platform › Audience › Test users* can post the sheet (kk4oda@gmail.com so far; add planners there, up to 100). Publishing it for anyone needs a homepage URL and a privacy policy URL on the Branding page; the scope is non-sensitive, so no Google review follows.
+Done for emcommplanner.org: Google Cloud project **EmComm Planner** (id `emcomm-planner`, owner kk4oda@gmail.com), Drive API enabled, consent screen "EmComm Planner" (External), web client "EmComm Planner web" with origins `https://emcommplanner.org` and `http://localhost:5173`, repository variable `VITE_GOOGLE_CLIENT_ID` set. The consent screen is **published (In production)** with homepage https://emcommplanner.org and privacy policy https://emcommplanner.org/privacy (`docs/PRIVACY.md`), so any Google account can post the sheet; the scope is non-sensitive, so no Google review is involved.
 
 ## What operators see
 

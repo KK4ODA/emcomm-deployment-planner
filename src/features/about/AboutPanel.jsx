@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Bug, BookOpen, Download, ExternalLink, FileText, Github, RefreshCw, Monitor, Globe, Smartphone } from 'lucide-react';
+import { Bug, BookOpen, Download, ExternalLink, FileText, Github, RefreshCw, Monitor, Globe, ShieldCheck, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,7 @@ import { isDesktopApp, openExternal, platformLabel } from '@/lib/platform';
 import { APP_NAME } from '@/lib/constants';
 import {
   APP_VERSION, UPDATE_CHANNEL, COPYRIGHT, REPO_URL, LATEST_RELEASE_URL, ISSUES_URL, DOCS_URL, CHANGELOG_URL,
-  releaseNotesUrl, isPrerelease, GUIDE_URL } from '@/lib/appInfo';
+  releaseNotesUrl, isPrerelease, GUIDE_URL, PRIVACY_URL } from '@/lib/appInfo';
 import { requestUpdateCheck } from '@/features/desktop/DesktopUpdater';
 
 const PLATFORM = {
@@ -75,6 +75,7 @@ export function AboutPanel() {
             <ResourceLink icon={BookOpen} href={DOCS_URL} title="Documentation" detail="Architecture, offline behaviour, backend, releases" />
             <ResourceLink icon={FileText} href={CHANGELOG_URL} title="Change log" detail="All versions" />
             <ResourceLink icon={Github} href={REPO_URL} title="Source code" detail="KK4ODA/emcomm-deployment-planner" />
+            <ResourceLink icon={ShieldCheck} href={PRIVACY_URL} title="Privacy policy" detail="What the app stores, who sees it, and how the Google Sheet feature handles Google data" />
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
             Works offline for viewing cached deployments and for creating or completing tasks; changes sync

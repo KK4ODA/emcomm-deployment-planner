@@ -203,6 +203,13 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-12 **Privacy policy and Google publishing**: `docs/PRIVACY.md`
+  rendered at `/privacy` by `pages/Privacy.jsx` through the shared
+  `components/common/MarkdownDoc` (the guide now uses it too); linked from
+  the user menu, About and sign-in. Google Cloud project `emcomm-planner`
+  holds the OAuth client; consent screen published to production with the
+  homepage and this policy, so any Google account can post the roster
+  sheet.
 - 2026-09-12 **Tasking** (migration `023`, applied; `aprs-ingest` v5):
   `ops_tasks` with a monotonic ladder (issued > acknowledged > en_route >
   on_scene > complete | cancelled), RPCs `dispatch_task`, `set_task_state`
