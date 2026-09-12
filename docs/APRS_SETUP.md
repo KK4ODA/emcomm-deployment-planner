@@ -57,7 +57,7 @@ The token is what lets the bridge and Graywolf write into your group. It is show
 
    The planner URL is the address only: no `/aprs-ingest`, no `?token=`. If you paste the webhook URL into the Planner URL field, *Test link* fails with `decode /aprs-ingest/ping: invalid character 'o'`.
 
-If you lose the token, revoke the bridge on this page and create a new one; the old token stops working immediately. One bridge per Graywolf station.
+Closed the dialog too soon? Click **Setup** next to the bridge. It shows the planner URL and the webhook URL again at any time. The token itself cannot be shown again (the planner stores only its hash); **Issue a new token** in that dialog gives you a fresh one, and the old one stops working at that moment, so paste the new token into Emcomm Objects and update the URL in the Graywolf Actions. One bridge per Graywolf station.
 
 **You leave this step with:** the planner URL, the token, and the webhook URL.
 

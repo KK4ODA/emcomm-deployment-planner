@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { RadioTower, Plus, Copy, Ban, CheckCircle2, AlertTriangle, MessageSquare, Send } from 'lucide-react';
+import { RadioTower, Plus, Copy, Ban, CheckCircle2, AlertTriangle, MessageSquare, Send, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,8 @@ import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useAresGroups, useUsers, useAprsBridges, useAprsActions, useAprsOutbox, useAprsLatest, reportMutationError } from '@/hooks/useEntities';
-import { createBridge, revokeBridge, functionsBaseUrl } from '@/api/aprs';
+import { createBridge, revokeBridge, rotateBridgeToken, functionsBaseUrl } from '@/api/aprs';
+import { useConfirm } from '@/components/common/ConfirmDialog';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { ageMinutes, ageBucket, positionsByUser, newBridgeToken, sha256Hex, APRS_ACTIONS } from '@/lib/aprs';
@@ -65,7 +66,8 @@ export default function Aprs() {
   const [groupId, setGroupId] = useState('');
   const activeGroup = groupId || deployment?.ares_group_id || myGroups[0]?.id || '';
   const [newName, setNewName] = useState('');
-  const [issued, setIssued] = useState(/** @type {{ name: string, token: string }|null} */ (null));
+  const [issued, setIssued] = useState(/** @type {{ id: string, name: string, token: string|null }|null} */ (null));
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [maxAge, setMaxAge] = useState('180');
 
   const bridges = useMemo(() => (bridgesQ.data ?? []).filter(b => b.ares_group_id === activeGroup), [bridgesQ.data, activeGroup]);
@@ -85,9 +87,18 @@ export default function Aprs() {
       const row = await createBridge({ groupId: activeGroup, name: newName.trim() || 'Graywolf', tokenHash: await sha256Hex(token), createdBy: user?.id ?? null });
       return { row, token };
     },
-    onSuccess: ({ row, token }) => { queryClient.invalidateQueries({ queryKey: queryKeys.aprsBridges }); setIssued({ name: row.name, token }); setNewName(''); },
+    onSuccess: ({ row, token }) => { queryClient.invalidateQueries({ queryKey: queryKeys.aprsBridges }); setIssued({ id: row.id, name: row.name, token }); setNewName(''); },
     onError: reportMutationError('Create bridge'),
   });
+  const rotate = useMutation({
+    mutationFn: async (/** @type {string} */ id) => { const token = newBridgeToken(); await rotateBridgeToken(id, await sha256Hex(token)); return token; },
+    onSuccess: (token) => { queryClient.invalidateQueries({ queryKey: queryKeys.aprsBridges }); setIssued(cur => (cur ? { ...cur, token } : cur)); toast.success('New token issued. The old one no longer works.'); },
+    onError: reportMutationError('Issue a new token'),
+  });
+  const reissue = async () => {
+    if (!issued) return;
+    if (await confirm({ title: `Issue a new token for ${issued.name}?`, description: 'The current token stops working the moment the new one is issued. Paste the new token into Emcomm Objects and update the webhook URL in the four Graywolf Actions.', confirmLabel: 'Issue new token', destructive: true })) rotate.mutate(issued.id);
+  };
   const revoke = useMutation({ mutationFn: (/** @type {string} */ id) => revokeBridge(id), onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.aprsBridges }); toast.success('Bridge revoked'); }, onError: reportMutationError('Revoke bridge') });
   const copy = (t) => navigator.clipboard?.writeText(t).then(() => toast.success('Copied')).catch(() => toast.error('Clipboard unavailable'));
   const base = functionsBaseUrl();
@@ -125,10 +136,11 @@ export default function Aprs() {
                       <p className="text-xs text-muted-foreground">{b.revoked_at ? `Revoked ${formatDateTime(b.revoked_at)}` : b.last_seen_at ? `Last report ${relativeTime(b.last_seen_at)}${b.last_stations != null ? `, ${b.last_stations} stations` : ''}` : 'Never reported yet'}{b.last_error ? ` · ${b.last_error}` : ''}</p>
                     </div>
                     {b.revoked_at ? <Badge variant="muted">revoked</Badge> : b.last_seen_at && ageMinutes(b.last_seen_at, now) <= 5 ? <Badge variant="success">online</Badge> : <Badge variant="warning">quiet</Badge>}
+                    {!b.revoked_at && <Button size="sm" variant="ghost" onClick={() => setIssued({ id: b.id, name: b.name, token: null })} title="Planner URL, webhook URL and a new token if you need one"><KeyRound /> Setup</Button>}
                     {!b.revoked_at && <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => revoke.mutate(b.id)}><Ban /> Revoke</Button>}
                   </li>
                 ))}
-                {bridges.length === 0 && <li className="px-3 py-3 text-sm text-muted-foreground">No bridge yet. Create one per Graywolf station; the token is shown once.</li>}
+                {bridges.length === 0 && <li className="px-3 py-3 text-sm text-muted-foreground">No bridge yet. Create one per Graywolf station. The token is shown once; Setup reopens the URLs and can issue a new token.</li>}
               </ul>
               <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="flex gap-2 border-t p-2">
                 <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Bridge name, e.g. EOC Graywolf" aria-label="Bridge name" />
@@ -168,7 +180,7 @@ export default function Aprs() {
         <div className="space-y-4">
           <Section title="Set up Graywolf" icon={AlertTriangle}>
             <ol className="list-decimal space-y-2 pl-5 text-sm">
-              <li>Create a bridge above. The dialog gives you three strings: the token, the planner URL and a webhook URL.</li>
+              <li>Create a bridge above. The dialog gives you three strings: the token, the planner URL and a webhook URL. Closed it? <strong>Setup</strong> next to the bridge shows the URLs again and can issue a new token.</li>
               <li>In <strong>Emcomm Objects</strong> (next to Graywolf), open Settings › EmComm Planner. <strong>Planner URL</strong> is <span className="font-mono text-xs">{base}</span> and nothing more; <strong>Bridge token</strong> is the token. Enable <em>Forward heard stations</em>, click <em>Test link</em>, save. Stations then appear here within a minute.</li>
               <li>For APRS check-ins, create four Graywolf <strong>Actions</strong> (Graywolf › Actions › New Action), one per command. Every field is the same except the name. Scroll the New Action form top to bottom and set:
                 <Table className="mt-2 text-xs">
@@ -224,22 +236,24 @@ export default function Aprs() {
       <Dialog open={!!issued} onOpenChange={(o) => !o && setIssued(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Bridge token for {issued?.name}</DialogTitle>
-            <DialogDescription>Three things go to two places. The token is shown once and stored only as a hash; if you lose it, revoke this bridge and create another.</DialogDescription>
+            <DialogTitle>Bridge setup: {issued?.name}</DialogTitle>
+            <DialogDescription>{issued?.token ? 'Three strings go to two places. The token is shown once and stored only as a hash.' : 'The planner keeps only a hash of the token, so it cannot be shown again. The URLs are always available here; issue a new token if you no longer have the old one.'}</DialogDescription>
           </DialogHeader>
           <FormField label="1. Bridge token" hint="Emcomm Objects › Settings › EmComm Planner › Bridge token">
-            {() => <div className="flex gap-2"><Input readOnly value={issued?.token ?? ''} className="font-mono text-xs" aria-label="Bridge token" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(issued?.token ?? '')}><Copy /></Button></div>}
+            {() => issued?.token
+              ? <div className="flex gap-2"><Input readOnly value={issued.token} className="font-mono text-xs" aria-label="Bridge token" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(issued.token ?? '')}><Copy /></Button></div>
+              : <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm"><span className="text-muted-foreground">Not stored; only its hash is kept.</span><Button size="sm" variant="outline" onClick={reissue} loading={rotate.isPending}><KeyRound /> Issue a new token</Button></div>}
           </FormField>
           <FormField label="2. Planner URL" hint="Emcomm Objects › Settings › EmComm Planner › Planner URL. Just this address: no token, no /aprs-ingest.">
             {({ id }) => <div className="flex gap-2"><Input id={id} readOnly value={base} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(base)}><Copy /></Button></div>}
           </FormField>
-
-          <FormField label="3. Webhook URL for Graywolf Actions" hint="Graywolf › Actions › handler URL, for each of checkin, onpos, checkout and status. Not for Emcomm Objects.">
-            {({ id }) => <div className="flex items-center gap-2"><Input id={id} readOnly value={`${base}/aprs-ingest/action?token=${issued?.token ?? ''}`} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(`${base}/aprs-ingest/action?token=${issued?.token ?? ''}`)}><Copy /></Button></div>}
+          <FormField label="3. Webhook URL for Graywolf Actions" hint={issued?.token ? 'Graywolf › Actions › URL, the same in all four Actions (checkin, onpos, checkout, status). Not for Emcomm Objects.' : 'Graywolf › Actions › URL, with your token in place of YOUR-TOKEN. Not for Emcomm Objects.'}>
+            {({ id }) => { const url = `${base}/aprs-ingest/action?token=${issued?.token ?? 'YOUR-TOKEN'}`; return <div className="flex items-center gap-2"><Input id={id} readOnly value={url} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(url)}><Copy /></Button></div>; }}
           </FormField>
           <DialogFooter><Button onClick={() => setIssued(null)}>Done</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </QueryState>
   );
 }

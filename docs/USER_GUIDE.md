@@ -120,7 +120,7 @@ Exports from the board: **ICS 204** (assignment list per site), **ICS 205A** (co
 
 - **Members**: roles, group join requests, invitations, and **Import roster** from a CSV (email, call sign, name, phone, licence class) with a preview before anything is created.
 - **ARES Groups**: the organisations. Every deployment, channel, asset and scheme belongs to one, and members only see their own groups' data.
-- **APRS** (planners): create a bridge token per Graywolf station, follow the setup steps for Emcomm Objects and Graywolf Actions, then watch stations heard, APRS check-ins and outbound messages. The full walk-through is docs/APRS_SETUP.md in the project.
+- **APRS** (planners): create a bridge per Graywolf station, follow the setup steps for Emcomm Objects and Graywolf Actions, then watch stations heard, APRS check-ins and outbound messages. *Setup* next to a bridge shows its URLs again and can issue a new token; the old token is never shown twice. The full walk-through is docs/APRS_SETUP.md in the project.
 - **Notification delivery**: push works out of the box. Email and text message switch on when the administrator adds the provider keys on the server. The switches on each profile say when a channel is unavailable.
 
 ---

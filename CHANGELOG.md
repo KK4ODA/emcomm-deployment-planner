@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- APRS: a **Setup** button on each bridge reopens the planner URL and webhook URL and can issue a new token when the old one was lost (the old token stops working). Tokens themselves are still shown only once.
+
 ### Changed
 - APRS page: the Set up Graywolf section now lists every field of Graywolf's New Action form, section by section, with the value to enter. The check-in webhook also accepts Graywolf's bare argument keys.
 

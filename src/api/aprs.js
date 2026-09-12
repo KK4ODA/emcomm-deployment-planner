@@ -25,6 +25,11 @@ export async function createBridge({ groupId, name, tokenHash, createdBy }) {
   return unwrap(await supabase.from(TABLES.aprsBridges).insert({ ares_group_id: groupId, name, token_hash: tokenHash, created_by: createdBy }).select().single());
 }
 
+/** Replace a bridge's token. The old token stops working immediately; only the new hash is stored. */
+export async function rotateBridgeToken(id, tokenHash) {
+  return unwrap(await supabase.from(TABLES.aprsBridges).update({ token_hash: tokenHash, last_error: null }).eq('id', id).select().single());
+}
+
 export async function revokeBridge(id) {
   return unwrap(await supabase.from(TABLES.aprsBridges).update({ revoked_at: new Date().toISOString() }).eq('id', id).select().single());
 }
