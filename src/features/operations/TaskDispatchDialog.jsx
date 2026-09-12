@@ -10,6 +10,26 @@ import { TASK_KINDS, TASK_PRIORITY } from '@/lib/tasking';
 
 const NONE = '__none__';
 
+/** Site or free text. Lives outside the dialog so typing does not remount the input. */
+function SitePicker({ label, sites, value, onChange, text, onText }) {
+  return (
+    <FormField label={label}>
+      {({ id }) => (
+        <div className="space-y-1.5">
+          <Select value={value || NONE} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
+            <SelectTrigger id={id}><SelectValue placeholder="Site" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Not a site (type below)</SelectItem>
+              {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {!value && <Input value={text} onChange={(e) => onText(e.target.value)} placeholder="e.g. Mile 12 ramp, corner of Peachtree and MLK" className="text-sm" />}
+        </div>
+      )}
+    </FormField>
+  );
+}
+
 /**
  * Dispatch a task to a unit. Kept to the fields a desk actually fills under
  * pressure: who, what, from, to, priority. Everything else is optional.
@@ -31,22 +51,6 @@ export function TaskDispatchDialog({ open, onClose, positions, sites, onSubmit, 
       fromSiteId: form.fromSiteId || null, toSiteId: form.toSiteId || null, fromText: form.fromSiteId ? null : form.fromText.trim() || null, toText: form.toSiteId ? null : form.toText.trim() || null,
     });
   };
-  const SitePicker = ({ value, onChange, text, onText, label }) => (
-    <FormField label={label}>
-      {({ id }) => (
-        <div className="space-y-1.5">
-          <Select value={value || NONE} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
-            <SelectTrigger id={id}><SelectValue placeholder="Site" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>Not a site (type below)</SelectItem>
-              {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          {!value && <Input value={text} onChange={(e) => onText(e.target.value)} placeholder="e.g. Mile 12 ramp, corner of Peachtree and MLK" className="text-sm" />}
-        </div>
-      )}
-    </FormField>
-  );
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
@@ -88,8 +92,8 @@ export function TaskDispatchDialog({ open, onClose, positions, sites, onSubmit, 
             {({ id }) => <Input id={id} value={form.title} onChange={(e) => set('title')(e.target.value)} placeholder="e.g. Pick up bib 1234, ankle, ambulatory" required autoFocus maxLength={120} />}
           </FormField>
           <div className="grid gap-4 sm:grid-cols-2">
-            <SitePicker label="From" value={form.fromSiteId} onChange={set('fromSiteId')} text={form.fromText} onText={set('fromText')} />
-            <SitePicker label="To" value={form.toSiteId} onChange={set('toSiteId')} text={form.toText} onText={set('toText')} />
+            <SitePicker label="From" sites={sites} value={form.fromSiteId} onChange={set('fromSiteId')} text={form.fromText} onText={set('fromText')} />
+            <SitePicker label="To" sites={sites} value={form.toSiteId} onChange={set('toSiteId')} text={form.toText} onText={set('toText')} />
           </div>
           <FormField label="Details" hint="Optional: contact on scene, condition, what to bring">
             {({ id }) => <Textarea id={id} rows={2} value={form.detail} onChange={(e) => set('detail')(e.target.value)} />}
