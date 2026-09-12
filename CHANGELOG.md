@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Changed
+- APRS setup: the webhook URL shown after the token is gone now ends in `PASTE-YOUR-TOKEN-HERE` with a warning, since a copied placeholder makes Graywolf Actions fail silently with `denied: bad token`; hints and the setup guide count eight Actions.
+
 ### Fixed
 - iPhone: text fields, selects and text areas are 16px on phones so Safari no longer zooms the page in when one is focused (the zoom used to stick and make every page look too wide afterwards). APRS command examples wrap as whole tokens.
 

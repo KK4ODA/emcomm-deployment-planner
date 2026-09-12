@@ -90,7 +90,7 @@ Check-ins do not go through Emcomm Objects. Graywolf calls the planner directly 
 | Identity | **Name** | `checkin` for the first Action; then `onpos`, `checkout`, `status`; and for tasking `ack`, `enroute`, `onscene`, `done`. The name is the word operators type after `@@#`; case does not matter on the air. |
 | Identity | **Description** | Optional, e.g. `EmComm Planner check-in`. |
 | Identity | **Type** | **Webhook**. The *Command* section disappears and a *Webhook* section takes its place. |
-| Webhook | **URL** | The webhook URL from Step 3, the one ending in `/aprs-ingest/action?token=ebt_…`. Same URL in all four Actions. |
+| Webhook | **URL** | The webhook URL from Step 3, the one ending in `/aprs-ingest/action?token=ebt_…`. Same URL in all eight Actions. It must carry the real token: if it still ends in `PASTE-YOUR-TOKEN-HERE` (or `YOUR-TOKEN`), every command is answered `denied: bad token`. |
 | Webhook | **Method** | **POST**. |
 | Webhook | **Headers** | None. |
 | Webhook | **Body template** | Leave empty. Graywolf then posts its default form fields (`action`, `sender_callsign`, `source`, `otp_verified`), which is what the planner reads. |
@@ -153,7 +153,7 @@ Only members of the bridge's ARES group are accepted, and a check-in applies to 
 | Emcomm Objects pill stays red, *Test link* fails | Token pasted with a trailing space or from the wrong bridge; planner URL missing `/functions/v1`; the computer has no internet. |
 | *Test link*: `decode /aprs-ingest/ping: invalid character 'o'` or `no sender` | The Planner URL field holds the webhook URL. Replace it with the planner URL alone (`https://<ref>.supabase.co/functions/v1`). Emcomm Objects 0.3.1 and later trims this automatically. |
 | Stations heard is empty on the planner | Graywolf is not hearing anyone (check Graywolf first); *Forward heard stations* unticked; the bridge's last report on the APRS page is old. |
-| `denied: bad token` on the air | The webhook URL in Graywolf has a typo or belongs to a revoked bridge. Copy it again from the planner (revoke and create a new bridge if needed). |
+| `denied: bad token` on the air | The webhook URL in Graywolf still has the placeholder instead of the token, has a typo, or belongs to a revoked bridge. Edit each Action's URL; if the token is lost, *Setup › Issue a new token* and paste it into Emcomm Objects and all eight Actions. |
 | `<CALL> not a member` | The sender's call sign is not on any member's profile and does not match a member's base call, or the member is not in this group. |
 | `no live assignment` | The operator has no accepted assignment whose shift is live now in the active deployment. Check Staffing. |
 | Offers do not arrive over APRS | The operator has not enabled APRS notifications; *Send messages* is unticked in Emcomm Objects; the message is longer than 67 characters and was truncated (that is expected). |

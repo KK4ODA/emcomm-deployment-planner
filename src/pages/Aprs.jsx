@@ -206,7 +206,7 @@ export default function Aprs() {
                   <TableHeader><TableRow><TableHead className="w-28">Section</TableHead><TableHead className="w-40">Field</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {GRAYWOLF_ACTION_FIELDS.map((r, i) => (
-                      <TableRow key={i}><TableCell className="font-medium">{r.section}</TableCell><TableCell>{r.field}</TableCell><TableCell>{r.value === '__URL__' ? <span className="break-all font-mono">{base}/aprs-ingest/action?token=YOUR-TOKEN</span> : r.value}</TableCell></TableRow>
+                      <TableRow key={i}><TableCell className="font-medium">{r.section}</TableCell><TableCell>{r.field}</TableCell><TableCell>{r.value === '__URL__' ? <span className="break-all font-mono">{base}/aprs-ingest/action?token=PASTE-YOUR-TOKEN-HERE</span> : r.value}</TableCell></TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -266,8 +266,8 @@ export default function Aprs() {
           <FormField label="2. Planner URL" hint="Emcomm Objects › Settings › EmComm Planner › Planner URL. Just this address: no token, no /aprs-ingest.">
             {({ id }) => <div className="flex gap-2"><Input id={id} readOnly value={base} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(base)}><Copy /></Button></div>}
           </FormField>
-          <FormField label="3. Webhook URL for Graywolf Actions" hint={issued?.token ? 'Graywolf › Actions › URL, the same in all four Actions (checkin, onpos, checkout, status). Not for Emcomm Objects.' : 'Graywolf › Actions › URL, with your token in place of YOUR-TOKEN. Not for Emcomm Objects.'}>
-            {({ id }) => { const url = `${base}/aprs-ingest/action?token=${issued?.token ?? 'YOUR-TOKEN'}`; return <div className="flex items-center gap-2"><Input id={id} readOnly value={url} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(url)}><Copy /></Button></div>; }}
+          <FormField label="3. Webhook URL for Graywolf Actions" hint={issued?.token ? 'Graywolf › Actions › URL, the same in all eight Actions (checkin, onpos, checkout, status, ack, enroute, onscene, done). Not for Emcomm Objects.' : 'Graywolf › Actions › URL. The token is not shown again, so replace PASTE-YOUR-TOKEN-HERE with the token you saved, or issue a new one above. Pasted as is, every command answers "denied: bad token". Not for Emcomm Objects.'}>
+            {({ id }) => { const url = `${base}/aprs-ingest/action?token=${issued?.token ?? 'PASTE-YOUR-TOKEN-HERE'}`; return <div className="flex items-center gap-2"><Input id={id} readOnly value={url} className="font-mono text-xs" onFocus={(e) => e.target.select()} /><Button variant="outline" onClick={() => copy(url)}><Copy /></Button></div>; }}
           </FormField>
           <DialogFooter><Button onClick={() => setIssued(null)}>Done</Button></DialogFooter>
         </DialogContent>
