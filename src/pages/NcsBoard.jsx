@@ -122,8 +122,8 @@ function NcsContent() {
       <PageHeader
         icon={Headphones}
         eyebrow={deployment.name}
-        title="Net control board"
-        description={<>Who is on station and who is not, as of {asOf ? formatDateTime(asOf, 'HH:mm:ss') : '—'}{!isOnline && <span className="ml-2 inline-flex items-center gap-1 text-warning"><CloudOff className="h-3.5 w-3.5" /> offline, showing the last copy</span>}{pendingCount > 0 && <span className="ml-2 text-warning">· {pendingCount} change{pendingCount === 1 ? '' : 's'} waiting to sync</span>}</>}
+        title="Operations"
+        description={<>The event-day board for whoever runs the desk: who is on station and who is not, plus the log. As of {asOf ? formatDateTime(asOf, 'HH:mm:ss') : '—'}{!isOnline && <span className="ml-2 inline-flex items-center gap-1 text-warning"><CloudOff className="h-3.5 w-3.5" /> offline, showing the last copy</span>}{pendingCount > 0 && <span className="ml-2 text-warning">· {pendingCount} change{pendingCount === 1 ? '' : 's'} waiting to sync</span>}</>}
         actions={(
           <>
             {nets.length > 0 && (

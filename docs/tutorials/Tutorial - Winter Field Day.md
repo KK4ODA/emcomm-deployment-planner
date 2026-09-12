@@ -6,7 +6,7 @@
 > Audience: the station captain or club planner. Operators read Steps 6 and 9.
 > Time: about an hour. The exercise profile adds objectives and per-period shifts to what a public-service event uses.
 
-Written for EmComm Planner 2.5.4. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.6.1. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 
@@ -263,13 +263,13 @@ Each operator opens **My packet** on the way out: report time, the station and i
 
 *My packet for the first HF slot: WFD HF, report 10:45 for an 11:00 start, talk-in on 146.550, the campground pin, and Check in.*
 
-### Net control board and readiness
+### The Operations board and readiness
 
-The captain keeps **Net control** open with the window set to Everything: who is on station at each position and who has not arrived, plus ICS 214 for the log. **Readiness** shows what is still open before the contest clock starts.
+The captain keeps **Operations** open with the window set to Everything: who is on station at each position and who has not arrived, plus ICS 214 for the log. **Readiness** shows what is still open before the contest clock starts.
 
-![Net control for the weekend, one line per position, worst first.](img/wfd-17-net-control.jpg)
+![The Operations board for the weekend, one line per position, worst first.](img/wfd-17-net-control.jpg)
 
-*Net control for the weekend, one line per position, worst first.*
+*The Operations board for the weekend, one line per position, worst first.*
 
 ![Readiness before the weekend: open seats, the unpublished plan and the unsigned checklist are the three lines to clear.](img/wfd-14-readiness.jpg)
 

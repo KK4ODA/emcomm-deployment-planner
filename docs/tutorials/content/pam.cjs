@@ -242,8 +242,8 @@ module.exports = {
       key: 'day', h: 'Race day', step: true, blocks: [
         { h2: 'Safety checklist', p: 'Start the standard checklist under **Safety**, adjust the lines to this event (the generator lines become N/A, the trip-hazard and weather lines matter), answer every line on the morning and sign. Signing locks the record and clears the Readiness warning.' },
         { img: 'pam-17-safety', caption: 'The safety checklist: OK or N/A per line, notes, and the Safety Officer\'s signature. It also exports as PDF for the served agency.' },
-        { h2: 'Net control board', p: 'Operators tap **Check in**, **On position** and **Check out** on their packets, over the air through APRS if the group runs a Graywolf station, or net control records it for them. **Net control** lists every live shift worst first and exports ICS 204, 205A and 214 from the same data.' },
-        { img: 'pam-18-net-control', caption: 'The net control board with the window set to Everything: one line per shift, worst first. On race day the lines turn green as operators check in and go on position; the log on the right feeds the ICS 214.' },
+        { h2: 'The Operations board', p: 'Operators tap **Check in**, **On position** and **Check out** on their packets, over the air through APRS if the group runs a Graywolf station, or the desk records it for them. **Operations** is the event-day board for whoever runs the desk: every live shift worst first, the running log, and ICS 204, 205A and 214 exported from the same data.' },
+        { img: 'pam-18-net-control', caption: 'The Operations board with the window set to Everything: one line per shift, worst first. On race day the lines turn green as operators check in and go on position; the log on the right feeds the ICS 214.' },
         { bullets: [
           'The time window at the top defaults to Now ±6 h so the desk sees what is live; set it to Everything while planning.',
           'Filter by net so the SAG desk sees vehicles only.',

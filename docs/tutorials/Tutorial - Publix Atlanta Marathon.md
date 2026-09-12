@@ -6,7 +6,7 @@
 > Audience: a planner or admin building the deployment. Operators can read Steps 7 and 10 to see what they get.
 > Time: about 90 minutes the first year. The second year starts from Duplicate and takes twenty.
 
-Written for EmComm Planner 2.5.4. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.6.1. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 
@@ -348,13 +348,13 @@ Start the standard checklist under **Safety**, adjust the lines to this event (t
 
 *The safety checklist: OK or N/A per line, notes, and the Safety Officer's signature. It also exports as PDF for the served agency.*
 
-### Net control board
+### The Operations board
 
-Operators tap **Check in**, **On position** and **Check out** on their packets, over the air through APRS if the group runs a Graywolf station, or net control records it for them. **Net control** lists every live shift worst first and exports ICS 204, 205A and 214 from the same data.
+Operators tap **Check in**, **On position** and **Check out** on their packets, over the air through APRS if the group runs a Graywolf station, or the desk records it for them. **Operations** is the event-day board for whoever runs the desk: every live shift worst first, the running log, and ICS 204, 205A and 214 exported from the same data.
 
-![The net control board with the window set to Everything: one line per shift, worst first. On race day the lines turn green as operators check in and go on position; the log on the right feeds the ICS 214.](img/pam-18-net-control.jpg)
+![The Operations board with the window set to Everything: one line per shift, worst first. On race day the lines turn green as operators check in and go on position; the log on the right feeds the ICS 214.](img/pam-18-net-control.jpg)
 
-*The net control board with the window set to Everything: one line per shift, worst first. On race day the lines turn green as operators check in and go on position; the log on the right feeds the ICS 214.*
+*The Operations board with the window set to Everything: one line per shift, worst first. On race day the lines turn green as operators check in and go on position; the log on the right feeds the ICS 214.*
 
 - The time window at the top defaults to Now ±6 h so the desk sees what is live; set it to Everything while planning.
 - Filter by net so the SAG desk sees vehicles only.

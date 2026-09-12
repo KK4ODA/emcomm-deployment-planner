@@ -139,7 +139,7 @@ Only members of the bridge's ARES group are accepted, and a check-in applies to 
 
 1. From a radio or an APRS app on a phone, send `@@#status` to the station call. Expect `ok: no live assignment` or `ok:` followed by your tactical call and status within a few seconds.
 2. On the planner's APRS page, the message appears under *APRS check-ins* with the result.
-3. Open **Net control** on the planner. With a live shift, your line shows the last APRS fix and the distance to your site.
+3. Open **Operations** on the planner. With a live shift, your line shows the last APRS fix and the distance to your site.
 4. Turn on APRS notifications on your profile, have a planner offer you a shift, and watch the offer arrive as an APRS message. It shows under *Outbound messages* on the APRS page as pending, then sent.
 5. Optional: in Emcomm Objects, click **Import deployment sites as objects**. The active deployment's sites arrive as disabled objects; enable the ones you want Graywolf to beacon.
 

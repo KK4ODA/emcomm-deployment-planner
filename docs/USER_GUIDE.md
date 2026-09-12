@@ -106,9 +106,9 @@ Under the Publish button a line says which version operators have and since when
 
 ---
 
-## 4. Event day: net control
+## 4. Event day: the Operations board
 
-**Net control** lists every live shift, worst first: nobody assigned, not heard from, arriving, on station, released. Record check-ins on someone's behalf, add log notes and incidents. When the group runs the Graywolf bridge, each operator's last APRS fix and distance to the site appear on their line.
+**Operations** is the board for whoever runs the desk on the day (net control, the assistant, or the coordinator). It lists every live shift, worst first: nobody assigned, not heard from, arriving, on station, released. Record check-ins on someone's behalf, add log notes and incidents. When the group runs the Graywolf bridge, each operator's last APRS fix and distance to the site appear on their line.
 
 Exports from the board: **ICS 204** (assignment list per site), **ICS 205A** (communications list), **ICS 214** (activity log). The board keeps working from cached data when the connection drops and shows "as of" the last refresh.
 

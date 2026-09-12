@@ -10,6 +10,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ## [Unreleased]
 
 ### Changed
+- The **Net control** page is now called **Operations**: it is the event-day board for whoever runs the desk, not only the voice net control operator. Same URL, same content.
+
+### Changed
 - Sites › Map: the APRS overlay now defaults to the operators of this deployment (anyone holding or offered a seat), with Group members and All stations heard as alternatives.
 
 ### Fixed
