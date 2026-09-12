@@ -10,7 +10,7 @@ import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useAprsLatest, usePositions, useShifts, useAssignments, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
+import { useLocations, useItems, useUsers, useTasks, useMapLayers, useCoverageLog, useAprsLatest, usePositions, useAssignments, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
 import { occupies } from '@/lib/staffing';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/db';
@@ -45,7 +45,6 @@ function SitesContent() {
   const coverageQ = useCoverageLog();
   const aprsQ = useAprsLatest();
   const positionsQ = usePositions();
-  const shiftsQ = useShifts();
   const assignmentsQ = useAssignments();
   const [aprsAge, setAprsAge] = useState('180');
   const [aprsScope, setAprsScope] = useLocalStorage('emcomm_sites_aprs_scope', 'deployment');
