@@ -40,8 +40,14 @@ async function authenticate(req: Request, url: URL): Promise<Bridge | null> {
   return data as Bridge
 }
 
-const baseCall = (cs: string) => String(cs || '').toUpperCase().trim().split('-')[0]
-const clean = (cs: string) => String(cs || '').toUpperCase().trim()
+// APRS payloads carry whatever the radio sent: NUL bytes and control characters
+// arrive in comments and even call signs, and Postgres refuses \u0000 in text
+// ("unsupported Unicode escape sequence"). Strip them before anything is stored.
+// deno-lint-ignore no-control-regex
+const CONTROL = /[\u0000-\u001f\u007f\ufffe\uffff]/g
+const scrub = (v: unknown, max = 200) => (v == null ? null : String(v).replace(CONTROL, '').trim().slice(0, max) || null)
+const baseCall = (cs: string) => (scrub(cs, 20) || '').toUpperCase().split('-')[0]
+const clean = (cs: string) => (scrub(cs, 20) || '').toUpperCase()
 
 // ── stations ─────────────────────────────────────────────────────────────────
 type StationDTO = Record<string, unknown>
@@ -66,22 +72,28 @@ async function ingestStations(bridge: Bridge, body: { stations?: StationDTO[]; s
     rows.push({
       ares_group_id: bridge.ares_group_id, bridge_id: bridge.id, callsign, base_call: baseCall(callsign),
       lat: p?.lat ?? null, lon: p?.lon ?? null, course: p?.course ?? null, speed_kt: p?.speed_kt ?? null, alt_m: p?.alt_m ?? null,
-      symbol: st.symbol_table || st.symbol_code ? `${st.symbol_table || '/'}${st.symbol_code || ''}` : null,
-      comment: st.comment ? String(st.comment).slice(0, 200) : null,
-      is_object: !!st.is_object, via: st.via ? String(st.via) : (st.gated ? 'is' : 'rf'),
+      symbol: st.symbol_table || st.symbol_code ? scrub(`${st.symbol_table || '/'}${st.symbol_code || ''}`, 2) : null,
+      comment: scrub(st.comment, 200),
+      is_object: !!st.is_object, via: scrub(st.via, 40) || (st.gated ? 'is' : 'rf'),
       heard_at: heard.toISOString(),
     })
   }
   let inserted = 0
+  let rejected = 0
   for (let i = 0; i < rows.length; i += 200) {
-    const { error, data } = await admin.from('aprs_positions').upsert(rows.slice(i, i + 200), { onConflict: 'ares_group_id,callsign,heard_at', ignoreDuplicates: true }).select('id')
-    if (error) throw error
-    inserted += data?.length ?? 0
+    const batch = rows.slice(i, i + 200)
+    const { error, data } = await admin.from('aprs_positions').upsert(batch, { onConflict: 'ares_group_id,callsign,heard_at', ignoreDuplicates: true }).select('id')
+    if (!error) { inserted += data?.length ?? 0; continue }
+    // One bad row should not lose the other 199: retry singly and count the rejects.
+    for (const row of batch) {
+      const one = await admin.from('aprs_positions').upsert([row], { onConflict: 'ares_group_id,callsign,heard_at', ignoreDuplicates: true }).select('id')
+      if (one.error) { rejected += 1; console.warn('aprs-ingest station rejected', row.callsign, one.error.message) } else inserted += one.data?.length ?? 0
+    }
   }
   await admin.from('aprs_bridges').update({ last_seen_at: new Date().toISOString(), last_stations: stations.length, last_error: null, ...(body.station_call ? { station_call: clean(body.station_call) } : {}) }).eq('id', bridge.id)
   // Housekeeping: keep 14 days of history.
   await admin.from('aprs_positions').delete().eq('ares_group_id', bridge.ares_group_id).lt('heard_at', new Date(Date.now() - 14 * 86400_000).toISOString())
-  return { received: stations.length, stored: inserted }
+  return { received: stations.length, stored: inserted, rejected }
 }
 
 // ── actions (check-in over APRS) ─────────────────────────────────────────────

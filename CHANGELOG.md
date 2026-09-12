@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- APRS ingest: a station whose comment or call sign carried a NUL or control character made Postgres reject the whole report (`unsupported Unicode escape sequence`, seen in Emcomm Objects as `stations: planner HTTP 500`). Such characters are now stripped and a single bad row no longer loses the batch.
+
 ### Added
 - **Packet**: a *Who is where* roster of the whole deployment grouped by site (call sign, name, phone), an *APRS check-in* block with the Graywolf station call and the four `@@#` commands when the group runs one, an *Event map* button for a shared map link set on the deployment, and a *Staffing roster* link when the roster is posted to Google Drive.
 - **Staffing**: *Roster CSV* export and *Google Sheet*, which posts the roster to the planner's Google Drive and updates the same sheet on later clicks (web app; needs the one-time OAuth client setup in docs/GOOGLE_DRIVE.md).
