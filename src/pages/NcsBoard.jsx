@@ -182,10 +182,7 @@ function NcsContent() {
         )}
       />
 
-      {rows.length === 0 ? (
-        <EmptyState icon={Headphones} title="No shifts in this window" description="Widen the time window, or add positions and shifts on the Staffing page." />
-      ) : (
-        <>
+      <>
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-6">
             <StatCard label="Open tasks" value={taskStats.open} icon={ListTodo} tone={taskStats.overdue ? 'critical' : taskStats.unacknowledged ? 'warning' : 'neutral'} hint={taskStats.unacknowledged ? `${taskStats.unacknowledged} not acknowledged` : taskStats.complete ? `${taskStats.complete} done` : undefined} />
             <StatCard label="On station" value={summary.onStation} icon={CheckCircle2} tone="success" />
@@ -196,6 +193,9 @@ function NcsContent() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+            {rows.length === 0 ? (
+              <EmptyState icon={Headphones} title="No shifts in this window" description="Widen the time window, or add positions and shifts on the Staffing page. Tasks and the log stay available either way." />
+            ) : (
             <ul className="space-y-2" aria-label="Positions">
               {rows.map(r => {
                 const meta = NCS_STATE[r.state];
@@ -239,6 +239,7 @@ function NcsContent() {
                 );
               })}
             </ul>
+            )}
 
             <aside className="space-y-4">
               <TaskBoard tasks={tasks} positionsById={positionsById} sitesById={siteById} canDispatch={canTask && isOnline} onDispatch={() => { setDispatchFor(null); setDispatchOpen(true); }} onStep={stepTask} busyId={taskBusy} now={now} />
@@ -261,8 +262,7 @@ function NcsContent() {
               </Section>
             </aside>
           </div>
-        </>
-      )}
+      </>
       <TaskDispatchDialog open={dispatchOpen} onClose={() => setDispatchOpen(false)} positions={positions} sites={locationsQ.data ? (locationsQ.data ?? []).filter(l => l.deployment_id === deploymentId) : []} onSubmit={submitDispatch} submitting={taskBusy === 'new'} presetPositionId={dispatchFor} />
       {confirmDialog}
     </QueryState>

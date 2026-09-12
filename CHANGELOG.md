@@ -9,6 +9,10 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- Dispatch dialog: typing a free-text From or To kept only the first character (the input remounted on every keystroke).
+- Operations: the Tasks panel and the log stay on screen when the time window holds no shifts, so a desk can dispatch on setup day or with the default window.
+
 ### Added
 - **Tasking.** The Operations board gains a Tasks panel and a *Dispatch* button (also a *Task* button on each position line): send a unit to pass a message, relay, pick up, deliver, stage, patrol, search, rendezvous or run a check, with from/to, priority and details. Operators get a *Your tasks* card on the packet with one button per step (Acknowledge, En route, On scene, Done; works offline) and a notification; over APRS the steps are `@@#ack N`, `@@#enroute N`, `@@#onscene N`, `@@#done N`. Open tasks turn amber and red when unacknowledged, every step writes to the activity log (so the ICS 214 fills itself), and the after-action review counts tasks and the median dispatch-to-scene time.
 
