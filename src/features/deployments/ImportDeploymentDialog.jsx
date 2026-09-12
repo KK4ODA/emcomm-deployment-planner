@@ -22,7 +22,7 @@ export const EXAMPLES_INDEX_URL = '/examples/index.json';
  */
 export function ImportDeploymentDialog({ open, onClose, groups, defaultGroupId = '', onSubmit, submitting }) {
   const fileRef = useRef(/** @type {HTMLInputElement|null} */ (null));
-  const [loaded, setLoaded] = useState(/** @type {ReturnType<typeof parseBundle>|null} */ (null));
+  const [loaded, setLoaded] = useState(/** @type {{ bundle: any, counts: ReturnType<typeof import('@/lib/deploymentBundle').bundleCounts> }|null} */ (null));
   const [sourceLabel, setSourceLabel] = useState('');
   const [examples, setExamples] = useState(/** @type {Array<{ file: string, title: string, description?: string }>} */ ([]));
   const [busy, setBusy] = useState('');
@@ -40,9 +40,9 @@ export function ImportDeploymentDialog({ open, onClose, groups, defaultGroupId =
   }, [open, defaultGroupId, groups]);
 
   const take = (text, label) => {
-    const r = parseBundle(text);
-    if (r.error) { setError(r.error); setLoaded(null); return; }
-    setError(''); setLoaded(r); setSourceLabel(label); setName(r.bundle.deployment.name);
+    const r = /** @type {any} */ (parseBundle(text));
+    if (r.error || !r.bundle) { setError(r.error || 'Could not read the file'); setLoaded(null); return; }
+    setError(''); setLoaded({ bundle: r.bundle, counts: r.counts }); setSourceLabel(label); setName(r.bundle.deployment.name);
   };
   const onFile = async (e) => {
     const f = e.target.files?.[0];

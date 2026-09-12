@@ -1,3 +1,14 @@
 {
-  "examples": []
+  "examples": [
+    {
+      "file": "publix-atlanta-marathon-2027.json",
+      "title": "Publix Atlanta Marathon 2027",
+      "description": "Public-service event: 19 sites, 36 positions, two nets, course map. Matches the marathon tutorial."
+    },
+    {
+      "file": "winter-field-day-2027.json",
+      "title": "Winter Field Day 2027",
+      "description": "Field exercise: stations with operating periods, 12 objectives, battery-only equipment lists. Matches the Winter Field Day tutorial."
+    }
+  ]
 }
