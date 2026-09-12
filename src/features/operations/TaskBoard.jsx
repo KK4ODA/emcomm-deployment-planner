@@ -45,7 +45,7 @@ export function TaskBoard({ tasks, positionsById, sitesById, canDispatch, onDisp
         {(t.detail || t.outcome) && <p className="text-xs text-muted-foreground">{t.detail}{t.outcome ? ` → ${t.outcome}` : ''}</p>}
         {actions.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
-            {actions.map(a => <Button key={a.status} size="sm" variant={a.destructive ? 'ghost' : a.status === 'complete' ? 'default' : 'outline'} className={cn('h-7 text-xs', a.destructive && 'text-destructive hover:text-destructive')} disabled={busyId === t.id} onClick={() => onStep(t, a.status)}>{a.label}</Button>)}
+            {actions.map(a => <Button key={a.status} size="sm" variant={a.destructive ? 'ghost' : a.status === 'complete' ? 'default' : 'outline'} className={cn('h-9 sm:h-7 text-xs', a.destructive && 'text-destructive hover:text-destructive')} disabled={busyId === t.id} onClick={() => onStep(t, a.status)}>{a.label}</Button>)}
             <span className="ml-auto self-center text-[11px] text-muted-foreground">{kindLabel(t.kind)}</span>
           </div>
         )}

@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- Phone layout: Dashboard, Sites, APRS and About no longer scroll sideways (grid columns were widened by one long line; they may now shrink, and the APRS function URL wraps). Site cards fit their three buttons. Larger tap targets on phones for the Operations row buttons, task steps, the packet's Open in Maps chip and the guide's section list.
+
 ### Added
 - **Privacy policy** at emcommplanner.org/privacy (source docs/PRIVACY.md; user menu, About, sign-in page): what is stored, who sees it, processors, retention, and the Google Drive section required for the roster sheet. The Google consent screen now points to it and is published for any Google account.
 

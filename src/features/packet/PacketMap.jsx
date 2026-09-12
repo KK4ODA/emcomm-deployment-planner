@@ -44,7 +44,7 @@ export function PacketMap({ site, layers = [], directions = null, className }) {
         ))}
         {pin && <Marker position={pin} interactive={false} />}
       </MapContainer>
-      {directions && <button type="button" onClick={() => openExternal(directions)} className="no-print absolute right-2 top-2 z-[400] rounded-md border bg-background/90 px-2 py-1 text-xs font-medium shadow hover:bg-background">Open in Maps</button>}
+      {directions && <button type="button" onClick={() => openExternal(directions)} className="no-print absolute right-2 top-2 z-[400] rounded-md border bg-background/90 px-3 py-2 text-xs font-medium shadow hover:bg-background sm:px-2 sm:py-1">Open in Maps</button>}
       <span className="pointer-events-none absolute bottom-1 right-1 z-[400] rounded bg-background/80 px-1 text-[10px] text-muted-foreground">© OpenStreetMap</span>
     </div>
   );

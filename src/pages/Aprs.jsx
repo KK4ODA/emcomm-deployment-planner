@@ -200,7 +200,7 @@ export default function Aprs() {
           <Section title="Set up Graywolf" icon={AlertTriangle}>
             <ol className="list-decimal space-y-2 pl-5 text-sm">
               <li>Create a bridge above. The dialog gives you three strings: the token, the planner URL and a webhook URL. Closed it? <strong>Setup</strong> next to the bridge shows the URLs again and can issue a new token.</li>
-              <li>In <strong>Emcomm Objects</strong> (next to Graywolf), open Settings › EmComm Planner. <strong>Planner URL</strong> is <span className="font-mono text-xs">{base}</span> and nothing more; <strong>Bridge token</strong> is the token. Enable <em>Forward heard stations</em>, click <em>Test link</em>, save. Stations then appear here within a minute.</li>
+              <li>In <strong>Emcomm Objects</strong> (next to Graywolf), open Settings › EmComm Planner. <strong>Planner URL</strong> is <span className="break-all font-mono text-xs">{base}</span> and nothing more; <strong>Bridge token</strong> is the token. Enable <em>Forward heard stations</em>, click <em>Test link</em>, save. Stations then appear here within a minute.</li>
               <li>For APRS check-ins, create four Graywolf <strong>Actions</strong> (Graywolf › Actions › New Action), one per command. Every field is the same except the name. Scroll the New Action form top to bottom and set:
                 <Table className="mt-2 text-xs">
                   <TableHeader><TableRow><TableHead className="w-28">Section</TableHead><TableHead className="w-40">Field</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>

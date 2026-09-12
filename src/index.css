@@ -119,6 +119,14 @@
     font-feature-settings: 'cv11', 'ss01', 'tnum';
   }
 
+  /* Grid items default to min-width:auto, so one unbreakable line (a URL, a
+     truncated label, a row of buttons) makes the whole column as wide as
+     that line and the page scrolls sideways on a phone. Let items shrink;
+     truncate and wrap then do their job. Explicit min-w-* still wins. */
+  .grid > * {
+    min-width: 0;
+  }
+
   /* Visible, consistent keyboard focus everywhere. */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;

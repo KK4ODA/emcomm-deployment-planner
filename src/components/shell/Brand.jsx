@@ -7,7 +7,7 @@ import { APP_NAME } from '@/lib/constants';
 /** @param {{ compact?: boolean, className?: string, light?: boolean }} props */
 export function Brand({ compact = false, className, light = false }) {
   return (
-    <span className={cn('flex items-center gap-2.5', className)}>
+    <span className={cn('flex min-w-0 items-center gap-2.5', className)}>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground shadow-sm">
         <RadioTower className="h-4.5 w-4.5" strokeWidth={2.25} aria-hidden />
       </span>

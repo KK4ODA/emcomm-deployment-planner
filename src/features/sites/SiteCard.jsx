@@ -97,9 +97,9 @@ export function SiteCard({ location, itemStats, taskSummary, missingOperators = 
             <ProgressBar value={taskSummary.completed} max={taskSummary.total} tone={taskSummary.total && taskSummary.completed === taskSummary.total ? 'success' : 'info'} label={`${location.name} task progress`} />
           </div>
           <div className="grid grid-cols-3 gap-1.5 pt-1">
-            <Button asChild variant="outline" size="sm"><Link to={`${ROUTES.dashboard}?site=${location.id}`} title="Equipment board filtered to this site"><Package /> Equipment</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to={ROUTES.siteTasks(location.id)}><ListTodo /> Tasks</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to={`${ROUTES.staffing}?site=${location.id}`} title="Positions at this site"><ClipboardList /> Positions</Link></Button>
+            <Button asChild variant="outline" size="sm" className="px-2 text-xs sm:px-3 sm:text-sm"><Link to={`${ROUTES.dashboard}?site=${location.id}`} title="Equipment board filtered to this site"><Package /> Equipment</Link></Button>
+            <Button asChild variant="outline" size="sm" className="px-2 text-xs sm:px-3 sm:text-sm"><Link to={ROUTES.siteTasks(location.id)}><ListTodo /> Tasks</Link></Button>
+            <Button asChild variant="outline" size="sm" className="px-2 text-xs sm:px-3 sm:text-sm"><Link to={`${ROUTES.staffing}?site=${location.id}`} title="Positions at this site"><ClipboardList /> Positions</Link></Button>
           </div>
         </div>
       </CardContent>

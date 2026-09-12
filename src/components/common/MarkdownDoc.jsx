@@ -34,7 +34,7 @@ export function MarkdownDoc({ source, navLabel }) {
         <nav aria-label={navLabel} className="no-print lg:sticky lg:top-20 lg:self-start">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</p>
           <ol className="space-y-1 text-sm">
-            {toc.map(h => <li key={h.id}><a href={`#${h.id}`} className="text-muted-foreground hover:text-foreground hover:underline">{h.text}</a></li>)}
+            {toc.map(h => <li key={h.id}><a href={`#${h.id}`} className="block py-1 text-muted-foreground hover:text-foreground hover:underline lg:py-0.5">{h.text}</a></li>)}
           </ol>
           <p className="mt-4 text-xs text-muted-foreground">Version {APP_VERSION}</p>
         </nav>

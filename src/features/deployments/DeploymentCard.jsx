@@ -45,7 +45,7 @@ export function DeploymentCard({ deployment, readiness, isCurrent, permissions, 
           {hasMenu && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Deployment actions" loading={busy}><MoreHorizontal /></Button>
+                <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Deployment actions" loading={busy}><MoreHorizontal /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
                 {transitions.length > 0 && (

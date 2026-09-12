@@ -203,6 +203,14 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-12 **Mobile pass 2** (v2.7.4): Playwright at 375 px over every
+  page (scratchpad `shots/mobile-audit.js`, `mobile-culprits.js`): the four
+  pages that scrolled sideways were all grid columns sized by one
+  unbreakable line; fixed once with `.grid > * { min-width: 0 }` in
+  `src/index.css` plus `break-all` on the APRS URL and a shrinkable Brand.
+  Tap targets raised to 36 px below `sm` where the desk buttons were 28 px.
+  Still to check on a real phone: the Your tasks card with an open task,
+  the Google Sheet popup in mobile Safari.
 - 2026-09-12 **Privacy policy and Google publishing**: `docs/PRIVACY.md`
   rendered at `/privacy` by `pages/Privacy.jsx` through the shared
   `components/common/MarkdownDoc` (the guide now uses it too); linked from
