@@ -69,6 +69,8 @@ export default function Aprs() {
   const [issued, setIssued] = useState(/** @type {{ id: string, name: string, token: string|null }|null} */ (null));
   const { confirm, dialog: confirmDialog } = useConfirm();
   const [maxAge, setMaxAge] = useState('180');
+  const [stationFilter, setStationFilter] = useState('');
+  const [membersOnly, setMembersOnly] = useState(false);
 
   const bridges = useMemo(() => (bridgesQ.data ?? []).filter(b => b.ares_group_id === activeGroup), [bridgesQ.data, activeGroup]);
   const latest = useMemo(() => (latestQ.data ?? []).filter(p => p.ares_group_id === activeGroup), [latestQ.data, activeGroup]);
@@ -77,6 +79,14 @@ export default function Aprs() {
   const userByCall = useMemo(() => { const m = new Map(); for (const [uid, p] of byUser) m.set(p.callsign, members.find(u => u.id === uid)); return m; }, [byUser, members]);
   const now = new Date();
   const shown = useMemo(() => latest.filter(p => ageMinutes(p.heard_at, now) <= Number(maxAge)).sort((a, b) => new Date(b.heard_at).getTime() - new Date(a.heard_at).getTime()), [latest, maxAge]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visible = useMemo(() => {
+    const q = stationFilter.trim().toUpperCase();
+    return shown
+      .filter(p => !membersOnly || userByCall.has(p.callsign))
+      .filter(p => !q || p.callsign.includes(q) || (userByCall.get(p.callsign)?.full_name || '').toUpperCase().includes(q))
+      .sort((x, y) => Number(userByCall.has(y.callsign)) - Number(userByCall.has(x.callsign)) || new Date(y.heard_at).getTime() - new Date(x.heard_at).getTime());
+  }, [shown, stationFilter, membersOnly, userByCall]);
+  const memberCount = useMemo(() => shown.filter(p => userByCall.has(p.callsign)).length, [shown, userByCall]);
   const actions = useMemo(() => (actionsQ.data ?? []).filter(a => a.ares_group_id === activeGroup).slice(0, 50), [actionsQ.data, activeGroup]);
   const outbox = useMemo(() => (outboxQ.data ?? []).filter(o => o.ares_group_id === activeGroup).slice(0, 50), [outboxQ.data, activeGroup]);
   const online = bridges.filter(b => !b.revoked_at && b.last_seen_at && ageMinutes(b.last_seen_at, now) <= 5).length;
@@ -155,11 +165,19 @@ export default function Aprs() {
               <SelectContent><SelectItem value="30">30 min</SelectItem><SelectItem value="180">3 h</SelectItem><SelectItem value="720">12 h</SelectItem><SelectItem value="1440">24 h</SelectItem><SelectItem value="20160">14 d</SelectItem></SelectContent>
             </Select>
           )} bodyClassName="p-0">
-            {shown.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{latest.length ? 'Nothing heard in this window.' : 'Nothing received yet. Once a bridge reports, stations appear here and on the Sites map.'}</p> : (
+            {shown.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-b p-2">
+                <Input value={stationFilter} onChange={(e) => setStationFilter(e.target.value)} placeholder="Call sign or name" aria-label="Filter stations" className="h-8 w-44 text-xs" />
+                <Button size="sm" variant={membersOnly ? 'default' : 'outline'} onClick={() => setMembersOnly(v => !v)} aria-pressed={membersOnly}>Members only{memberCount ? ` (${memberCount})` : ''}</Button>
+                <span className="ml-auto text-xs text-muted-foreground">{visible.length === shown.length ? `${shown.length} stations` : `${visible.length} of ${shown.length} stations`}{visible.length > 300 ? ', first 300 shown' : ''}</span>
+              </div>
+            )}
+            {shown.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{latest.length ? 'Nothing heard in this window.' : 'Nothing received yet. Once a bridge reports, stations appear here and on the Sites map.'}</p> : visible.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{membersOnly ? 'No member heard in this window. Members are matched by the APRS call sign on their profile or any SSID of their call sign.' : 'No station matches.'}</p> : (
+              <div className="max-h-[26rem] overflow-y-auto">
               <Table>
                 <TableHeader><TableRow><TableHead>Station</TableHead><TableHead>Member</TableHead><TableHead>Heard</TableHead><TableHead>Position</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {shown.slice(0, 200).map(p => {
+                  {visible.slice(0, 300).map(p => {
                     const u = userByCall.get(p.callsign);
                     const b = ageBucket(ageMinutes(p.heard_at, now));
                     return (
@@ -173,6 +191,7 @@ export default function Aprs() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             )}
           </Section>
         </div>

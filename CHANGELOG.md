@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Changed
+- APRS: Stations heard scrolls inside its own box instead of stretching the page, lists members first, and has a call-sign filter and a Members only toggle.
+
 ### Added
 - APRS: a **Setup** button on each bridge reopens the planner URL and webhook URL and can issue a new token when the old one was lost (the old token stops working). Tokens themselves are still shown only once.
 
