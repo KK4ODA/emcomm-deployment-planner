@@ -85,7 +85,7 @@ export function readinessChecklist({ deployment, positions = [], shifts = [], as
     else add('Comms', 'published', 'ok', `Plan v${deployment.plan_version || 1} published`);
     if (deployment.plan_published_at) {
       const unseen = live.filter(a => a.status !== 'offered' && (a.packet_version_seen ?? 0) < (deployment.plan_version || 1));
-      if (unseen.length) add('Comms', 'acks', 'warn', `${n(unseen.length, 'operator')} not yet on the latest packet`, 'They will see a change banner; call the ones on critical positions.', ROUTES.ncs, 'Net control');
+      if (unseen.length) add('Comms', 'acks', 'warn', `${n(unseen.length, 'operator')} not yet on the latest packet`, 'They will see a change banner; call the ones on critical positions.', ROUTES.ncs, 'Operations');
       else if (live.length) add('Comms', 'acks', 'ok', 'Everyone has seen the latest packet');
     }
   }

@@ -52,12 +52,12 @@ module.exports = {
           ['Tasking reference', 'ATC volunteer radio operator request, January 2027'],
         ] } },
         { img: 'pam-02-new-deployment', caption: 'The New deployment form with the marathon filled in. Start and end are the first report time and the last release.' },
-        { why: 'The start and end times bound the net control board and the hours report. The served agency and tasking reference are your authorization record: AUXCOMM doctrine says never self-deploy, and this is where the request is written down.' },
+        { why: 'The start and end times bound the Operations board and the hours report. The served agency and tasking reference are your authorization record: AUXCOMM doctrine says never self-deploy, and this is where the request is written down.' },
       ],
     },
     {
       key: 'map', h: 'Import the course map', step: true, blocks: [
-        'Atlanta Track Club publishes the course and the ARES pickup routes as a Google My Maps layer. Import it once and every site, packet and the net control board draw on top of it. Do this before adding sites so you can place pins against the real course.',
+        'Atlanta Track Club publishes the course and the ARES pickup routes as a Google My Maps layer. Import it once and every site, packet and the Operations board draw on top of it. Do this before adding sites so you can place pins against the real course.',
         { do: [
           'Open **Sites** and click **Map layers**.',
           'Choose the KML file (in the screenshots: PAM 2026 ARES Map.kml, 41 routes and 50 points). Name the layer and pick a colour.',

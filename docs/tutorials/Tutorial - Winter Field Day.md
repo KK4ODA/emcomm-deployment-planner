@@ -6,7 +6,7 @@
 > Audience: the station captain or club planner. Operators read Steps 6 and 9.
 > Time: about an hour. The exercise profile adds objectives and per-period shifts to what a public-service event uses.
 
-Written for EmComm Planner 2.6.1. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.6.2. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 

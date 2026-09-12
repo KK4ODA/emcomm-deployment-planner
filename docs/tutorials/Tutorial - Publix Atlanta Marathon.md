@@ -6,7 +6,7 @@
 > Audience: a planner or admin building the deployment. Operators can read Steps 7 and 10 to see what they get.
 > Time: about 90 minutes the first year. The second year starts from Duplicate and takes twenty.
 
-Written for EmComm Planner 2.6.1. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.6.2. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 
@@ -60,11 +60,11 @@ A deployment is the container for one event: its sites, positions, plan and reco
 
 *The New deployment form with the marathon filled in. Start and end are the first report time and the last release.*
 
-> **Why it matters.** The start and end times bound the net control board and the hours report. The served agency and tasking reference are your authorization record: AUXCOMM doctrine says never self-deploy, and this is where the request is written down.
+> **Why it matters.** The start and end times bound the Operations board and the hours report. The served agency and tasking reference are your authorization record: AUXCOMM doctrine says never self-deploy, and this is where the request is written down.
 
 ## Step 2. Import the course map
 
-Atlanta Track Club publishes the course and the ARES pickup routes as a Google My Maps layer. Import it once and every site, packet and the net control board draw on top of it. Do this before adding sites so you can place pins against the real course.
+Atlanta Track Club publishes the course and the ARES pickup routes as a Google My Maps layer. Import it once and every site, packet and the Operations board draw on top of it. Do this before adding sites so you can place pins against the real course.
 
 **Do this**
 
