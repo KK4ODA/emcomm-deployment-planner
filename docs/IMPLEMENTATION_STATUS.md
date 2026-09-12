@@ -202,6 +202,13 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-12 **Deployment files** (`src/lib/deploymentBundle.js`, format
+  `emcomm-planner-deployment` v1): export a deployment with everything but
+  people; import into any group with key remapping, date shifting and
+  channel relinking (match by name and rx frequency, create when absent).
+  `ImportDeploymentDialog` also lists `public/examples/index.json`, which
+  ships the tutorial deployments as examples with every release. Tests:
+  deploymentBundle (4).
 - 2026-09-09 **Tutorials** (`docs/tutorials`): two step-by-step guides built
   from real scenarios, the Publix Atlanta Marathon (36 positions, two nets,
   course KML, three-condition plan) and Winter Field Day (stations, operating

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, FolderOpen, Archive } from 'lucide-react';
+import { Plus, FolderOpen, Archive, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -11,7 +11,7 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useMapLayers, useObjectives, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
+import { useCategories, useItems, useLocations, useUsers, useTasks, useCommsPlans, useCommsPlanChannels, useOperationalPeriods, usePositions, useShifts, useAssignments, useLessons, useMapLayers, useObjectives, useChannels, useSafetyChecklists, useAresGroups, useEntityMutations, reportMutationError } from '@/hooks/useEntities';
 import { objectivesToCopy } from '@/lib/objectives';
 import { lessonsToCarry } from '@/lib/aar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -29,6 +29,9 @@ import { DEPLOYMENT_STATUS, STORAGE_KEYS } from '@/lib/constants';
 import { DeploymentCard } from '@/features/deployments/DeploymentCard';
 import { DeploymentForm } from '@/features/deployments/DeploymentForm';
 import { DuplicateDeploymentDialog } from '@/features/deployments/DuplicateDeploymentDialog';
+import { ImportDeploymentDialog } from '@/features/deployments/ImportDeploymentDialog';
+import { buildBundle, importBundle } from '@/lib/deploymentBundle';
+import { APP_VERSION } from '@/lib/appInfo';
 import { TemplateForm } from '@/features/templates/TemplateForm';
 import { ROUTES } from '@/app/routes';
 
@@ -80,10 +83,14 @@ export default function Deployments() {
   const lessonsQ = useLessons();
   const layersQ = useMapLayers();
   const objectivesQ = useObjectives();
+  const channelsQ = useChannels();
+  const safetyQ = useSafetyChecklists();
+  const groupsQ = useAresGroups();
 
   const [form, setForm] = useState({ open: false, deployment: null });
   const [templateFor, setTemplateFor] = useState(null);
   const [duplicateFor, setDuplicateFor] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [exportingId, setExportingId] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [showArchived, setShowArchived] = useLocalStorage(STORAGE_KEYS.showArchivedDeployments, false);
@@ -154,6 +161,41 @@ export default function Deployments() {
       toast.success('Template saved');
     },
     onError: reportMutationError('Save template'),
+  });
+
+  const myGroups = React.useMemo(() => {
+    const all = groupsQ.data ?? [];
+    return user?.app_role === 'admin' ? all : all.filter(g => user?.ares_group_ids?.includes(g.id));
+  }, [groupsQ.data, user]);
+
+  const exportFile = (deployment) => {
+    const parts = partsOf(deployment);
+    const bundle = buildBundle({
+      ...parts,
+      objectives: (objectivesQ.data ?? []).filter(o => o.deployment_id === deployment.id),
+      safety: (safetyQ.data ?? []).find(s => s.deployment_id === deployment.id) ?? null,
+      channels: channelsQ.data ?? [],
+    }, { appVersion: APP_VERSION, groupName: (groupsQ.data ?? []).find(g => g.id === deployment.ares_group_id)?.name, exportedBy: user?.call_sign });
+    downloadBlob(JSON.stringify(bundle, null, 2), `deployment-${safeFileName(deployment.name)}.json`, 'application/json');
+    toast.success('Deployment file saved', { description: 'Sites, positions, shifts, plan, layers, equipment, objectives and safety list. No people.' });
+  };
+
+  const importFile = useMutation({
+    mutationFn: (/** @type {{ bundle: Object, name: string, groupId: string, newStartsAt: string|null }} */ { bundle, name, groupId, newStartsAt }) => importBundle(db, bundle, {
+      groupId, createdBy: user?.id ?? null, name, newStartsAt,
+      existingChannels: (channelsQ.data ?? []).filter(c => c.ares_group_id === groupId && c.active !== false),
+      createTask: (task) => createTaskEvent(task, user, isOnline),
+    }),
+    onSuccess: ({ deployment, counts, shiftedDays }) => {
+      invalidateAll();
+      for (const key of [queryKeys.channels, queryKeys.objectives, queryKeys.safetyChecklists, queryKeys.mapLayers]) queryClient.invalidateQueries({ queryKey: key });
+      setImportOpen(false);
+      toast.success(`“${deployment.name}” imported`, {
+        description: `${counts.sites} sites, ${counts.positions} positions, ${counts.planRows} plan rows${counts.channelsCreated ? `, ${counts.channelsCreated} channel${counts.channelsCreated === 1 ? '' : 's'} added to the library` : ''}${shiftedDays ? `, dates moved ${shiftedDays} days` : ''}.`,
+        action: { label: 'Open', onClick: () => { selectDeployment(deployment.id); navigate(ROUTES.dashboard); } },
+      });
+    },
+    onError: reportMutationError('Import deployment'),
   });
 
   const duplicate = useMutation({
@@ -260,6 +302,7 @@ export default function Deployments() {
                 <Archive /> {showArchived ? 'Hide archived' : `Show ${archivedCount} archived`}
               </Button>
             )}
+            {perms.canCreate && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload /> Import</Button>}
             {perms.canCreate && <Button onClick={() => setForm({ open: true, deployment: null })}><Plus /> New deployment</Button>}
           </>
         )}
@@ -295,6 +338,7 @@ export default function Deployments() {
                 onExport={(includeGoKit) => exportText(d, includeGoKit)}
                 onSaveTemplate={() => setTemplateFor(d)}
                 onDuplicate={() => setDuplicateFor(d)}
+                onExportFile={perms.canExport ? () => exportFile(d) : undefined}
                 onTransition={(to) => transition(d, to)}
               />
             ))}
@@ -315,6 +359,14 @@ export default function Deployments() {
         onClose={() => setTemplateFor(null)}
         onSubmit={({ name, description }) => saveTemplate.mutate({ deployment: templateFor, name, description })}
         submitting={saveTemplate.isPending}
+      />
+      <ImportDeploymentDialog
+        open={importOpen}
+        groups={myGroups}
+        defaultGroupId={deployments.find(d => d.id === deploymentId)?.ares_group_id || myGroups[0]?.id || ''}
+        onClose={() => setImportOpen(false)}
+        onSubmit={(data) => importFile.mutate(data)}
+        submitting={importFile.isPending}
       />
       <DuplicateDeploymentDialog
         open={!!duplicateFor}

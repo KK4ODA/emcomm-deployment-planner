@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- **Deployment files.** A deployment's menu has *Export deployment file*: one JSON file with its sites, positions, shifts, periods, comms plan and the library channels it uses, map layers, equipment lists, tasks, objectives and safety checklist, and no people. *Import* on the Deployments page loads such a file, or one of the examples shipped with the app, into any of your groups, optionally moved to a new date; library channels are matched by name and frequency and created when missing.
+
 ### Changed
 - APRS: Stations heard scrolls inside its own box instead of stretching the page, lists members first, and has a call-sign filter and a Members only toggle.
 

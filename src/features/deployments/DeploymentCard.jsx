@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Globe, Pencil, Trash2, Save, FileDown, ArrowRight, MoreHorizontal, Check, Copy, CheckCircle2, ArrowRightLeft } from 'lucide-react';
+import { Calendar, Globe, Pencil, Trash2, Save, FileDown, ArrowRight, MoreHorizontal, Check, Copy, CheckCircle2, ArrowRightLeft, FileJson2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -14,11 +14,11 @@ import { cn } from '@/lib/utils';
  *   deployment: Object, readiness: Readiness,
  *   isCurrent: boolean, permissions: { canEdit: boolean, canDelete: boolean, canExport: boolean, canTemplate: boolean, canCreate: boolean },
  *   onOpen: () => void, onEdit: () => void, onDelete: () => void, onExport: (includeGoKit: boolean) => void,
- *   onSaveTemplate: () => void, onDuplicate: () => void, onTransition: (to: string) => void,
+ *   onSaveTemplate: () => void, onDuplicate: () => void, onExportFile?: () => void, onTransition: (to: string) => void,
  *   exporting?: boolean, busy?: boolean
  * }} props
  */
-export function DeploymentCard({ deployment, readiness, isCurrent, permissions, onOpen, onEdit, onDelete, onExport, onSaveTemplate, onDuplicate, onTransition, exporting, busy }) {
+export function DeploymentCard({ deployment, readiness, isCurrent, permissions, onOpen, onEdit, onDelete, onExport, onSaveTemplate, onDuplicate, onExportFile, onTransition, exporting, busy }) {
   const hasMenu = permissions.canEdit || permissions.canDelete || permissions.canExport || permissions.canTemplate || permissions.canCreate;
   const transitions = permissions.canEdit ? (DEPLOYMENT_TRANSITIONS[deployment.status] ?? []) : [];
   const archived = deployment.status === 'archived';
@@ -65,6 +65,7 @@ export function DeploymentCard({ deployment, readiness, isCurrent, permissions, 
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onExport(true)} disabled={exporting}><FileDown /> Export text (with go-kit list)</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onExport(false)} disabled={exporting}><FileDown /> Export text (without go-kit)</DropdownMenuItem>
+                    {onExportFile && <DropdownMenuItem onClick={onExportFile}><FileJson2 /> Export deployment file</DropdownMenuItem>}
                   </>
                 )}
                 {permissions.canDelete && (
