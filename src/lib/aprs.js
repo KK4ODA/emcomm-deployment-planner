@@ -105,6 +105,10 @@ export const APRS_ACTIONS = Object.freeze([
   { action: 'onpos', label: 'On position', example: '@@#onpos' },
   { action: 'checkout', label: 'Check out', example: '@@#checkout' },
   { action: 'status', label: 'My status', example: '@@#status' },
+  { action: 'ack', label: 'Acknowledge task', example: '@@#ack 14' },
+  { action: 'enroute', label: 'En route on task', example: '@@#enroute 14' },
+  { action: 'onscene', label: 'On scene', example: '@@#onscene 14' },
+  { action: 'done', label: 'Task done', example: '@@#done 14' },
 ]);
 
 /** APRS message body limit for outbound notifications. */

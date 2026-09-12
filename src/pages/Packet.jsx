@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { tasksForOperator } from '@/lib/tasking';
+import { PacketTasks } from '@/features/packet/PacketTasks';
 import { TILE_LAYERS } from '@/features/sites/leafletSetup';
 import { prefetchTiles, shouldPrefetch } from '@/lib/tilePrefetch';
 import { buildStaffingRoster, rosterBySite } from '@/lib/staffingRoster';
@@ -13,7 +15,7 @@ import { QueryState } from '@/components/common/QueryState';
 import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError, useAprsStationCalls } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError, useAprsStationCalls, useOpsTasks } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { buildPacket, pickCurrentAssignment } from '@/lib/packet';
@@ -61,6 +63,8 @@ function PacketContent() {
   const itemsQ = useItems();
   const periodsQ = useOperationalPeriods();
   useRealtimeInvalidation('assignments', queryKeys.assignments);
+  const tasksQ = useOpsTasks(deploymentId);
+  useRealtimeInvalidation('opsTasks', [...queryKeys.opsTasks, deploymentId]);
   const isPlanner = hasPermission(user?.app_role, 'MANAGE_ASSIGNMENTS');
   const [acking, setAcking] = useState(false);
   const [pickedId, setPickedId] = useState('');
@@ -162,6 +166,7 @@ function PacketContent() {
             statusLine={isMine && assignment.status === 'offered' ? <>You have not answered this offer yet. <Link to={ROUTES.myAssignments} className="underline">Accept or decline</Link>.</> : null}
             map={<PacketMap site={packet.site} layers={(layersQ.data ?? []).filter(l => l.deployment_id === deploymentId)} directions={directionsUrl(packet.site)} />}
             coverageAction={isMine && hasPermission(user?.app_role, 'LOG_COVERAGE') ? <Button variant="outline" size="sm" onClick={() => setCoverageOpen(true)}><RadioTower /> Report a coverage check</Button> : null}
+            tasks={isMine ? <PacketTasks tasks={tasksForOperator(tasksQ.data ?? [], { assignmentIds: mine.filter(a => occupies(a.status)).map(a => a.id), positionIds: mine.filter(a => occupies(a.status)).map(a => shiftById.get(a.shift_id)?.position_id).filter(Boolean) })} deploymentId={deploymentId} sitesById={new Map((locationsQ.data ?? []).map(l => [l.id, l]))} intents={intents} onChanged={() => queryClient.invalidateQueries({ queryKey: [...queryKeys.opsTasks, deploymentId] })} /> : null}
           />
           <CoverageReportDialog
             open={coverageOpen}

@@ -54,6 +54,9 @@ On the packet: **Check in** when you arrive, **On position** when you are set up
 - **Report a coverage check** (below the frequencies): which channel, whether it reached net control (direct, via relay, no contact), power and antenna if you like. Ten seconds. These build the group's real coverage map.
 - **Over APRS**, if your group runs a Graywolf station: send an APRS message to the station's call with `@@#checkin`, `@@#onpos`, `@@#checkout` or `@@#status`. You get a reply on the air.
 
+### Tasks from the desk
+When the desk sends you somewhere, a **Your tasks** card appears at the top of your packet with the task number, what to do, where, and one big button for the next step: **Acknowledge** as soon as you have it, **En route** when you move, **On scene** when you arrive, **Done** when finished. It works without signal; the step is sent when you have coverage. Over APRS the same steps are `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14` (14 being the task number; leave it out for your newest task).
+
 ### Objectives
 When the deployment has objectives (exercises, Field Day), **Objectives** shows them. *I will take this* › do it › *Done*. Points and completion feed the after-action review.
 
@@ -110,7 +113,9 @@ Under the Publish button a line says which version operators have and since when
 
 **Operations** is the board for whoever runs the desk on the day (net control, the assistant, or the coordinator). It lists every live shift, worst first: nobody assigned, not heard from, arriving, on station, released. Record check-ins on someone's behalf, add log notes and incidents. When the group runs the Graywolf bridge, each operator's last APRS fix and distance to the site appear on their line.
 
-Exports from the board: **ICS 204** (assignment list per site), **ICS 205A** (communications list), **ICS 214** (activity log). The board keeps working from cached data when the connection drops and shows "as of" the last refresh.
+**Tasks** are how the desk sends a unit to do something: pass a message, relay, pick up, deliver, stage, patrol, search, rendezvous, a welfare or equipment check. **Dispatch** (or the *Task* button on a position's line) asks for the unit, one line of what to do, from and to (a site or free text), and a priority. The unit gets it on their packet and by notification, then walks the ladder from their packet or over APRS: **Acknowledge**, **En route**, **On scene**, **Done**. The Tasks panel lists open tasks worst first, with the minutes waiting; a task nobody acknowledged turns amber at five minutes and red at ten (half that for urgent). The desk can move a task forward or cancel it. Every step writes a line to the log, so the ICS 214 fills itself, and the after-action review counts tasks and the median time from dispatch to on scene.
+
+Exports from the board: **ICS 204** (assignment list per site), **ICS 205A** (communications list), **ICS 214** (activity log, including every task step). The board keeps working from cached data when the connection drops and shows "as of" the last refresh.
 
 ---
 

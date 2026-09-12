@@ -113,6 +113,10 @@ export function useSafetyChecklists() {
 export function useNamingSchemes() {
   return useQuery({ queryKey: queryKeys.namingSchemes, queryFn: () => db.namingSchemes.list({ orderBy: 'sort_order' }) });
 }
+/** Tasks of one deployment, newest first; realtime keeps it current on the board and the packet. */
+export function useOpsTasks(deploymentId) {
+  return useQuery({ queryKey: [...queryKeys.opsTasks, deploymentId], queryFn: () => db.opsTasks.where({ deployment_id: deploymentId }, { orderBy: 'issued_at', ascending: false }), enabled: !!deploymentId });
+}
 /** Station call signs operators send APRS check-in commands to (members of the group only). */
 export function useAprsStationCalls() {
   return useQuery({ queryKey: queryKeys.aprsStationCalls, queryFn: () => db.aprsStationCalls.list({ orderBy: 'last_seen_at', ascending: false }), staleTime: 5 * 60_000 });

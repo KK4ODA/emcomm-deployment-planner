@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useConfirm } from '@/components/common/ConfirmDialog';
+import { taskSummary } from '@/lib/tasking';
+import { dispatchTask, setTaskState } from '@/api/tasking';
+import { TaskDispatchDialog } from '@/features/operations/TaskDispatchDialog';
+import { TaskBoard } from '@/features/operations/TaskBoard';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Headphones, RefreshCw, LogIn, MapPinCheck, LogOut, CloudOff, MessageSquarePlus, Users, AlertTriangle, CheckCircle2, Clock, RadioTower } from 'lucide-react';
+import { ListTodo, Headphones, RefreshCw, LogIn, MapPinCheck, LogOut, CloudOff, MessageSquarePlus, Users, AlertTriangle, CheckCircle2, Clock, RadioTower } from 'lucide-react';
 import { positionsByUser, ageMinutes, ageBucket, nearSite } from '@/lib/aprs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +22,7 @@ import { CallSign } from '@/components/common/CallSign';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useRealtimeInvalidation, useLocations, useCommsPlanChannels, useAprsLatest } from '@/hooks/useEntities';
+import { usePositions, useShifts, useAssignments, useUsers, useActivityLog, useRealtimeInvalidation, useLocations, useCommsPlanChannels, useAprsLatest, useOpsTasks } from '@/hooks/useEntities';
 import { useIntents } from '@/hooks/useIntents';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
@@ -56,16 +61,49 @@ function NcsContent() {
   const { intents } = useIntents();
   useRealtimeInvalidation('assignments', queryKeys.assignments);
   useRealtimeInvalidation('activityLog', [...queryKeys.activityLog, deploymentId]);
+  const tasksQ = useOpsTasks(deploymentId);
+  useRealtimeInvalidation('opsTasks', [...queryKeys.opsTasks, deploymentId]);
   const canRecord = hasPermission(user?.app_role, 'RECORD_CHECKIN_FOR_OTHERS');
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const [net, setNet] = useState('all');
   const [windowHours, setWindowHours] = useState('6');
   const [now, setNow] = useState(() => new Date());
   const [note, setNote] = useState('');
   const [busyId, setBusyId] = useState(/** @type {string|null} */ (null));
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [dispatchFor, setDispatchFor] = useState(/** @type {string|null} */ (null));
+  const [taskBusy, setTaskBusy] = useState(/** @type {string|null} */ (null));
+  const canTask = hasPermission(user?.app_role, 'MANAGE_ASSIGNMENTS');
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(t); }, []);
 
   const positions = useMemo(() => (positionsQ.data ?? []).filter(p => p.deployment_id === deploymentId), [positionsQ.data, deploymentId]);
+  const positionsById = useMemo(() => new Map(positions.map(p => [p.id, p])), [positions]);
+  const tasks = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
+  const taskStats = useMemo(() => taskSummary(tasks, now), [tasks, now]);
+  const submitDispatch = async (data) => {
+    setTaskBusy('new');
+    try {
+      const t = await dispatchTask({ deploymentId, ...data });
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.opsTasks, deploymentId] });
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.activityLog, deploymentId] });
+      setDispatchOpen(false);
+      toast.success(`Task ${t.seq} dispatched`, { description: data.positionId ? `${positionsById.get(data.positionId)?.tactical_callsign || positionsById.get(data.positionId)?.name} has been notified.` : 'Any operator on this deployment can take it.' });
+    } catch (err) {
+      toast.error(`Dispatch failed: ${err.message || 'unknown error'}`);
+    } finally { setTaskBusy(null); }
+  };
+  const stepTask = async (t, status) => {
+    if (status === 'cancelled' && !(await confirm({ title: `Cancel task ${t.seq}?`, description: t.title, confirmLabel: 'Cancel task', destructive: true }))) return;
+    setTaskBusy(t.id);
+    try {
+      await setTaskState(t.id, status, null);
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.opsTasks, deploymentId] });
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.activityLog, deploymentId] });
+    } catch (err) {
+      toast.error(`Could not update task ${t.seq}: ${err.message || 'unknown error'}`);
+    } finally { setTaskBusy(null); }
+  };
   const shifts = useMemo(() => (shiftsQ.data ?? []).filter(s => s.deployment_id === deploymentId), [shiftsQ.data, deploymentId]);
   const assignments = useMemo(() => (assignmentsQ.data ?? []).filter(a => a.deployment_id === deploymentId), [assignmentsQ.data, deploymentId]);
   const usersById = useMemo(() => new Map((usersQ.data ?? []).map(u => [u.id, u])), [usersQ.data]);
@@ -148,7 +186,8 @@ function NcsContent() {
         <EmptyState icon={Headphones} title="No shifts in this window" description="Widen the time window, or add positions and shifts on the Staffing page." />
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-6">
+            <StatCard label="Open tasks" value={taskStats.open} icon={ListTodo} tone={taskStats.overdue ? 'critical' : taskStats.unacknowledged ? 'warning' : 'neutral'} hint={taskStats.unacknowledged ? `${taskStats.unacknowledged} not acknowledged` : taskStats.complete ? `${taskStats.complete} done` : undefined} />
             <StatCard label="On station" value={summary.onStation} icon={CheckCircle2} tone="success" />
             <StatCard label="Not checked in" value={summary.missing} icon={AlertTriangle} tone={summary.missing ? 'critical' : 'neutral'} hint="Shift started, nobody heard" />
             <StatCard label="Nobody assigned" value={summary.uncovered} icon={Users} tone={summary.uncovered ? 'critical' : 'neutral'} />
@@ -185,6 +224,7 @@ function NcsContent() {
                               </span>
                               {p.user?.phone && <a href={`tel:${p.user.phone}`} className="font-mono text-xs text-primary underline-offset-4 hover:underline">{p.user.phone}</a>}
                               {(() => { const fix = aprsByUser.get(p.user?.id); if (!fix) return null; const b = ageBucket(ageMinutes(fix.heard_at, now)); const near = nearSite(fix, siteById.get(r.position.site_id)); return <span className="inline-flex items-center gap-1 text-xs" title={`APRS ${fix.callsign} heard ${b.label}${near ? `, ${near.distanceM} m from the site` : ''}`}><RadioTower className="h-3 w-3" style={{ color: b.color }} /> <span className="font-mono">{fix.callsign}</span> {b.label}{near?.onSite ? <span className="text-success"> · on site</span> : near ? <span className="text-muted-foreground"> · {near.distanceM >= 1000 ? `${(near.distanceM / 1000).toFixed(1)} km` : `${near.distanceM} m`} away</span> : null}</span>; })()}
+                              {canTask && isOnline && <Button size="sm" variant="ghost" className="h-7 text-xs" title={`Dispatch a task to ${r.position.tactical_callsign || r.position.name}`} onClick={() => { setDispatchFor(r.position.id); setDispatchOpen(true); }}><ListTodo /> Task</Button>}
                               {canRecord && actions.length > 0 && (
                                 <span className="ml-auto flex gap-1">
                                   {actions.map(a => { const Icon = ICONS[a.status]; return <Button key={a.status} size="sm" variant={a.primary ? 'default' : 'outline'} className="h-7 px-2 text-xs" onClick={() => record(p.assignment, a.status)} loading={busyId === p.assignment.id} title={`Record on behalf of ${p.user?.call_sign ?? 'operator'}`}><Icon /> {a.label}</Button>; })}
@@ -201,6 +241,7 @@ function NcsContent() {
             </ul>
 
             <aside className="space-y-4">
+              <TaskBoard tasks={tasks} positionsById={positionsById} sitesById={siteById} canDispatch={canTask && isOnline} onDispatch={() => { setDispatchFor(null); setDispatchOpen(true); }} onStep={stepTask} busyId={taskBusy} now={now} />
               <Section title="Log" icon={MessageSquarePlus} bodyClassName="p-0">
                 {canRecord && (
                   <form onSubmit={addNote} className="flex gap-1.5 border-b p-2">
@@ -222,6 +263,8 @@ function NcsContent() {
           </div>
         </>
       )}
+      <TaskDispatchDialog open={dispatchOpen} onClose={() => setDispatchOpen(false)} positions={positions} sites={locationsQ.data ? (locationsQ.data ?? []).filter(l => l.deployment_id === deploymentId) : []} onSubmit={submitDispatch} submitting={taskBusy === 'new'} presetPositionId={dispatchFor} />
+      {confirmDialog}
     </QueryState>
   );
 }

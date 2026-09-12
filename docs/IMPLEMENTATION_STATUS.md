@@ -37,6 +37,7 @@ started**. The version is the release the row first shipped in.
 |---|---|---|
 | Readiness / viability checklist | Shipped v2.3.0 | `/readiness`: plan, staffing, comms, sites and logistics checks (open slots, unanswered offers, unmet requirements, double-booked operators, missing tactical calls, no net control, nets without a primary, stale channels, unpublished changes, unacknowledged packets, sites without pins or arrival notes, essential items nobody brings, overdue tasks) as a worklist with a link per line; dashboard card for planners. |
 | NCS live board (staffed / uncovered / released, offline) | Shipped v2.0.0 | `/ncs`, worst-first rows, on-behalf check-in, log notes, works from cache. |
+| Tasking: dispatch a unit, ladder to done, on the 214 (added by the owner, outside the design doc) | Shipped v2.7.0 | Operations board Tasks panel and Dispatch (unit, kind, priority, from/to site or text); operator packet *Your tasks* card with one button per step, offline-queued; APRS `@@#ack / #enroute / #onscene / #done N`; notifications on dispatch; amber/red when unacknowledged; every step logged (ICS 214); AAR counts and median dispatch-to-scene. |
 | Change notification to affected operators only, with a diff | Shipped v2.2.0 | Per-position packet snapshots; `publish_plan` notifies only changed positions with their changes; unaffected packets show no banner. |
 | Deployment cloning with lessons carried forward | Shipped v2.1.0 | Copies periods, positions, shifts, people, comms plan, map layers; shifts dates; open lessons carry over and show on Staffing. |
 | Structured post-event feedback + AAR assembly | Shipped v2.1.0 | `/aar`: two-minute form (anonymous option), planner review, Markdown draft, lessons. |
@@ -202,6 +203,18 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-12 **Tasking** (migration `023`, applied; `aprs-ingest` v5):
+  `ops_tasks` with a monotonic ladder (issued > acknowledged > en_route >
+  on_scene > complete | cancelled), RPCs `dispatch_task`, `set_task_state`
+  (idempotent, intent id), `update_task`, service-only `apply_aprs_task`,
+  view `my_open_tasks`; every change writes an `activity_log` line
+  (kind `task`) so the ICS 214 is automatic; dispatch inserts notifications
+  for the unit's operators. Client: `src/lib/tasking.js` (kinds, ladder,
+  attention thresholds, summary), `src/api/tasking.js` (RPC wrappers plus
+  task intents in the same offline store as check-ins, drained by the same
+  loop), `features/operations/{TaskBoard,TaskDispatchDialog}`,
+  `features/packet/PacketTasks`, APRS commands ack/enroute/onscene/done,
+  AAR task metrics. Tests: tasking (7).
 - 2026-09-12 **Packet extras and desktop fixes** (migration `022`, applied):
   packet gains the whole roster grouped by site (`src/lib/staffingRoster.js`),
   an APRS check-in block (view `aprs_station_calls`), an Event map button

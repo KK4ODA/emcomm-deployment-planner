@@ -3,6 +3,7 @@
  * the coordinator edits, plus helpers for lessons that follow an event into
  * next year's copy. Pure functions.
  */
+import { taskSummary } from './tasking';
 
 export const LESSON_CATEGORIES = Object.freeze({
   staffing: 'Staffing',
@@ -24,9 +25,9 @@ const round = (n) => Math.round(n * 100) / 100;
 
 /**
  * Attendance and record summary for one deployment.
- * @param {{ assignments: Object[], positions: Object[], shifts: Object[], log: Object[], hours: Object[], feedback: Object[], usersById: Map<string, Object>, objectives?: Object[], coverage?: Object[], safety?: Object|null }} args
+ * @param {{ assignments: Object[], positions: Object[], shifts: Object[], log: Object[], hours: Object[], feedback: Object[], usersById: Map<string, Object>, objectives?: Object[], coverage?: Object[], safety?: Object|null, tasks?: Object[] }} args
  */
-export function aarSummary({ assignments, positions, shifts, log, hours, feedback, usersById, objectives = [], coverage = [], safety = null }) {
+export function aarSummary({ assignments, positions, shifts, log, hours, feedback, usersById, objectives = [], coverage = [], safety = null, tasks = [] }) {
   const shiftById = new Map(shifts.map(s => [s.id, s]));
   const positionById = new Map(positions.map(p => [p.id, p]));
   const byStatus = {};
@@ -59,6 +60,7 @@ export function aarSummary({ assignments, positions, shifts, log, hours, feedbac
     unstaffed,
     totalHours,
     incidents,
+    tasks: taskSummary(tasks),
     firstCheckIn,
     lastCheckOut,
     feedbackCount: feedback.length,
@@ -85,6 +87,7 @@ export function aarMarkdown({ deployment, summary, feedback, lessons, usersById,
   lines.push('## Participation');
   lines.push(`- ${summary.operators} operators worked ${summary.slotsWorked} of ${summary.shifts} shift slots across ${summary.positions} positions`);
   lines.push(`- ${summary.totalHours} person-hours recorded`);
+  if (summary.tasks && (summary.tasks.complete || summary.tasks.open || summary.tasks.cancelled)) lines.push(`- ${summary.tasks.complete} tasks completed, ${summary.tasks.cancelled} cancelled, ${summary.tasks.open} still open${summary.tasks.medianToScene != null ? `; median ${summary.tasks.medianToScene} min from dispatch to on scene` : ''}`);
   if (summary.firstCheckIn) lines.push(`- First check-in ${new Date(summary.firstCheckIn).toLocaleString()}${summary.lastCheckOut ? `, last check-out ${new Date(summary.lastCheckOut).toLocaleString()}` : ''}`);
   if (summary.noShows.length) lines.push(`- No-shows: ${summary.noShows.map(n => `${n.callSign} (${n.position})`).join(', ')}`);
   if (summary.unstaffed.length) lines.push(`- Unstaffed shifts: ${summary.unstaffed.map(u => `${u.tactical || u.position}`).join(', ')}`);

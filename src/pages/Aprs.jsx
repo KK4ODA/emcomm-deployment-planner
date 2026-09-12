@@ -29,7 +29,7 @@ import { formatDateTime, relativeTime } from '@/lib/time';
  * its sections. Kept as data so the setup guide and this page agree.
  */
 const GRAYWOLF_ACTION_FIELDS = Object.freeze([
-  { section: 'Identity', field: 'Name', value: 'checkin (then onpos, checkout, status). This is the word operators type after @@#.' },
+  { section: 'Identity', field: 'Name', value: 'checkin (then onpos, checkout, status, and for tasking ack, enroute, onscene, done). This is the word operators type after @@#.' },
   { section: 'Identity', field: 'Description', value: 'EmComm Planner check-in (optional)' },
   { section: 'Identity', field: 'Type', value: 'Webhook' },
   { section: 'Webhook', field: 'URL', value: '__URL__' },
@@ -37,7 +37,7 @@ const GRAYWOLF_ACTION_FIELDS = Object.freeze([
   { section: 'Webhook', field: 'Headers', value: 'none' },
   { section: 'Webhook', field: 'Body template', value: 'leave empty (Graywolf then sends its default form fields: action, sender_callsign, source)' },
   { section: 'Webhook', field: 'Timeout (s)', value: '10 (default)' },
-  { section: 'Arguments', field: 'Argument mode', value: 'Key/value (default); do not add allowed args' },
+  { section: 'Arguments', field: 'Argument mode', value: 'Freeform for the four task Actions (the task number follows the word); Key/value (default) for the others, no allowed args' },
   { section: 'Security', field: 'Require valid one-time code', value: 'Off. The planner checks that the sender is a member with a live assignment; a code per check-in is more than a race day can bear.' },
   { section: 'Security', field: 'Sender allowlist', value: 'Empty (anyone), or a comma-separated list such as KK4ODA-*, W4XYZ-* to limit it to your members' },
   { section: 'Throttling', field: 'Rate limit (s)', value: '5 (default)' },
@@ -210,7 +210,7 @@ export default function Aprs() {
                     ))}
                   </TableBody>
                 </Table>
-                <p className="mt-2">Save, then repeat with the names <span className="font-mono">onpos</span>, <span className="font-mono">checkout</span> and <span className="font-mono">status</span>. Graywolf sends our reply back to the operator prefixed with <span className="font-mono">ok:</span>.</p>
+                <p className="mt-2">Save, then repeat with the names <span className="font-mono">onpos</span>, <span className="font-mono">checkout</span>, <span className="font-mono">status</span>, and for tasking <span className="font-mono">ack</span>, <span className="font-mono">enroute</span>, <span className="font-mono">onscene</span>, <span className="font-mono">done</span> (those four with Argument mode Freeform). Graywolf sends our reply back to the operator prefixed with <span className="font-mono">ok:</span>.</p>
               </li>
               <li>Operators then send Graywolf's station an APRS message such as {APRS_ACTIONS.map(a => <span key={a.action} className="mr-1 font-mono">{a.example}</span>)} from any APRS radio or app. Their profile's APRS call, or any SSID of their call sign, identifies them.</li>
               <li>Outbound: operators who turn on <em>APRS</em> under Profile › Notifications get offers and packet changes as APRS messages, sent by the bridge through Graywolf.</li>

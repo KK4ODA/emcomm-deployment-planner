@@ -80,14 +80,14 @@ Closed the dialog too soon? Click **Setup** next to the bridge. It shows the pla
 
 ## Step 5. Configure Graywolf Actions for check-ins
 
-Check-ins do not go through Emcomm Objects. Graywolf calls the planner directly when an operator sends a `@@#` message to the station's call sign. You create four Actions, identical except for the name.
+Check-ins do not go through Emcomm Objects. Graywolf calls the planner directly when an operator sends a `@@#` message to the station's call sign. You create eight Actions, identical except for the name and, for the four task commands, the argument mode.
 
 1. In Graywolf's web UI open **Actions** and click **+ New Action**. The form is long; scroll it top to bottom and fill it as in the table. Anything not listed keeps its default.
-2. **Save changes**. Repeat for the other three names.
+2. **Save changes**. Repeat for the other seven names.
 
 | Section (in scroll order) | Field | Set it to |
 |---|---|---|
-| Identity | **Name** | `checkin` for the first Action; then `onpos`, `checkout`, `status`. The name is the word operators type after `@@#`; case does not matter on the air. |
+| Identity | **Name** | `checkin` for the first Action; then `onpos`, `checkout`, `status`; and for tasking `ack`, `enroute`, `onscene`, `done`. The name is the word operators type after `@@#`; case does not matter on the air. |
 | Identity | **Description** | Optional, e.g. `EmComm Planner check-in`. |
 | Identity | **Type** | **Webhook**. The *Command* section disappears and a *Webhook* section takes its place. |
 | Webhook | **URL** | The webhook URL from Step 3, the one ending in `/aprs-ingest/action?token=ebt_…`. Same URL in all four Actions. |
@@ -95,7 +95,7 @@ Check-ins do not go through Emcomm Objects. Graywolf calls the planner directly 
 | Webhook | **Headers** | None. |
 | Webhook | **Body template** | Leave empty. Graywolf then posts its default form fields (`action`, `sender_callsign`, `source`, `otp_verified`), which is what the planner reads. |
 | Webhook | **Timeout (s)** | 10, the default. |
-| Arguments | **Argument mode** | *Key/value (default)*. Do **not** add allowed args; the commands take none, and an empty schema rejects stray text after the command. |
+| Arguments | **Argument mode** | *Key/value (default)* for `checkin`, `onpos`, `checkout`, `status`, with no allowed args (an empty schema rejects stray text). **Freeform** for `ack`, `enroute`, `onscene`, `done`, so `@@#done 14 delivered` passes the task number and note through. |
 | Security | **Require valid one-time code** | **Off**. Operators would otherwise have to type a six-digit code from an authenticator app in every message. The planner already refuses senders who are not members of the group and check-ins that do not match a live assignment. |
 | Security | **Sender allowlist** | Empty means any call sign. To restrict it to your members, list them comma-separated with a wildcard SSID: `KK4ODA-*, W4XYZ-*`. Anyone else gets `denied`. |
 | Throttling | **Rate limit (s)** | 5, the default: one invocation per five seconds per Action. |
@@ -112,13 +112,14 @@ Reply texts from the planner:
 | `@@#checkin` | `ok: <TACTICAL>: checked in` |
 | `@@#onpos` | `ok: <TACTICAL>: on position` |
 | `@@#checkout` | `ok: <TACTICAL>: released` |
-| `@@#status` | `ok: <TACTICAL>: <current status>` or `ok: no live assignment` |
+| `@@#status` | `ok: <TACTICAL>: <current status>; task 14 en route` or `ok: no live assignment` |
+| `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14 note` | `ok: task 14 acknowledged SAG 7` and so on; leave the number out for your newest open task |
 | from a call sign the planner does not know | `ok: <CALL> not a member; set APRS call on your profile` |
 | wrong token in the URL | `error: http 401` (the planner said `denied: bad token`) |
 
 Use Graywolf's **Test** button on an Action to fire it without a radio; the planner logs it with source `test` under *APRS check-ins*.
 
-**You leave this step with:** four enabled Webhook Actions, all pointing at the same webhook URL, OTP off.
+**You leave this step with:** eight enabled Webhook Actions, all pointing at the same webhook URL, OTP off, the four task ones in Freeform mode.
 ---
 
 ## Step 6. Operators: one profile field
@@ -129,7 +130,7 @@ Ask each operator to:
 
 1. Open **Profile & settings › My profile** and set **APRS call sign** to the call and SSID their radio or app transmits.
 2. If they want offers and packet changes over the air, turn on **APRS** under **Profile & settings › Notifications**.
-3. On the day, address messages to the station call from Step 1: `@@#checkin` on arrival, `@@#onpos` when on the air, `@@#checkout` when released, `@@#status` to ask.
+3. On the day, address messages to the station call from Step 1: `@@#checkin` on arrival, `@@#onpos` when on the air, `@@#checkout` when released, `@@#status` to ask; when tasked by the desk, `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14` with the task number from the message.
 
 Only members of the bridge's ARES group are accepted, and a check-in applies to the operator's live assignment in the deployment that is active at that time. Someone without an assignment gets `no live assignment` rather than a phantom check-in.
 

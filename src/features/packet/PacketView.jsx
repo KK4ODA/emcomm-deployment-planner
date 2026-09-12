@@ -17,9 +17,9 @@ const APRS_HINTS = { checkin: 'when you arrive', onpos: 'when you are on the air
 /**
  * The operator packet, phone-first. Above the fold: where, when, my call,
  * primary frequency. Two primary actions at most. Prints on one page.
- * @param {{ packet: ReturnType<import('@/lib/packet').buildPacket>, asOf?: Date|null, onAcknowledge?: () => void, acknowledging?: boolean, actions?: React.ReactNode, statusLine?: React.ReactNode, map?: React.ReactNode, coverageAction?: React.ReactNode }} props
+ * @param {{ packet: ReturnType<import('@/lib/packet').buildPacket>, asOf?: Date|null, onAcknowledge?: () => void, acknowledging?: boolean, actions?: React.ReactNode, statusLine?: React.ReactNode, map?: React.ReactNode, coverageAction?: React.ReactNode, tasks?: React.ReactNode }} props
  */
-export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, actions, statusLine, map = null, coverageAction = null }) {
+export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, actions, statusLine, map = null, coverageAction = null, tasks = null }) {
   const p = packet;
   const dir = directionsUrl(p.site);
   const primary = p.primaryChannel;
@@ -68,6 +68,8 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
         )}
         {statusLine && <p className="no-print mt-2 text-sm text-muted-foreground">{statusLine}</p>}
       </header>
+
+      {tasks}
 
       {p.site && (p.site.parking || p.site.arrival || p.site.access || p.site.contact) && (
         <Block title="Getting there" icon={MapPin}>
@@ -133,6 +135,7 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
           <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
             {p.aprs.commands.map(c => <li key={c.action} className="flex items-baseline gap-2"><span className="font-mono font-semibold">{c.example}</span><span className="text-muted-foreground">{APRS_HINTS[c.action] || c.label}</span></li>)}
           </ul>
+          <p className="mt-2 text-xs text-muted-foreground">Tasks: <span className="font-mono">@@#ack 14</span>, <span className="font-mono">@@#enroute 14</span>, <span className="font-mono">@@#onscene 14</span>, <span className="font-mono">@@#done 14</span> (the number is the task; leave it out for your newest task).</p>
         </Block>
       )}
 

@@ -81,7 +81,7 @@ export async function drainIntents(now = Date.now()) {
   for (const intent of all) {
     if (intent.next_at && intent.next_at > now) break; // still backing off; keep order
     try {
-      await sendIntent(intent);
+      if (intent.kind === 'task') { const { sendTaskIntent } = await import('./tasking'); await sendTaskIntent(intent); } else await sendIntent(intent);
       await offlineStorage.deleteEntity(STORES.intents, intent.id);
       sent += 1;
     } catch (err) {

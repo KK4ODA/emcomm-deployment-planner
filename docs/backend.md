@@ -65,6 +65,7 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `aprs_positions` | Heard stations: callsign, base call, fix, symbol, comment, via, heard_at; 14-day history; `aprs_positions_latest` view gives the newest per callsign (021). Group reads; written by `aprs-ingest` |
 | `aprs_actions` | Audit of APRS commands received: sender, action, matched user and assignment, result, reply (021) |
 | `aprs_outbox` | APRS messages for the bridge to send: recipient, 67-char text, status pending/sent/failed/expired, attempts (021) |
+| `ops_tasks` | Tasking (023): unit (position/assignment), kind, priority, title, from/to site or text, ladder timestamps, outcome, `seq` per deployment. Select for anyone who sees the deployment; writes only through `dispatch_task` / `set_task_state` / `update_task` (planners) and `apply_aprs_task` (service role). `activity_log.task_id` links the 214 lines |
 | `aprs_station_calls` (view) | Station call signs of the group's live bridges for members (022); runs as owner with a membership check in the WHERE, so operators never see `aprs_bridges` itself |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |

@@ -36,5 +36,6 @@ export const queryKeys = Object.freeze({
   aprsActions: ['aprs-actions'],
   aprsOutbox: ['aprs-outbox'],
   aprsStationCalls: ['aprs-station-calls'],
+  opsTasks: ['ops-tasks'],
   notifications: (email) => (email ? ['notifications', email] : ['notifications']),
 });
