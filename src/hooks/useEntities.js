@@ -113,6 +113,10 @@ export function useSafetyChecklists() {
 export function useNamingSchemes() {
   return useQuery({ queryKey: queryKeys.namingSchemes, queryFn: () => db.namingSchemes.list({ orderBy: 'sort_order' }) });
 }
+/** Station call signs operators send APRS check-in commands to (members of the group only). */
+export function useAprsStationCalls() {
+  return useQuery({ queryKey: queryKeys.aprsStationCalls, queryFn: () => db.aprsStationCalls.list({ orderBy: 'last_seen_at', ascending: false }), staleTime: 5 * 60_000 });
+}
 export function useAprsBridges() {
   return useQuery({ queryKey: queryKeys.aprsBridges, queryFn: () => db.aprsBridges.list({ orderBy: 'created_at' }) });
 }

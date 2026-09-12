@@ -65,6 +65,7 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `aprs_positions` | Heard stations: callsign, base call, fix, symbol, comment, via, heard_at; 14-day history; `aprs_positions_latest` view gives the newest per callsign (021). Group reads; written by `aprs-ingest` |
 | `aprs_actions` | Audit of APRS commands received: sender, action, matched user and assignment, result, reply (021) |
 | `aprs_outbox` | APRS messages for the bridge to send: recipient, 67-char text, status pending/sent/failed/expired, attempts (021) |
+| `aprs_station_calls` (view) | Station call signs of the group's live bridges for members (022); runs as owner with a membership check in the WHERE, so operators never see `aprs_bridges` itself |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
 
@@ -115,6 +116,8 @@ Trigger `notifications_deliver` (019): after every insert of a deliverable
 type (`assignment_offered/accepted/declined`, `plan_published`, `open_shift`,
 `info`), `net.http_post` sends the row to `deliver_url` with the
 `x-emcomm-hook` secret; failures never block the insert.
+
+Migration 022 adds `deployments.map_url` (shared event map link), `roster_drive_file_id`, `roster_drive_url`, `roster_drive_updated_at` (the staffing roster posted to Google Drive as a Sheet from the browser; the app keeps only the id and link).
 
 Function `apply_aprs_status(user, status, at, note)` (021, service role only):
 finds the operator's live assignment, applies checked_in / on_position /

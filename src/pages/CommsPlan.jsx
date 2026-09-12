@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { PublishStatus } from '@/features/deployments/PublishStatus';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Radio, Plus, FileDown, Download, Send, AlertTriangle, CheckCircle2, Save } from 'lucide-react';
@@ -109,7 +110,12 @@ function CommsPlanContent() {
           <>
             <Button variant="outline" onClick={exportChirp} disabled={rows.length === 0}><Download /> CHIRP CSV</Button>
             <Button variant="outline" onClick={exportPdf} loading={exporting} disabled={rows.length === 0}><FileDown /> ICS 205 PDF</Button>
-            {canEdit && <Button onClick={() => setPublishOpen(true)}><Send /> Publish plan</Button>}
+            {canEdit && (
+              <div className="flex flex-col items-end gap-1">
+                <Button onClick={() => setPublishOpen(true)}><Send /> Publish plan</Button>
+                <PublishStatus deployment={deployment} />
+              </div>
+            )}
           </>
         )}
       />

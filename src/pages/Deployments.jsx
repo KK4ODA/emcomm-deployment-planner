@@ -45,7 +45,7 @@ function localDate(iso) {
 }
 
 function normalizeDeployment(data) {
-  const { template_id: _template, starts_at, ends_at, served_agency, requesting_official, tasking_reference, ...rest } = data;
+  const { template_id: _template, starts_at, ends_at, served_agency, requesting_official, tasking_reference, map_url, ...rest } = data;
   return {
     ...rest,
     starts_at: starts_at || null,
@@ -55,6 +55,7 @@ function normalizeDeployment(data) {
     served_agency: served_agency?.trim() || null,
     requesting_official: requesting_official?.trim() || null,
     tasking_reference: tasking_reference?.trim() || null,
+    map_url: map_url?.trim() || null,
   };
 }
 

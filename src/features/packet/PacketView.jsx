@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Clock, Radio, Navigation, Phone, User, Package, AlertTriangle, Info, Printer, Check, ParkingCircle, DoorOpen, KeyRound } from 'lucide-react';
+import { MapPin, Clock, Radio, Navigation, Phone, User, Package, AlertTriangle, Info, Printer, Check, ParkingCircle, DoorOpen, KeyRound, RadioTower, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CallSign } from '@/components/common/CallSign';
@@ -11,6 +11,8 @@ import { openExternal } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 
 const ROLE_VARIANT = { primary: 'success', alternate: 'info', contingency: 'warning', emergency: 'critical' };
+
+const APRS_HINTS = { checkin: 'when you arrive', onpos: 'when you are on the air', checkout: 'when released', status: 'to ask where you stand' };
 
 /**
  * The operator packet, phone-first. Above the fold: where, when, my call,
@@ -55,6 +57,13 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
           <div className="no-print mt-4 grid grid-cols-2 gap-2">
             {actions}
             {dir && <Button size="lg" variant="outline" className="h-12 text-base" onClick={() => openExternal(dir)}><Navigation /> Directions</Button>}
+          </div>
+        )}
+        {(p.deployment.mapUrl || p.deployment.rosterUrl) && (
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            {p.deployment.mapUrl && <Button variant="ghost" size="sm" onClick={() => openExternal(p.deployment.mapUrl)}><MapPin /> Event map</Button>}
+            {p.deployment.rosterUrl && <Button variant="ghost" size="sm" onClick={() => openExternal(p.deployment.rosterUrl)}><Users /> Staffing roster (Google Sheet)</Button>}
+            <span className="hidden print:inline text-xs text-muted-foreground">{p.deployment.mapUrl ? `Map: ${p.deployment.mapUrl}` : ''}{p.deployment.mapUrl && p.deployment.rosterUrl ? ' · ' : ''}{p.deployment.rosterUrl ? `Roster: ${p.deployment.rosterUrl}` : ''}</span>
           </div>
         )}
         {statusLine && <p className="no-print mt-2 text-sm text-muted-foreground">{statusLine}</p>}
@@ -118,10 +127,43 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
         </Block>
       )}
 
+      {p.aprs && (
+        <Block title="APRS check-in" icon={RadioTower}>
+          <p className="text-sm">From any APRS radio or app, send a message to <span className="font-mono font-semibold">{p.aprs.station}</span>. The reply comes back as an APRS message starting with <span className="font-mono">ok:</span>.</p>
+          <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+            {p.aprs.commands.map(c => <li key={c.action} className="flex items-baseline gap-2"><span className="font-mono font-semibold">{c.example}</span><span className="text-muted-foreground">{APRS_HINTS[c.action] || c.label}</span></li>)}
+          </ul>
+        </Block>
+      )}
+
       {(p.netControl.length > 0 || p.supervisor?.people?.length) && (
         <Block title="People" icon={Phone}>
           {p.supervisor?.people?.map((x, i) => <Contact key={`s${i}`} role={`Reports to (${p.supervisor.tactical || p.supervisor.name})`} c={x} />)}
           {p.netControl.map((x, i) => <Contact key={`n${i}`} role="Net control" c={x} />)}
+        </Block>
+      )}
+
+      {p.roster?.length > 0 && (
+        <Block title="Who is where" icon={Users} className="print:break-inside-auto">
+          <p className="mb-2 text-xs text-muted-foreground">Everyone on this deployment. Open seats are still being filled.</p>
+          <div className="space-y-3">
+            {p.roster.map(g => (
+              <div key={g.site}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.site}</p>
+                <ul className="mt-1 divide-y text-sm">
+                  {g.positions.map(pos => (
+                    <li key={`${pos.position}|${pos.tactical}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1">
+                      <span className="w-28 shrink-0 font-mono font-semibold">{pos.tactical || pos.position}</span>
+                      <span className="min-w-0 flex-1">
+                        {pos.people.map((x, i) => <span key={i} className="mr-3 inline-block"><span className="font-mono">{x.callSign || '—'}</span>{x.name ? ` ${x.name}` : ''}{x.phone ? <a href={`tel:${x.phone}`} className="ml-1 text-muted-foreground underline-offset-2 hover:underline">{x.phone}</a> : null}</span>)}
+                        {pos.open > 0 && <span className="text-muted-foreground">{pos.people.length ? ` +${pos.open} open` : `${pos.open} open`}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </Block>
       )}
 

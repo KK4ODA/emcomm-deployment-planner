@@ -202,6 +202,17 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-12 **Packet extras and desktop fixes** (migration `022`, applied):
+  packet gains the whole roster grouped by site (`src/lib/staffingRoster.js`),
+  an APRS check-in block (view `aprs_station_calls`), an Event map button
+  (`deployments.map_url`) and a Staffing roster link; Staffing gains Roster
+  CSV and Google Sheet (browser only, `src/lib/googleDrive.js`, GIS token
+  client with drive.file, needs `VITE_GOOGLE_CLIENT_ID`, docs/GOOGLE_DRIVE.md);
+  PublishStatus line under Publish buttons; packet map zoomable with a tile
+  pre-fetch around the site (`src/lib/tilePrefetch.js`). Desktop: `save_file`
+  Tauri command + native Save dialog behind `downloadBlob`, opener scope for
+  https/http/mailto/tel so Directions and About links work. Tests:
+  staffingRoster (3), tilePrefetch (3).
 - 2026-09-12 **Deployment files** (`src/lib/deploymentBundle.js`, format
   `emcomm-planner-deployment` v1): export a deployment with everything but
   people; import into any group with key remapping, date shifting and

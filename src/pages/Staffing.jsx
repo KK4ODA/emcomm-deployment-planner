@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { openExternal } from '@/lib/platform';
+import { driveAvailability, uploadCsvAsSheet } from '@/lib/googleDrive';
+import { downloadBlob, safeFileName } from '@/lib/download';
+import { buildStaffingRoster, rosterCsv } from '@/lib/staffingRoster';
+import { PublishStatus } from '@/features/deployments/PublishStatus';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ClipboardList, Plus, Layers, CalendarRange, Users, AlertTriangle, MapPin, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, Plus, Layers, CalendarRange, Users, AlertTriangle, MapPin, CheckCircle2, Download, Sheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
@@ -144,6 +149,25 @@ function StaffingContent() {
 
   const busy = mutations.offer.isPending || mutations.setStatus.isPending || mutations.unassign.isPending;
 
+  const rosterRows = () => buildStaffingRoster({ deploymentId, positions: positionsQ.data ?? [], shifts: shiftsQ.data ?? [], assignments: assignmentsQ.data ?? [], users: usersQ.data ?? [], sites: locationsQ.data ?? [] });
+  const exportRoster = () => downloadBlob(rosterCsv(rosterRows(), { deploymentName: deployment.name }), `roster_${safeFileName(deployment.name)}.csv`, 'text/csv;charset=utf-8');
+  const [postingRoster, setPostingRoster] = useState(false);
+  const rosterQueryClient = useQueryClient();
+  const postRoster = async () => {
+    const avail = driveAvailability();
+    if (avail === 'desktop') { toast.info('Google sign-in does not run inside the desktop app. Open emcommplanner.org in a browser, Staffing › Google Sheet.'); return; }
+    if (avail === 'unconfigured') { toast.info('Google Drive is not configured for this installation. See docs/GOOGLE_DRIVE.md for the one-time setup.'); return; }
+    setPostingRoster(true);
+    try {
+      const { id, url, created } = await uploadCsvAsSheet({ csv: rosterCsv(rosterRows(), { deploymentName: deployment.name }), name: `${deployment.name} staffing roster`, fileId: deployment.roster_drive_file_id ?? null });
+      await db.deployments.update(deployment.id, { roster_drive_file_id: id, roster_drive_url: url, roster_drive_updated_at: new Date().toISOString() });
+      rosterQueryClient.invalidateQueries({ queryKey: queryKeys.deployments });
+      toast.success(created ? 'Roster posted to Google Drive' : 'Google Sheet updated', { description: 'Linked on every packet.', action: { label: 'Open', onClick: () => openExternal(url) } });
+    } catch (err) {
+      toast.error(`Google Drive: ${err?.message || 'failed'}`);
+    } finally { setPostingRoster(false); }
+  };
+
   return (
     <QueryState queries={[locationsQ, usersQ, positionsQ, shiftsQ, assignmentsQ, periodsQ]}>
       <PageHeader
@@ -156,7 +180,14 @@ function StaffingContent() {
             <Button variant="ghost" size="sm" onClick={() => setPeriodsOpen(true)}><CalendarRange /> Periods ({periods.length})</Button>
             <Button variant="outline" onClick={() => setBulkOpen(true)}><Layers /> Create several</Button>
             <Button variant="outline" onClick={() => setPositionDialog({ open: true, position: null })}><Plus /> Position</Button>
-            {positions.length > 0 && <Button onClick={() => setPublishOpen(true)}><Send /> Publish plan</Button>}
+            {positions.length > 0 && <Button variant="outline" onClick={exportRoster} title="One line per seat: site, position, tactical call, shift, status, call sign, name, phone"><Download /> Roster CSV</Button>}
+            {positions.length > 0 && <Button variant="outline" onClick={postRoster} loading={postingRoster} title={driveAvailability() === 'ok' ? (deployment.roster_drive_url ? 'Update the Google Sheet operators see on their packets' : 'Post the roster to your Google Drive as a Sheet and link it on every packet') : driveAvailability() === 'desktop' ? 'Google sign-in does not run inside the desktop app; use emcommplanner.org for this' : 'Google Drive is not configured for this installation (docs/GOOGLE_DRIVE.md)'}><Sheet /> {deployment.roster_drive_url ? 'Update Google Sheet' : 'Google Sheet'}</Button>}
+            {positions.length > 0 && (
+              <div className="flex flex-col items-end gap-1">
+                <Button onClick={() => setPublishOpen(true)}><Send /> Publish plan</Button>
+                <PublishStatus deployment={deployment} />
+              </div>
+            )}
           </>
         )}
       />

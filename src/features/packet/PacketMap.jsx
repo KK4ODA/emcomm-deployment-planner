@@ -8,9 +8,10 @@ import { openExternal } from '@/lib/platform';
 ensureLeafletIcons();
 
 /**
- * Small, non-interactive map for the packet: the site pin over the course
- * layers. Tiles are cached by the service worker once seen, so it survives
- * offline; tapping opens directions.
+ * The packet map: the site pin over the course layers. Zoom and pan work
+ * (scroll-wheel zoom is off so the page still scrolls); tiles are cached by
+ * the service worker once seen and pre-fetched around the site, so it
+ * survives offline. A chip opens the same spot in the phone's maps app.
  * @param {{ site: { lat?: number|null, lon?: number|null, name?: string }|null, layers?: Object[], directions?: string|null, className?: string }} props
  */
 export function PacketMap({ site, layers = [], directions = null, className }) {
@@ -25,18 +26,12 @@ export function PacketMap({ site, layers = [], directions = null, className }) {
   const key = spans ? `b:${bounds.flat().join(',')}` : `c:${pin?.join(',')}`;
   const street = TILE_LAYERS.street;
   return (
-    <div
-      className={className ?? 'relative h-48 overflow-hidden rounded-lg border print:h-40 print:border-2'}
-      role={directions ? 'link' : undefined}
-      aria-label={directions ? `Map of ${site?.name || 'the site'}; opens directions` : `Map of ${site?.name || 'the area'}`}
-      onClick={directions ? () => openExternal(directions) : undefined}
-      style={directions ? { cursor: 'pointer' } : undefined}
-    >
+    <div className={className ?? 'relative h-64 overflow-hidden rounded-lg border print:h-48 print:border-2'} aria-label={`Map of ${site?.name || 'the area'}`}>
       <MapContainer
         key={key}
         {...(spans ? { bounds, boundsOptions: { padding: [16, 16] } } : { center: pin, zoom: 15 })}
         className="h-full w-full"
-        zoomControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false} keyboard={false} attributionControl={false}
+        zoomControl dragging scrollWheelZoom={false} doubleClickZoom touchZoom keyboard={false} attributionControl={false} maxZoom={19}
       >
         <TileLayer url={street.url} attribution={street.attribution} maxZoom={street.maxZoom} />
         {layers.map(layer => (
@@ -49,7 +44,8 @@ export function PacketMap({ site, layers = [], directions = null, className }) {
         ))}
         {pin && <Marker position={pin} interactive={false} />}
       </MapContainer>
-      <span className="pointer-events-none absolute bottom-1 right-1 rounded bg-background/80 px-1 text-[10px] text-muted-foreground">© OpenStreetMap</span>
+      {directions && <button type="button" onClick={() => openExternal(directions)} className="no-print absolute right-2 top-2 z-[400] rounded-md border bg-background/90 px-2 py-1 text-xs font-medium shadow hover:bg-background">Open in Maps</button>}
+      <span className="pointer-events-none absolute bottom-1 right-1 z-[400] rounded bg-background/80 px-1 text-[10px] text-muted-foreground">© OpenStreetMap</span>
     </div>
   );
 }

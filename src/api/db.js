@@ -37,6 +37,7 @@ export const TABLES = Object.freeze({
   aprsPositions: 'aprs_positions',
   aprsActions: 'aprs_actions',
   aprsOutbox: 'aprs_outbox',
+  aprsStationCalls: 'aprs_station_calls',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -194,4 +195,5 @@ export const db = Object.freeze({
   aprsPositions: createRepository(TABLES.aprsPositions),
   aprsActions: createRepository(TABLES.aprsActions),
   aprsOutbox: createRepository(TABLES.aprsOutbox),
+  aprsStationCalls: createRepository(TABLES.aprsStationCalls),
 });

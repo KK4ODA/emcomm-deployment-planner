@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { TILE_LAYERS } from '@/features/sites/leafletSetup';
+import { prefetchTiles, shouldPrefetch } from '@/lib/tilePrefetch';
+import { buildStaffingRoster, rosterBySite } from '@/lib/staffingRoster';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -10,7 +13,7 @@ import { QueryState } from '@/components/common/QueryState';
 import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError, useAprsStationCalls } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { buildPacket, pickCurrentAssignment } from '@/lib/packet';
@@ -48,6 +51,7 @@ function PacketContent() {
   const plansQ = useCommsPlans();
   const rowsQ = useCommsPlanChannels();
   const layersQ = useMapLayers();
+  const stationsQ = useAprsStationCalls();
   const [coverageOpen, setCoverageOpen] = useState(false);
   const logCoverage = useMutation({
     mutationFn: (/** @type {Object} */ data) => db.coverageLog.create({ ...data, ares_group_id: deployment.ares_group_id, deployment_id: deploymentId, reported_by: user.id, occurred_at: new Date().toISOString() }),
@@ -90,11 +94,23 @@ function PacketContent() {
     const plan = (plansQ.data ?? []).filter(p => p.deployment_id === deploymentId).find(p => !p.operational_period_id || p.operational_period_id === shift.operational_period_id) ?? (plansQ.data ?? []).find(p => p.deployment_id === deploymentId) ?? null;
     const planRows = plan ? (rowsQ.data ?? []).filter(r => r.comms_plan_id === plan.id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) : [];
     const period = shift.operational_period_id ? (periodsQ.data ?? []).find(p => p.id === shift.operational_period_id) ?? null : null;
+    const station = (stationsQ.data ?? []).find(s => s.ares_group_id === deployment.ares_group_id && s.station_call)?.station_call ?? null;
+    const roster = rosterBySite(buildStaffingRoster({ deploymentId, positions: positionsQ.data ?? [], shifts: shiftsQ.data ?? [], assignments: assignmentsQ.data ?? [], users, sites: locationsQ.data ?? [] }));
     return buildPacket({
       assignment, shift, position, deployment, site, supervisorPosition,
       supervisorUsers: peopleOn(supervisorPosition), ncsUsers, planRows, items: site ? (itemsQ.data ?? []).filter(i => i.deployment_location_id === site.id) : [], period,
+      aprsStation: station, roster,
     });
-  }, [assignment, shiftById, positionsQ.data, usersQ.data, locationsQ.data, shiftsQ.data, assignmentsQ.data, plansQ.data, rowsQ.data, itemsQ.data, periodsQ.data, deployment, deploymentId]);
+  }, [assignment, shiftById, positionsQ.data, usersQ.data, locationsQ.data, shiftsQ.data, assignmentsQ.data, plansQ.data, rowsQ.data, itemsQ.data, periodsQ.data, deployment, deploymentId, stationsQ.data]);
+
+  // Warm the tile cache around the site once a day while online, so the map still zooms with no signal.
+  const siteLat = packet?.site?.lat ?? null, siteLon = packet?.site?.lon ?? null, siteId = packet?.site?.id ?? null;
+  useEffect(() => {
+    if (siteLat == null || siteLon == null || !siteId || typeof navigator === 'undefined' || !navigator.onLine) return;
+    if (!shouldPrefetch(siteId)) return;
+    const timer = setTimeout(() => { prefetchTiles(siteLat, siteLon, { template: TILE_LAYERS.street.url }).catch(() => {}); }, 2500);
+    return () => clearTimeout(timer);
+  }, [siteLat, siteLon, siteId]);
 
   const acknowledge = async () => {
     setAcking(true);

@@ -9,8 +9,13 @@ export function isDesktopApp() {
  */
 export async function openExternal(url) {
   if (isDesktopApp()) {
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
-    await openUrl(url);
+    try {
+      const { openUrl } = await import('@tauri-apps/plugin-opener');
+      await openUrl(url);
+    } catch (err) {
+      const { toast } = await import('sonner');
+      toast.error(`Could not open the link: ${err?.message || err}`);
+    }
     return;
   }
   window.open(url, '_blank', 'noopener,noreferrer');

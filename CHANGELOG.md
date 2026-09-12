@@ -10,6 +10,16 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 ## [Unreleased]
 
 ### Added
+- **Packet**: a *Who is where* roster of the whole deployment grouped by site (call sign, name, phone), an *APRS check-in* block with the Graywolf station call and the four `@@#` commands when the group runs one, an *Event map* button for a shared map link set on the deployment, and a *Staffing roster* link when the roster is posted to Google Drive.
+- **Staffing**: *Roster CSV* export and *Google Sheet*, which posts the roster to the planner's Google Drive and updates the same sheet on later clicks (web app; needs the one-time OAuth client setup in docs/GOOGLE_DRIVE.md).
+- **Last published** line under every Publish plan button.
+- The packet map zooms and pans, and the tiles around the site are pre-fetched while online so it keeps working offline.
+
+### Fixed
+- Desktop app: saving files (ICS 205 PDF, CHIRP CSV, roster, deployment files) now opens the native Save dialog; before, the download silently went nowhere. Browsers that support it ask where to save too.
+- Desktop app: Directions and every other external link open in the system browser again (the link permission scope was missing).
+
+### Added
 - **Deployment files.** A deployment's menu has *Export deployment file*: one JSON file with its sites, positions, shifts, periods, comms plan and the library channels it uses, map layers, equipment lists, tasks, objectives and safety checklist, and no people. *Import* on the Deployments page loads such a file, or one of the examples shipped with the app, into any of your groups, optionally moved to a new date; library channels are matched by name and frequency and created when missing.
 
 ### Changed

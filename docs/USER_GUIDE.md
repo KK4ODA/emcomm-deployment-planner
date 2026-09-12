@@ -46,6 +46,8 @@ Below your positions, **Open shifts** lists every shift still needing someone. S
 
 If the plan changes after you have seen it, a banner says what changed for your position. Tap *Got it* once read.
 
+The packet also carries **Who is where**, the whole roster grouped by site with call signs and phone numbers, an **APRS check-in** block with the station call and the four commands when your group runs Graywolf, and, when the coordinator added them, an **Event map** link and a **Staffing roster** Google Sheet. The map zooms and pans; the tiles around your site are fetched while you are online so it still works without signal.
+
 ### On the day
 On the packet: **Check in** when you arrive, **On position** when you are set up, **Check out** when released. This works without signal; the buttons say "saved on this device" until it syncs. Net control sees your status live.
 
@@ -81,14 +83,17 @@ Work down the left menu. **Readiness** tells you what is still missing at any po
 - **Periods** defines operational periods when the event spans days or the ICS forms need them.
 
 ### Staff it
+- **Roster CSV** downloads the staffing table, one line per seat with call sign, name and phone. **Google Sheet** posts the same table to your Google Drive and links it on every packet; click it again after changes to update the sheet in place (web app only; see docs/GOOGLE_DRIVE.md for the one-time setup).
+- The deployment's **Event map link** (Deployments › edit › Served agency and authorization) puts an Event map button on every packet, for the Google My Maps or CalTopo map the served agency maintains.
 Each shift chip opens the assign dialog: candidates ranked by requirement match and availability, with reasons such as "Missing Winlink" or "Already on another shift". *Offer* asks the operator. *Assign as confirmed* records a yes you already have. *Notify qualified* tells every qualified, free operator that the shift is open. Positions accept self sign-up unless you switch it off on the position.
 
 ### Channels and the comms plan
 - **Channels** is the group's library (ICS-217A shape). Enter each repeater, simplex channel, digital gateway and phone number once. **Export** it as a file for another group, or **Import** theirs.
+- Saving a file (CHIRP CSV, ICS 205, roster, deployment file) asks where to put it in the desktop app and in Chromium browsers; other browsers use their download folder.
 - **Comms plan** picks from the library per deployment. For each condition (1 normal, 2 degraded, 3 repeaters down) mark primary, alternate, contingency and emergency paths and the net each serves. **Plan check** lists gaps. **CHIRP** exports a CSV to program radios. **ICS 205** is generated from the plan.
 
 ### Publish
-**Publish plan** compares every packet with the last publication and lists what changed, position by position. Only affected operators are notified, with their changes in the message. Tick *Notify everyone assigned* for whole-event notes such as weather. Operators whose packet did not change see no banner.
+Under the Publish button a line says which version operators have and since when. **Publish plan** compares every packet with the last publication and lists what changed, position by position. Only affected operators are notified, with their changes in the message. Tick *Notify everyone assigned* for whole-event notes such as weather. Operators whose packet did not change see no banner.
 
 ### Readiness
 **Readiness** is the worklist: open slots, unanswered offers, requirement gaps, double-booked operators, positions without a tactical call, no net control, nets without a primary channel, channels changed in the library since publishing, unpublished changes, unacknowledged packets, sites without pins or arrival notes, essential items nobody brings, overdue tasks, safety checklist unsigned. Each line links to where it is fixed.

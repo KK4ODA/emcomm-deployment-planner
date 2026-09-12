@@ -13,7 +13,7 @@ import { toDateTimeLocal } from '@/lib/time';
 const BLANK = '__blank__';
 const EMPTY = {
   name: '', description: '', status: 'planning', profile: 'public_service', starts_at: '', ends_at: '', location: '', ares_group_id: '', template_id: '',
-  served_agency: '', requesting_official: '', tasking_reference: '',
+  served_agency: '', requesting_official: '', tasking_reference: '', map_url: '',
 };
 
 /** ISO from a datetime-local input value, or '' */
@@ -43,7 +43,7 @@ export function DeploymentForm({ open, onClose, onSubmit, deployment, submitting
       starts_at: deployment.starts_at || (deployment.start_date ? new Date(`${deployment.start_date}T00:00`).toISOString() : ''),
       ends_at: deployment.ends_at || (deployment.end_date ? new Date(`${deployment.end_date}T23:59`).toISOString() : ''),
       location: deployment.location || '', ares_group_id: deployment.ares_group_id || '', template_id: '',
-      served_agency: deployment.served_agency || '', requesting_official: deployment.requesting_official || '', tasking_reference: deployment.tasking_reference || '',
+      served_agency: deployment.served_agency || '', requesting_official: deployment.requesting_official || '', tasking_reference: deployment.tasking_reference || '', map_url: deployment.map_url || '',
     } : EMPTY);
   }, [deployment, open]);
 
@@ -126,7 +126,7 @@ export function DeploymentForm({ open, onClose, onSubmit, deployment, submitting
             {({ id }) => <Textarea id={id} rows={3} value={form.description} onChange={(e) => set('description')(e.target.value)} />}
           </FormField>
 
-          <details className="rounded-md border p-3" open={!!(form.served_agency || form.requesting_official || form.tasking_reference)}>
+          <details className="rounded-md border p-3" open={!!(form.served_agency || form.requesting_official || form.tasking_reference || form.map_url)}>
             <summary className="flex cursor-pointer items-center gap-1 text-sm font-medium"><ChevronDown className="h-4 w-4" /> Served agency and authorization <span className="text-xs font-normal text-muted-foreground">(optional; printed on the deployment order)</span></summary>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <FormField label="Served agency">
@@ -137,6 +137,9 @@ export function DeploymentForm({ open, onClose, onSubmit, deployment, submitting
               </FormField>
               <FormField label="Tasking reference" className="sm:col-span-2">
                 {({ id }) => <Input id={id} value={form.tasking_reference} onChange={(e) => set('tasking_reference')(e.target.value)} placeholder="e.g., EMA mission number, email of request" />}
+              </FormField>
+              <FormField label="Event map link" className="sm:col-span-2" hint="A shared map kept elsewhere (Google My Maps, CalTopo). Every packet gets an Event map button that opens it.">
+                {({ id }) => <Input id={id} type="url" inputMode="url" value={form.map_url} onChange={(e) => set('map_url')(e.target.value)} placeholder="https://www.google.com/maps/d/..." />}
               </FormField>
             </div>
           </details>
