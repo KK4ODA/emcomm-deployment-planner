@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseGeoFile, parseKml, parseGpx, layerSummary, layerBounds, waypointsOf, kmlColorToCss, routeLengthKm, unionBounds } from './geo';
+import { layerLegend, parseGeoFile, parseKml, parseGpx, layerSummary, layerBounds, waypointsOf, kmlColorToCss, routeLengthKm, unionBounds } from './geo';
 
 const KML = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
@@ -95,5 +95,33 @@ describe('summaries', () => {
     expect(kmlColorToCss('ff00ff00')).toBe('#00ff00');
     expect(kmlColorToCss('7f0000ff')).toBe('#ff0000');
     expect(kmlColorToCss('nope')).toBeNull();
+  });
+});
+
+describe('KML styles the way Google My Maps writes them', () => {
+  const kml = `<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+    <Style id="icon-red-normal"><IconStyle><color>ff0000ff</color></IconStyle></Style>
+    <Style id="icon-red-highlight"><IconStyle><color>ff0000ff</color></IconStyle></Style>
+    <StyleMap id="icon-red"><Pair><key>normal</key><styleUrl>#icon-red-normal</styleUrl></Pair><Pair><key>highlight</key><styleUrl>#icon-red-highlight</styleUrl></Pair></StyleMap>
+    <Style id="line-green-normal"><LineStyle><color>ff00ff00</color><width>6.6</width></LineStyle></Style>
+    <StyleMap id="line-green"><Pair><key>normal</key><styleUrl>#line-green-normal</styleUrl></Pair></StyleMap>
+    <Folder><name>Aid Stations</name>
+      <Placemark><name>Aid 2</name><styleUrl>#icon-red</styleUrl><Point><coordinates>-84.38,33.75,0</coordinates></Point></Placemark>
+    </Folder>
+    <Folder><name>SAG Routes</name>
+      <Placemark><name>Approach</name><styleUrl>#line-green</styleUrl><LineString><coordinates>-84.4,33.7,0 -84.41,33.71,0</coordinates></LineString></Placemark>
+      <Placemark><name>Inline</name><Style><LineStyle><color>ffff0000</color></LineStyle></Style><LineString><coordinates>-84.4,33.7,0 -84.42,33.72,0</coordinates></LineString></Placemark>
+    </Folder>
+  </Document></kml>`;
+  it('follows StyleMaps to icon and line colours, keeps widths and folders', () => {
+    const fc = parseKml(kml);
+    expect(fc.features[0].properties).toMatchObject({ name: 'Aid 2', color: '#ff0000', folder: 'Aid Stations' });
+    expect(fc.features[1].properties).toMatchObject({ name: 'Approach', color: '#00ff00', width: 4, folder: 'SAG Routes' });
+    expect(fc.features[2].properties.color).toBe('#0000ff');
+  });
+  it('builds a legend per folder with the dominant colour', () => {
+    const legend = layerLegend(parseKml(kml));
+    expect(legend.map(l => l.label)).toEqual(['Aid Stations', 'SAG Routes']);
+    expect(legend[1]).toMatchObject({ count: 2 });
   });
 });

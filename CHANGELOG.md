@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- Map layers imported from Google My Maps KML keep their own colours, icon colours and line widths (the importer now follows KML StyleMaps), and the Sites map shows a legend per KML folder. Layers imported earlier need to be removed and imported again to pick up their colours.
+
 ### Changed
 - The **Net control** page is now called **Operations**: it is the event-day board for whoever runs the desk, not only the voice net control operator. Same URL, same content.
 

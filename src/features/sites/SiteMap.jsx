@@ -5,9 +5,23 @@ import { MapPin } from 'lucide-react';
 import { ensureLeafletIcons, TILE_LAYERS } from './leafletSetup';
 import { parseCoordinates, frameLocations } from '@/lib/coordinates';
 import { locationItemStats } from '@/lib/deployments';
-import { layerBounds, unionBounds } from '@/lib/geo';
+import { layerLegend, layerBounds, unionBounds } from '@/lib/geo';
 
 ensureLeafletIcons();
+
+/** Small legend for the imported layers: one chip per KML folder (or colour). */
+function LayerLegend({ layers }) {
+  const entries = layers.flatMap(l => layerLegend(l.geojson, l.color || '#2563eb').map(e => ({ ...e, layer: l.name })));
+  if (!entries.length) return null;
+  const single = layers.length === 1;
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-label="Map legend">
+      {entries.map((e, i) => (
+        <span key={i} className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-white shadow-sm" style={{ background: e.color }} />{single ? e.label : `${e.layer}: ${e.label}`}<span className="opacity-70">({e.count})</span></span>
+      ))}
+    </div>
+  );
+}
 
 /**
  * All sites with coordinates on one map, over any imported layers (course
@@ -29,6 +43,7 @@ export function SiteMap({ locations, items, layers = [], coverage = null, aprs =
   const mapKey = spans ? `b:${bounds.flat().join(',')}` : `c:${center.join(',')}-${zoom}`;
 
   return (
+    <div>
     <div className={className ?? 'relative h-[60vh] min-h-[360px] overflow-hidden rounded-lg border'}>
       <MapContainer key={mapKey} {...(spans ? { bounds, boundsOptions: { padding: [24, 24] } } : { center, zoom })} scrollWheelZoom className="h-full w-full">
         <LayersControl position="topright">
@@ -64,8 +79,8 @@ export function SiteMap({ locations, items, layers = [], coverage = null, aprs =
               <LayersControl.Overlay key={layer.id} checked name={layer.name}>
                 <GeoJSON
                   data={layer.geojson}
-                  style={(f) => ({ color: f?.properties?.color || color, weight: 3, opacity: 0.9, fillOpacity: 0.12 })}
-                  pointToLayer={(f, latlng) => L.circleMarker(latlng, { radius: 5, color: f?.properties?.color || color, weight: 2, fillOpacity: 0.9 })}
+                  style={(f) => ({ color: f?.properties?.color || color, weight: f?.properties?.width || 3, opacity: 0.9, fillColor: f?.properties?.fill || f?.properties?.color || color, fillOpacity: f?.geometry?.type === 'Polygon' ? 0.18 : 0.12 })}
+                  pointToLayer={(f, latlng) => L.circleMarker(latlng, { radius: 6, color: '#ffffff', weight: 2, fillColor: f?.properties?.color || color, fillOpacity: 1 })}
                   onEachFeature={(f, l) => { if (f.properties?.name) l.bindTooltip(String(f.properties.name), { direction: 'top', offset: [0, -4] }); }}
                 />
               </LayersControl.Overlay>
@@ -97,6 +112,8 @@ export function SiteMap({ locations, items, layers = [], coverage = null, aprs =
           </div>
         </div>
       )}
+    </div>
+    <LayerLegend layers={layers} />
     </div>
   );
 }

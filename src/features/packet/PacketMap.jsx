@@ -38,7 +38,7 @@ export function PacketMap({ site, layers = [], directions = null, className }) {
           <GeoJSON
             key={layer.id}
             data={layer.geojson}
-            style={(f) => ({ color: f?.properties?.color || layer.color || '#2563eb', weight: 3, opacity: 0.9, fillOpacity: 0.12 })}
+            style={(f) => ({ color: f?.properties?.color || layer.color || '#2563eb', weight: f?.properties?.width || 3, opacity: 0.9, fillColor: f?.properties?.fill || f?.properties?.color || layer.color || '#2563eb', fillOpacity: 0.12 })}
             pointToLayer={(f, latlng) => L.circleMarker(latlng, { radius: 4, color: f?.properties?.color || layer.color || '#2563eb', weight: 2, fillOpacity: 0.9 })}
           />
         ))}

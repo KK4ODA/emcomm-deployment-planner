@@ -65,27 +65,72 @@ function kmlGeometry(el) {
   return out;
 }
 
-/** @returns {{ type: 'FeatureCollection', features: Object[] }} */
+/** Style of one KML <Style>: line/polygon/icon colour and line width. */
+function kmlStyleOf(el) {
+  const line = Array.from(el.children).find(c => c.localName === 'LineStyle');
+  const poly = Array.from(el.children).find(c => c.localName === 'PolyStyle');
+  const icon = Array.from(el.children).find(c => c.localName === 'IconStyle');
+  const lineColor = kmlColorToCss(textOf(line, 'color'));
+  const polyColor = kmlColorToCss(textOf(poly, 'color'));
+  const iconColor = kmlColorToCss(textOf(icon, 'color'));
+  const width = num(textOf(line, 'width'));
+  const out = {};
+  if (lineColor) out.stroke = lineColor;
+  if (polyColor) out.fill = polyColor;
+  if (iconColor) out.icon = iconColor;
+  if (width != null && width > 0) out.width = width;
+  return out;
+}
+
+/**
+ * KML placemarks to GeoJSON features. Styles are resolved the way Google My
+ * Maps writes them: a placemark points at a <StyleMap>, whose "normal" pair
+ * points at the <Style>; inline styles win. Each feature carries
+ * `color` (what to draw it in), `width` for lines, and `folder` (the KML
+ * folder name, e.g. "Aid Stations"), so the map can legend by folder.
+ * @returns {{ type: 'FeatureCollection', features: Object[] }}
+ */
 export function parseKml(text) {
   const doc = xml(text);
   const styles = new Map();
   for (const s of Array.from(doc.getElementsByTagName('Style'))) {
     const id = s.getAttribute('id');
-    const line = Array.from(s.children).find(c => c.localName === 'LineStyle');
-    const poly = Array.from(s.children).find(c => c.localName === 'PolyStyle');
-    const color = kmlColorToCss(textOf(line, 'color')) || kmlColorToCss(textOf(poly, 'color'));
-    if (id && color) styles.set(`#${id}`, color);
+    if (id) styles.set(`#${id}`, kmlStyleOf(s));
   }
+  for (const m of Array.from(doc.getElementsByTagName('StyleMap'))) {
+    const id = m.getAttribute('id');
+    if (!id) continue;
+    const pairs = Array.from(m.children).filter(c => c.localName === 'Pair');
+    const normal = pairs.find(p => textOf(p, 'key') === 'normal') || pairs[0];
+    const target = normal ? textOf(normal, 'styleUrl') : '';
+    if (target && styles.has(target)) styles.set(`#${id}`, styles.get(target));
+  }
+  const folderOf = (el) => {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      if (p.localName === 'Folder') { const n = textOf(p, 'name'); if (n) return n; }
+    }
+    return null;
+  };
   const features = [];
   for (const pm of Array.from(doc.getElementsByTagName('Placemark'))) {
     const name = textOf(pm, 'name');
     const description = textOf(pm, 'description');
     const styleUrl = textOf(pm, 'styleUrl');
     const inline = Array.from(pm.children).find(c => c.localName === 'Style');
-    const inlineColor = inline ? (kmlColorToCss(textOf(Array.from(inline.children).find(c => c.localName === 'LineStyle'), 'color')) || kmlColorToCss(textOf(Array.from(inline.children).find(c => c.localName === 'PolyStyle'), 'color'))) : null;
-    const color = inlineColor || styles.get(styleUrl) || null;
+    const style = { ...(styles.get(styleUrl) || {}), ...(inline ? kmlStyleOf(inline) : {}) };
+    const folder = folderOf(pm);
     for (const geometry of kmlGeometry(pm)) {
-      features.push({ type: 'Feature', geometry, properties: { name: name || null, description: description || null, ...(color ? { color } : {}) } });
+      const color = geometry.type === 'Point' ? (style.icon || style.stroke || style.fill) : (style.stroke || style.fill || style.icon);
+      features.push({
+        type: 'Feature', geometry,
+        properties: {
+          name: name || null, description: description || null,
+          ...(color ? { color } : {}),
+          ...(style.width && geometry.type !== 'Point' ? { width: Math.min(8, Math.max(1, Math.round(style.width * 0.6))) } : {}),
+          ...(style.fill && geometry.type === 'Polygon' ? { fill: style.fill } : {}),
+          ...(folder ? { folder } : {}),
+        },
+      });
     }
   }
   return { type: 'FeatureCollection', features };
@@ -130,6 +175,25 @@ function eachPosition(geometry, fn) {
   else if (type === 'MultiLineString' || type === 'Polygon') coordinates.forEach(r => r.forEach(fn));
   else if (type === 'MultiPolygon') coordinates.forEach(p => p.forEach(r => r.forEach(fn)));
   else if (type === 'GeometryCollection') (geometry.geometries || []).forEach(g => eachPosition(g, fn));
+}
+
+/**
+ * Legend entries for a layer: one per KML folder (or per distinct colour when
+ * the file has no folders), with the colour most of its features use.
+ * @returns {Array<{ label: string, color: string, count: number }>}
+ */
+export function layerLegend(fc, fallback = '#2563eb') {
+  const groups = new Map();
+  for (const f of fc?.features ?? []) {
+    const p = f.properties || {};
+    const label = p.folder || (p.color ? p.color : 'Features');
+    if (!groups.has(label)) groups.set(label, { label, count: 0, colors: new Map() });
+    const g = groups.get(label);
+    g.count += 1;
+    const c = p.color || fallback;
+    g.colors.set(c, (g.colors.get(c) || 0) + 1);
+  }
+  return [...groups.values()].map(g => ({ label: g.label, count: g.count, color: [...g.colors.entries()].sort((a, b) => b[1] - a[1])[0][0] }));
 }
 
 /** @returns {{ points: number, lines: number, polygons: number, features: number, kind: 'route'|'area'|'points'|'mixed' }} */
