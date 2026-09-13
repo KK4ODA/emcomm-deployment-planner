@@ -5,7 +5,7 @@
 // with a per-group bridge token and:
 //
 //   POST /aprs-ingest/stations   { stations: [StationDTO...] }  heard stations -> aprs_positions
-//   POST /aprs-ingest/action     Graywolf Action webhook: @@#checkin | #onpos | #checkout | #status
+//   POST /aprs-ingest/action     Graywolf Action webhook: @@#checkin | #onpos | #checkout | #status (live shift + tasks, else next shift)
 //                                tasks: @@#ack N | #enroute N | #onscene N | #done N [note]
 //                                (Graywolf's default form body: action, sender_callsign, source, otp_verified, plus bare arg keys)
 //   GET  /aprs-ingest/outbox     pending APRS messages for the bridge to send
@@ -138,17 +138,13 @@ async function handleAction(bridge: Bridge, form: Record<string, string>) {
   if (!member) return log('not_allowed', `${user.call_sign} not in this group`, { user_id: user.id })
 
   if (action === 'status' || action === 'st') {
-    const { data: a } = await admin.from('assignments').select('status, shifts(starts_at, positions(name, tactical_callsign))').eq('user_id', user.id).in('status', ['accepted', 'checked_in', 'on_position']).order('created_at', { ascending: false }).limit(1).maybeSingle()
-    const s = a as unknown as { status: string; shifts?: { positions?: { name?: string; tactical_callsign?: string } } } | null
-    const { data: openTasks } = await admin.from('ops_tasks').select('seq, status, title, position_id, assignment_id, deployment_id').in('status', ['issued', 'acknowledged', 'en_route', 'on_scene']).order('issued_at', { ascending: false }).limit(20)
-    let taskBit = ''
-    if (s && openTasks?.length) {
-      const { data: mineRows } = await admin.from('assignments').select('id, deployment_id, shifts(position_id)').eq('user_id', user.id).in('status', ['accepted', 'checked_in', 'on_position'])
-      const myAssign = new Set((mineRows ?? []).map(r => r.id)), myPos = new Set((mineRows ?? []).map(r => (r as unknown as { shifts?: { position_id?: string } }).shifts?.position_id).filter(Boolean)), myDeps = new Set((mineRows ?? []).map(r => r.deployment_id))
-      const mine = openTasks.filter(t => myDeps.has(t.deployment_id) && ((t.assignment_id && myAssign.has(t.assignment_id)) || (!t.assignment_id && t.position_id && myPos.has(t.position_id)) || (!t.assignment_id && !t.position_id)))
-      if (mine.length) taskBit = `; task ${mine[0].seq} ${mine[0].status.replace('_', ' ')}${mine.length > 1 ? ` +${mine.length - 1}` : ''}`
-    }
-    return log('ok', s ? `${s.shifts?.positions?.tactical_callsign || s.shifts?.positions?.name || 'position'}: ${s.status.replace('_', ' ')}${taskBit}` : 'no live assignment', { user_id: user.id })
+    // The same "live assignment" rule as check-ins (running now or within 12 h,
+    // in a planning/active deployment of this bridge's group), plus open tasks;
+    // otherwise the operator's next shift.
+    const { data, error } = await admin.rpc('aprs_status_reply', { p_user_id: user.id, p_group_id: bridge.ares_group_id, p_at: new Date().toISOString() })
+    if (error) return log('error', 'server error, tell net control', { user_id: user.id })
+    const r = data as { result: string; reply: string; assignment_id?: string }
+    return log(r.result, r.reply, { user_id: user.id, assignment_id: r.assignment_id ?? null })
   }
   const taskStatus = TASK_STATUS[action]
   if (taskStatus) {
@@ -157,14 +153,14 @@ async function handleAction(bridge: Bridge, form: Record<string, string>) {
     const m = raw.match(/^#?(\d+)\s*(.*)$/)
     const seq = m ? Number(m[1]) : null
     const taskNote = m ? (m[2] || null) : (raw || null)
-    const { data, error } = await admin.rpc('apply_aprs_task', { p_user_id: user.id, p_status: taskStatus, p_seq: seq, p_note: taskNote, p_at: new Date().toISOString() })
+    const { data, error } = await admin.rpc('apply_aprs_task', { p_user_id: user.id, p_status: taskStatus, p_seq: seq, p_note: taskNote, p_at: new Date().toISOString(), p_group_id: bridge.ares_group_id })
     if (error) return log('error', 'server error, tell net control', { user_id: user.id })
     const r = data as { result: string; reply: string; task_id?: string }
     return log(r.result, r.reply, { user_id: user.id })
   }
   const status = ACTION_STATUS[action]
   if (!status) return log('not_allowed', 'use #checkin #onpos #checkout #status #ack #enroute #onscene #done', { user_id: user.id })
-  const { data, error } = await admin.rpc('apply_aprs_status', { p_user_id: user.id, p_status: status, p_at: new Date().toISOString(), p_note: note })
+  const { data, error } = await admin.rpc('apply_aprs_status', { p_user_id: user.id, p_status: status, p_at: new Date().toISOString(), p_note: note, p_group_id: bridge.ares_group_id })
   if (error) return log('error', 'server error, tell net control', { user_id: user.id })
   const r = data as { result: string; reply: string; assignment_id?: string }
   return log(r.result, r.reply, { user_id: user.id, assignment_id: r.assignment_id ?? null })

@@ -55,7 +55,7 @@ On the packet: **Check in** when you arrive, **On position** when you are set up
 - **Over APRS**, if your group runs a Graywolf station: send an APRS message to the station's call with `@@#checkin`, `@@#onpos`, `@@#checkout` or `@@#status`. You get a reply on the air.
 
 ### Tasks from the desk
-When the desk sends you somewhere, a **Your tasks** card appears at the top of your packet with the task number, what to do, where, and one big button for the next step: **Acknowledge** as soon as you have it, **En route** when you move, **On scene** when you arrive, **Done** when finished. It works without signal; the step is sent when you have coverage. Over APRS the same steps are `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14` (14 being the task number; leave it out for your newest task).
+When the desk sends you somewhere, a **Your tasks** card appears at the top of your packet with the task number, what to do, where, and one big button for the next step: **Acknowledge** as soon as you have it, **En route** when you move, **On scene** when you arrive, **Done** when finished. It works without signal; the step is sent when you have coverage. Over APRS the same steps are `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14` (14 being the task number; leave it out for your newest task). `@@#status` answers with your live shift and open task, or with the start time of your next shift.
 
 ### Objectives
 When the deployment has objectives (exercises, Field Day), **Objectives** shows them. *I will take this* › do it › *Done*. Points and completion feed the after-action review.

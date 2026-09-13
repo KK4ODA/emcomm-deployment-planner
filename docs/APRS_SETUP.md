@@ -112,7 +112,7 @@ Reply texts from the planner:
 | `@@#checkin` | `ok: <TACTICAL>: checked in` |
 | `@@#onpos` | `ok: <TACTICAL>: on position` |
 | `@@#checkout` | `ok: <TACTICAL>: released` |
-| `@@#status` | `ok: <TACTICAL>: <current status>; task 14 en route` or `ok: no live assignment` |
+| `@@#status` | `ok: <TACTICAL>: <current status>; task 14 en route` while your shift is live (running, or within the next 12 hours); `ok: no shift now; next AID 20 Mar 07 10:45z` when your next shift is further out; `ok: no live assignment` when you have none |
 | `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14 note` | `ok: task 14 acknowledged SAG 7` and so on; leave the number out for your newest open task |
 | from a call sign the planner does not know | `ok: <CALL> not a member; set APRS call on your profile` |
 | wrong token in the URL | `error: http 401` (the planner said `denied: bad token`) |
@@ -155,7 +155,7 @@ Only members of the bridge's ARES group are accepted, and a check-in applies to 
 | Stations heard is empty on the planner | Graywolf is not hearing anyone (check Graywolf first); *Forward heard stations* unticked; the bridge's last report on the APRS page is old. |
 | `denied: bad token` on the air | The webhook URL in Graywolf still has the placeholder instead of the token, has a typo, or belongs to a revoked bridge. Edit each Action's URL; if the token is lost, *Setup › Issue a new token* and paste it into Emcomm Objects and all eight Actions. |
 | `<CALL> not a member` | The sender's call sign is not on any member's profile and does not match a member's base call, or the member is not in this group. |
-| `no live assignment` | The operator has no accepted assignment whose shift is live now in the active deployment. Check Staffing. |
+| `no live assignment` / `no shift now; next …` | The operator has no accepted assignment whose shift is running or starting within 12 hours in a planning/active deployment of this bridge's group. Check Staffing; a shift on another day answers with its start time in UTC. |
 | Offers do not arrive over APRS | The operator has not enabled APRS notifications; *Send messages* is unticked in Emcomm Objects; the message is longer than 67 characters and was truncated (that is expected). |
 | Positions look stale | The bridge forwards every 30 s and Graywolf only reports what it heard in the last hour by default (`lookback_seconds`). Downtown Atlanta has poor RF APRS coverage; phone-based APRS-IS positions do not reach Graywolf. |
 

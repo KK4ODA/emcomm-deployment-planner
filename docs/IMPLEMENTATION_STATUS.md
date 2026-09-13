@@ -203,6 +203,13 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-09-13 **APRS live-assignment rule** (migration `024`, applied;
+  `aprs-ingest` v6): `aprs_live_assignment(user, at, group)` shared by
+  `apply_aprs_status`, `apply_aprs_task` (both gain `p_group_id`) and the new
+  `aprs_status_reply`; found when the owner's first RF `@@#status` named a
+  Field Day slot in January. Verified by SQL probe (now: next-shift reply;
+  marathon morning: `AID 20: accepted`; foreign group: none). Owner ran all
+  eight Graywolf Actions over RF on 2026-09-13.
 - 2026-09-12 **Mobile pass 2** (v2.7.4): Playwright at 375 px over every
   page (scratchpad `shots/mobile-audit.js`, `mobile-culprits.js`): the four
   pages that scrolled sideways were all grid columns sized by one

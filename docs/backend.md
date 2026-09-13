@@ -120,10 +120,22 @@ type (`assignment_offered/accepted/declined`, `plan_published`, `open_shift`,
 
 Migration 022 adds `deployments.map_url` (shared event map link), `roster_drive_file_id`, `roster_drive_url`, `roster_drive_updated_at` (the staffing roster posted to Google Drive as a Sheet from the browser; the app keeps only the id and link).
 
-Function `apply_aprs_status(user, status, at, note)` (021, service role only):
-finds the operator's live assignment, applies checked_in / on_position /
-released along the same ladder as the app, logs it ("via APRS") with an
-idempotency key, and returns a short reply for the radio.
+Function `apply_aprs_status(user, status, at, note, group)` (021, 024, service
+role only): finds the operator's live assignment, applies checked_in /
+on_position / released along the same ladder as the app, logs it ("via
+APRS") with an idempotency key, and returns a short reply for the radio.
+
+Migration 024 defines "live assignment" once, in `aprs_live_assignment(user,
+at, group)`: the accepted / checked-in / on-position assignment whose shift is
+running now or starts within 12 hours (ended less than 2 hours ago at most),
+in a planning or active deployment of the bridge's own ARES group. Check-ins,
+task steps (`apply_aprs_task`, now also group-scoped and preferring the live
+deployment) and `@@#status` (`aprs_status_reply`) all use it. Status answers
+`<TAC>: <status>; task N <state> +k` when a shift is live, `no shift now; next
+<TAC> <Mon DD HH:MI>z` when the operator only has a future shift, else `no live
+assignment`. Before 024, status picked the newest accepted assignment in any
+deployment, so an operator staffed for a Field Day months away heard about
+that slot on marathon day.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a

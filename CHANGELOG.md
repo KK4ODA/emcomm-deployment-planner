@@ -9,6 +9,9 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- APRS `@@#status` answered with the operator's newest accepted assignment in any deployment (a Winter Field Day slot months away, on a September afternoon). Migration 024 gives check-ins, task steps and status one definition of the live assignment: the shift running now or within 12 hours, in a planning or active deployment of the bridge's own group. With nothing live, status now replies `no shift now; next <unit> <date time>z`. Task steps over APRS are scoped to the same group and prefer the live deployment.
+
 ### Changed
 - APRS setup: the webhook URL shown after the token is gone now ends in `PASTE-YOUR-TOKEN-HERE` with a warning, since a copied placeholder makes Graywolf Actions fail silently with `denied: bad token`; hints and the setup guide count eight Actions.
 
