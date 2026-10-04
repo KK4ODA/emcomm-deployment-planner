@@ -9,6 +9,15 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Added
+- **Agency registration.** A deployment can record that the served agency keeps its own participant roster, with a deadline, a link and what the host needs. Staffing tracks each assigned operator as submitted, confirmed or rejected, readiness counts who is outstanding and turns critical at the deadline, and each packet tells the operator where they stand.
+- **ICS 219 cards.** *Cards* on Staffing prints personnel T-cards (219-5) and crew cards (219-2) from the plan, six to a page, with the crew, departure point, times and Winlink address. A crew card short of its planned headcount says so.
+- **Winlink addressing.** A position can carry the address written traffic goes to and how often the unit checks it. Both appear on every packet, in the ICS 205A and on crew cards, and readiness asks for them once the comms plan carries digital modes.
+- **Monitor-only channels.** A comms-plan row can be marked listen-only: MONITOR ONLY in the ICS 205 transmit column, a badge on the packet, and duplex off in the CHIRP export.
+- **Read-only share links.** *Share* on Staffing mints a link for partner agencies and anyone without an account, showing times, sites with arrival notes and the units, with contact details left out unless the planner opts in. Links are listed with their view count and can be revoked.
+- **Minimum team size.** A deployment can set the floor (three is the usual one), and readiness warns about any staffed team below it.
+- **Objective evaluation.** Planners can score each objective met, partly met, not met or not exercised, and the after-action report assembles the objectives table from it.
+
 ### Fixed
 - APRS `@@#status` answered with the operator's newest accepted assignment in any deployment (a Winter Field Day slot months away, on a September afternoon). Migration 024 gives check-ins, task steps and status one definition of the live assignment: the shift running now or within 12 hours, in a planning or active deployment of the bridge's own group. With nothing live, status now replies `no shift now; next <unit> <date time>z`. Task steps over APRS are scoped to the same group and prefer the live deployment.
 

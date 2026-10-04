@@ -37,6 +37,7 @@ started**. The version is the release the row first shipped in.
 |---|---|---|
 | Readiness / viability checklist | Shipped v2.3.0 | `/readiness`: plan, staffing, comms, sites and logistics checks (open slots, unanswered offers, unmet requirements, double-booked operators, missing tactical calls, no net control, nets without a primary, stale channels, unpublished changes, unacknowledged packets, sites without pins or arrival notes, essential items nobody brings, overdue tasks) as a worklist with a link per line; dashboard card for planners. |
 | NCS live board (staffed / uncovered / released, offline) | Shipped v2.0.0 | `/ncs`, worst-first rows, on-behalf check-in, log notes, works from cache. |
+| Exercise readiness: agency registration, ICS 219 cards, Winlink addressing, monitor-only channels, share links, team-size floor, objective evaluation (added by the owner after the 2026 Atlanta UASI exercise, outside the design doc) | Shipped v2.8.0 | Registration tracked per operator with a deadline and a readiness check; ICS 219-5 and 219-2 cards generated from the plan; `winlink_address` per position on the packet, the 205A and crew cards; monitor-only rows in the 205 and CHIRP; `/s/:token` read-only links with contacts opt-in and revocation; minimum team size; objectives scored met / partly met / not met / not exercised into the AAR table. |
 | Tasking: dispatch a unit, ladder to done, on the 214 (added by the owner, outside the design doc) | Shipped v2.7.0 | Operations board Tasks panel and Dispatch (unit, kind, priority, from/to site or text); operator packet *Your tasks* card with one button per step, offline-queued; APRS `@@#ack / #enroute / #onscene / #done N`; notifications on dispatch; amber/red when unacknowledged; every step logged (ICS 214); AAR counts and median dispatch-to-scene. |
 | Change notification to affected operators only, with a diff | Shipped v2.2.0 | Per-position packet snapshots; `publish_plan` notifies only changed positions with their changes; unaffected packets show no banner. |
 | Deployment cloning with lessons carried forward | Shipped v2.1.0 | Copies periods, positions, shifts, people, comms plan, map layers; shifts dates; open lessons carry over and show on Staffing. |
@@ -203,6 +204,21 @@ shipped, waitlisted with a trigger, or removed with a reason.
   Verified live: GET returns the generated VAPID key, POST without the hook
   secret is refused, and an inserted notification reaches the function
   through pg_net. Tests: notificationPrefs (3). 242 total.
+- 2026-10-04 **Exercise readiness batch** (migration `025`, applied;
+  `public-plan` Edge Function v1), built from the after-action reports of the
+  Atlanta UASI Communications Functional Exercise of 2026-10-01, which was
+  planned over e-mail and lost a team leader the morning before to a
+  registration rejection. Seven gaps closed: agency registration per operator
+  (`deployment_registrations`, `src/lib/registration.js`,
+  `features/staffing/RegistrationPanel`), Winlink addressing per position
+  (`positions.winlink_address`, packet block, ICS 205A column), monitor-only
+  channels (`comms_plan_channels.monitor_only`, ICS 205, CHIRP duplex off),
+  ICS 219 personnel and crew cards (`src/lib/icsCards.js`,
+  `features/staffing/icsCardsPdf.js`), a minimum team size readiness rule,
+  read-only share links (`deployment_shares`, `create_deployment_share`,
+  `public_deployment_view`, `/s/:token` via `pages/SharedPlan.jsx`), and an
+  evaluation per objective feeding the AAR objectives table. Tests:
+  registration (4), icsCards (5), readiness (5), comms (3), aar (3).
 - 2026-09-13 **APRS live-assignment rule** (migration `024`, applied;
   `aprs-ingest` v6): `aprs_live_assignment(user, at, group)` shared by
   `apply_aprs_status`, `apply_aprs_task` (both gain `p_group_id`) and the new

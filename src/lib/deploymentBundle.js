@@ -12,7 +12,7 @@ export const BUNDLE_FORMAT = 'emcomm-planner-deployment';
 export const BUNDLE_VERSION = 1;
 
 const CHANNEL_FIELDS = ['name', 'band', 'config', 'rx_freq', 'rx_tone', 'rx_bandwidth', 'tx_freq', 'tx_tone', 'tx_bandwidth', 'mode', 'digital_mode', 'gateway_callsign', 'tactical_address', 'owner_callsign', 'phone_number', 'lat', 'lon', 'timeout_seconds', 'eligible_users', 'remarks'];
-const PLAN_ROW_FIELDS = ['sort_order', 'channel_name', 'band', 'config', 'rx_freq', 'rx_tone', 'rx_bandwidth', 'tx_freq', 'tx_tone', 'tx_bandwidth', 'mode', 'digital_mode', 'gateway_callsign', 'tactical_address', 'owner_callsign', 'phone_number', 'timeout_seconds', 'zone_group', 'channel_number', 'function', 'assignment', 'net', 'condition_level', 'path_role', 'remarks'];
+const PLAN_ROW_FIELDS = ['sort_order', 'channel_name', 'band', 'config', 'rx_freq', 'rx_tone', 'rx_bandwidth', 'tx_freq', 'tx_tone', 'tx_bandwidth', 'mode', 'digital_mode', 'gateway_callsign', 'tactical_address', 'owner_callsign', 'phone_number', 'timeout_seconds', 'zone_group', 'channel_number', 'function', 'assignment', 'net', 'condition_level', 'path_role', 'monitor_only', 'remarks'];
 
 const pick = (row, fields) => Object.fromEntries(fields.filter(f => row[f] !== undefined).map(f => [f, row[f] ?? null]));
 const keyer = (prefix) => { const m = new Map(); return { of: (id) => (id == null ? null : m.get(id) ?? null), add: (id) => { const k = `${prefix}${m.size + 1}`; m.set(id, k); return k; } }; };
@@ -49,6 +49,7 @@ export function buildBundle({ source, locations = [], categories = [], items = [
       key: positionKeys.add(p.id), site_key: siteKeys.of(p.site_id), supervisor_id: p.supervisor_position_id ?? null, supervisor_key: null,
       name: p.name, tactical_callsign: p.tactical_callsign ?? null, position_type: p.position_type ?? null, net: p.net ?? null, headcount: p.headcount ?? 1,
       requirements: Array.isArray(p.requirements) ? p.requirements : [], briefing_notes: p.briefing_notes ?? null, sort_order: p.sort_order ?? 0, open_signup: p.open_signup !== false,
+      winlink_address: p.winlink_address ?? null, digital_check_minutes: p.digital_check_minutes ?? null,
     })),
     shifts: shifts.map(s => ({ position_key: positionKeys.of(s.position_id), period_key: periodKeys.of(s.operational_period_id), starts_at: s.starts_at, ends_at: s.ends_at, muster_at: s.muster_at ?? null, headcount: s.headcount ?? null, notes: s.notes ?? null })),
     channels: [],
@@ -177,6 +178,7 @@ export async function importBundle(repos, bundle, { groupId, createdBy = null, n
       const created = await repos.positions.create({
         deployment_id: deployment.id, site_id: siteIds.get(p.site_key) ?? null, name: p.name, tactical_callsign: p.tactical_callsign ?? null, position_type: p.position_type ?? null, net: p.net ?? null,
         headcount: p.headcount ?? 1, requirements: Array.isArray(p.requirements) ? p.requirements : [], briefing_notes: p.briefing_notes ?? null, sort_order: p.sort_order ?? 0, open_signup: p.open_signup !== false,
+        winlink_address: p.winlink_address ?? null, digital_check_minutes: p.digital_check_minutes ?? null,
       });
       positionIds.set(p.key, created.id); counts.positions += 1;
     }

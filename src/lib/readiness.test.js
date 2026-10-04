@@ -66,3 +66,47 @@ describe('readinessChecklist', () => {
     expect(r.items.find(i => i.id === 'double')).toMatchObject({ state: 'warn', detail: 'KK4ODA' });
   });
 });
+
+describe('exercise readiness (registration, team size, addressing)', () => {
+  const base = {
+    deployment, positions, shifts, users, locations, planRows: rows, periods: [{ id: 'op1' }], items: [], tasks: [],
+    safety: { signed_at: '2026-03-07T08:00:00Z', signed_name: 'KK4ODA' },
+    assignments: [
+      { id: 'a1', shift_id: 's1', user_id: 'u1', status: 'accepted', packet_version_seen: 2 },
+      { id: 'a2', shift_id: 's9', user_id: 'u2', status: 'accepted', packet_version_seen: 2 },
+    ],
+  };
+  const find = (r, id) => r.items.find(i => i.id === id);
+
+  it('says nothing about registration unless the agency keeps its own roster', () => {
+    expect(find(readinessChecklist(base), 'registration')).toBeUndefined();
+  });
+
+  it('counts operators who are not confirmed, and calls out a rejection', () => {
+    const dep = { ...deployment, registration_required: true, registration_deadline: '2026-03-06T00:00:00Z' };
+    const r = readinessChecklist({ ...base, deployment: dep, registrations: [{ user_id: 'u1', status: 'rejected' }], now: new Date('2026-03-05T00:00:00Z') });
+    expect(find(r, 'registration-rejected')).toMatchObject({ state: 'todo' });
+    expect(find(r, 'registration').label).toContain('1 operator not confirmed');
+  });
+
+  it('is green once everyone is on the agency roster', () => {
+    const dep = { ...deployment, registration_required: true };
+    const r = readinessChecklist({ ...base, deployment: dep, registrations: [{ user_id: 'u1', status: 'confirmed' }, { user_id: 'u2', status: 'confirmed' }] });
+    expect(find(r, 'registration')).toMatchObject({ state: 'ok' });
+  });
+
+  it('warns about a team below the minimum size', () => {
+    const r = readinessChecklist({ ...base, deployment: { ...deployment, min_team_size: 3 } });
+    expect(find(r, 'teamsize')).toMatchObject({ state: 'warn' });
+    expect(find(r, 'teamsize').label).toContain('below 3 operators');
+  });
+
+  it('asks for Winlink addresses only when the plan carries digital modes', () => {
+    expect(find(readinessChecklist(base), 'winlink')).toBeUndefined();
+    const digital = [...rows, { id: 'r4', condition_level: 2, path_role: 'contingency', channel_name: 'WD5EMA-10', rx_freq: 145.53, tx_freq: 145.53, mode: 'D', digital_mode: 'vara_fm', function: 'Command' }];
+    const r = readinessChecklist({ ...base, planRows: digital });
+    expect(find(r, 'winlink')).toMatchObject({ state: 'todo' });
+    const addressed = positions.map(p => ({ ...p, winlink_address: `DKARES-${p.id}` }));
+    expect(find(readinessChecklist({ ...base, planRows: digital, positions: addressed }), 'winlink')).toMatchObject({ state: 'ok' });
+  });
+});

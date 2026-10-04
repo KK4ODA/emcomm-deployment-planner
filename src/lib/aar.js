@@ -66,7 +66,7 @@ export function aarSummary({ assignments, positions, shifts, log, hours, feedbac
     feedbackCount: feedback.length,
     coverage: { total: coverage.length, direct: coverage.filter(c => c.result === 'direct').length, relay: coverage.filter(c => c.result === 'relay').length, fail: coverage.filter(c => c.result === 'fail').length },
     safety: safety ? { signed: !!safety.signed_at, signedName: safety.signed_name || null, signedAt: safety.signed_at || null } : null,
-    objectives: { total: objectives.filter(o => o.status !== 'dropped').length, done: objectives.filter(o => o.status === 'done').length, open: objectives.filter(o => o.status === 'open').length, points: objectives.filter(o => o.status === 'done').reduce((s, o) => s + (o.points || 0), 0) },
+    objectives: { total: objectives.filter(o => o.status !== 'dropped').length, done: objectives.filter(o => o.status === 'done').length, open: objectives.filter(o => o.status === 'open').length, points: objectives.filter(o => o.status === 'done').reduce((s, o) => s + (o.points || 0), 0), evaluated: objectives.filter(o => o.status !== 'dropped' && o.evaluation).length },
     averageRating: ratings.length ? round(ratings.reduce((s, r) => s + r, 0) / ratings.length) : null,
     commsVotes,
   };
@@ -76,6 +76,8 @@ export function aarSummary({ assignments, positions, shifts, log, hours, feedbac
  * Plain-text AAR draft (Markdown) the coordinator can paste into an email or
  * a document. Never invents content; empty sections say so.
  */
+const EVALUATION_LABEL = { met: 'Met', partly_met: 'Partly met', not_met: 'Not met', not_exercised: 'Not exercised' };
+
 export function aarMarkdown({ deployment, summary, feedback, lessons, usersById, planChanges = [], objectives = [] }) {
   const lines = [];
   const who = (f) => (f.anonymous || !f.user_id ? 'Anonymous' : usersById.get(f.user_id)?.call_sign || usersById.get(f.user_id)?.full_name || 'Member');
@@ -126,7 +128,13 @@ export function aarMarkdown({ deployment, summary, feedback, lessons, usersById,
     lines.push(summary.safety.signed ? `- Safety checklist signed by ${summary.safety.signedName || 'the Safety Officer'} on ${new Date(summary.safety.signedAt).toLocaleString()}` : '- Safety checklist started but never signed');
     lines.push('');
   }
-  if (summary.objectives?.total) {
+  if (summary.objectives?.evaluated) {
+    lines.push('', '## Objectives', '', '| # | Objective | Result | Notes |', '|---|---|---|---|');
+    (objectives || []).filter(o => o.status !== 'dropped').forEach((o, i) => {
+      const result = o.evaluation ? EVALUATION_LABEL[o.evaluation] || o.evaluation : 'Not scored';
+      lines.push(`| ${i + 1} | ${o.title} | ${result} | ${(o.evaluation_note || o.evidence || '').replace(/\|/g, '/')} |`);
+    });
+  } else if (summary.objectives?.total) {
     lines.push('## Objectives');
     lines.push(`- ${summary.objectives.done} of ${summary.objectives.total} done${summary.objectives.points ? ` (${summary.objectives.points} points)` : ''}${summary.objectives.open ? `, ${summary.objectives.open} never taken` : ''}`);
     for (const o of (objectives || [])) if (o.status !== 'dropped') lines.push(`  - [${o.status === 'done' ? 'x' : ' '}] ${o.title}${o.status === 'done' && o.evidence ? ` (${o.evidence})` : ''}`);

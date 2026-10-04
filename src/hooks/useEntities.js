@@ -117,6 +117,14 @@ export function useNamingSchemes() {
 export function useOpsTasks(deploymentId) {
   return useQuery({ queryKey: [...queryKeys.opsTasks, deploymentId], queryFn: () => db.opsTasks.where({ deployment_id: deploymentId }, { orderBy: 'issued_at', ascending: false }), enabled: !!deploymentId });
 }
+/** Registration with the served agency, one row per operator on this deployment. */
+export function useDeploymentRegistrations(deploymentId) {
+  return useQuery({ queryKey: [...queryKeys.deploymentRegistrations, deploymentId], queryFn: () => db.deploymentRegistrations.where({ deployment_id: deploymentId }), enabled: !!deploymentId });
+}
+/** Read-only share links for this deployment (planners only; RLS hides them from operators). */
+export function useDeploymentShares(deploymentId) {
+  return useQuery({ queryKey: [...queryKeys.deploymentShares, deploymentId], queryFn: () => db.deploymentShares.where({ deployment_id: deploymentId }, { orderBy: 'created_at', ascending: false }), enabled: !!deploymentId });
+}
 /** Station call signs operators send APRS check-in commands to (members of the group only). */
 export function useAprsStationCalls() {
   return useQuery({ queryKey: queryKeys.aprsStationCalls, queryFn: () => db.aprsStationCalls.list({ orderBy: 'last_seen_at', ascending: false }), staleTime: 5 * 60_000 });

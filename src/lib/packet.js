@@ -33,11 +33,12 @@ export function pickCurrentAssignment(assignments, shiftById, now = new Date()) 
  * @param {{
  *   assignment: Object, shift: Object, position: Object, deployment: Object,
  *   site?: Object|null, supervisorPosition?: Object|null, supervisorUsers?: Object[],
- *   ncsUsers?: Object[], planRows?: Object[], items?: Object[], period?: Object|null, aprsStation?: string|null, roster?: Object[]
+ *   ncsUsers?: Object[], planRows?: Object[], items?: Object[], period?: Object|null, aprsStation?: string|null, roster?: Object[],
+ *   positions?: Object[], registration?: Object|null
  * }} ctx
  */
 export function buildPacket(ctx) {
-  const { assignment, shift, position, deployment, site = null, supervisorPosition = null, supervisorUsers = [], ncsUsers = [], planRows = [], items = [], period = null, aprsStation = null, roster = [] } = ctx;
+  const { assignment, shift, position, deployment, site = null, supervisorPosition = null, supervisorUsers = [], ncsUsers = [], planRows = [], items = [], period = null, aprsStation = null, roster = [], positions = [], registration = null } = ctx;
   const rows = channelsForNet(planRows, position.net);
   const byCondition = groupByCondition(rows);
   const primary = byCondition[1].find(r => r.path_role === 'primary') || byCondition[1][0] || rows[0] || null;
@@ -51,6 +52,23 @@ export function buildPacket(ctx) {
     hasUnseenChange: !!deployment.plan_published_at && (assignment.packet_version_seen ?? 0) < (deployment.plan_version || 1),
     deployment: { id: deployment.id, name: deployment.name, servedAgency: deployment.served_agency || null, status: deployment.status, mapUrl: deployment.map_url || null, rosterUrl: deployment.roster_drive_url || null },
     position: { id: position.id, name: position.name, tactical: position.tactical_callsign || null, type: position.position_type || null, net: position.net || null, briefing: position.briefing_notes || null, headcount: position.headcount },
+    /** Where written traffic goes: this unit's own address first, then everyone else's. */
+    digital: (() => {
+      const mine = position.winlink_address
+        ? { address: position.winlink_address, everyMinutes: position.digital_check_minutes || null }
+        : null;
+      const others = (positions.length ? positions : [])
+        .filter(x => x.id !== position.id && x.winlink_address)
+        .map(x => ({ unit: x.tactical_callsign || x.name, address: x.winlink_address, everyMinutes: x.digital_check_minutes || null }));
+      return mine || others.length ? { mine, others } : null;
+    })(),
+    /** Registration with the served agency, when the host keeps its own roster. */
+    registration: deployment.registration_required ? {
+      status: registration?.status || 'not_submitted',
+      reference: registration?.reference || null,
+      notes: deployment.registration_notes || null,
+      deadline: deployment.registration_deadline || null,
+    } : null,
     shift: {
       id: shift.id, startsAt: shift.starts_at, endsAt: shift.ends_at, musterAt: shift.muster_at || null, notes: shift.notes || null,
       period: period ? { label: period.label || `Period ${period.sequence}`, startsAt: period.starts_at, endsAt: period.ends_at } : null,

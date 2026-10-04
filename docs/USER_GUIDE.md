@@ -58,6 +58,8 @@ On the packet: **Check in** when you arrive, **On position** when you are set up
 When the desk sends you somewhere, a **Your tasks** card appears at the top of your packet with the task number, what to do, where, and one big button for the next step: **Acknowledge** as soon as you have it, **En route** when you move, **On scene** when you arrive, **Done** when finished. It works without signal; the step is sent when you have coverage. Over APRS the same steps are `@@#ack 14`, `@@#enroute 14`, `@@#onscene 14`, `@@#done 14` (14 being the task number; leave it out for your newest task). `@@#status` answers with your live shift and open task, or with the start time of your next shift.
 
 ### Objectives
+Planners can also score each objective after the event as met, partly met, not met or not exercised. The after-action report then assembles the objectives table that an agency report asks for, instead of someone writing it out by hand.
+
 When the deployment has objectives (exercises, Field Day), **Objectives** shows them. *I will take this* › do it › *Done*. Points and completion feed the after-action review.
 
 ### Feedback and your hours
@@ -83,6 +85,7 @@ Work down the left menu. **Readiness** tells you what is still missing at any po
 
 ### Positions and shifts
 - **Staffing › Position**: name, tactical call, type, site (or mobile), net, who it reports to, headcount, requirements (capability, station type, licence, hours of power), shifts with muster times, briefing notes.
+- **Winlink address** on a position is where written traffic for that unit goes, with how often the unit checks it. Both appear on every packet, in the ICS 205A and on crew cards, so a message has an agreed destination before anyone needs one.
 - **Create several** for numbered positions: "AID MILE {n}" with tactical call "AID {n}" for 1 to 14. Save the pattern as a naming scheme; the position form then fills tactical call, type, net and requirements as you type.
 - **Periods** defines operational periods when the event spans days or the ICS forms need them.
 
@@ -95,6 +98,24 @@ Each shift chip opens the assign dialog: candidates ranked by requirement match 
 - **Channels** is the group's library (ICS-217A shape). Enter each repeater, simplex channel, digital gateway and phone number once. **Export** it as a file for another group, or **Import** theirs.
 - Saving a file (CHIRP CSV, ICS 205, roster, deployment file) asks where to put it in the desktop app and in Chromium browsers; other browsers use their download folder.
 - **Comms plan** picks from the library per deployment. For each condition (1 normal, 2 degraded, 3 repeaters down) mark primary, alternate, contingency and emergency paths and the net each serves. **Plan check** lists gaps. **CHIRP** exports a CSV to program radios. **ICS 205** is generated from the plan.
+
+### Agency registration
+Some hosts keep their own participant roster, and being assigned here does not put an operator on it. Turn on **The served agency keeps its own participant roster** when you create or edit the deployment, with the deadline and what the host needs (a government photo ID at the gate, for example). Staffing then shows an **Agency registration** panel listing every assigned operator, where you set each one to submitted, confirmed or rejected and record the agency's reference. Readiness counts who is still outstanding and turns red once the deadline passes or the day before the event, and every operator's packet tells them whether they are confirmed.
+
+### Cards
+**Cards** on the Staffing page prints ICS 219 resource status cards from the plan, six to a page: personnel T-cards (219-5), one per assigned operator, and crew cards (219-2), one per unit with its crew, departure point, times and Winlink address. A crew card that is short of its planned headcount says so.
+
+### Share the plan
+**Share** creates a read-only link for people with no account: the partner agency, the venue, the operator who cannot find the address. The link shows the times, every site with address, parking and arrival notes, and the list of units. Personal contact details are left out unless you tick **Include contacts** when you create it. Each link is listed with its view count and can be revoked.
+
+### Agency registration
+Some hosts keep their own participant roster, and being assigned here does not put an operator on it. Turn on **The served agency keeps its own participant roster** when you create or edit the deployment, with the deadline and what the host needs (a government photo ID at the gate, for example). Staffing then shows an **Agency registration** panel listing every assigned operator, where you set each one to submitted, confirmed or rejected and record the agency's reference. Readiness counts who is still outstanding and turns red once the deadline passes or the day before the event, and every operator's packet tells them whether they are confirmed.
+
+### Cards
+**Cards** on the Staffing page prints ICS 219 resource status cards from the plan, six to a page: personnel T-cards (219-5), one per assigned operator, and crew cards (219-2), one per unit with its crew, departure point, times and Winlink address. A crew card that is short of its planned headcount says so.
+
+### Share the plan
+**Share** creates a read-only link for people with no account: the partner agency, the venue, the operator who cannot find the address. The link shows the times, every site with address, parking and arrival notes, and the list of units. Personal contact details are left out unless you tick **Include contacts** when you create it. Each link is listed with its view count and can be revoked.
 
 ### Publish
 Under the Publish button a line says which version operators have and since when. **Publish plan** compares every packet with the last publication and lists what changed, position by position. Only affected operators are notified, with their changes in the message. Tick *Notify everyone assigned* for whole-event notes such as weather. Operators whose packet did not change see no banner.
@@ -114,6 +135,8 @@ Under the Publish button a line says which version operators have and since when
 **Operations** is the board for whoever runs the desk on the day (net control, the assistant, or the coordinator). It lists every live shift, worst first: nobody assigned, not heard from, arriving, on station, released. Record check-ins on someone's behalf, add log notes and incidents. When the group runs the Graywolf bridge, each operator's last APRS fix and distance to the site appear on their line.
 
 **Tasks** are how the desk sends a unit to do something: pass a message, relay, pick up, deliver, stage, patrol, search, rendezvous, a welfare or equipment check. **Dispatch** (or the *Task* button on a position's line) asks for the unit, one line of what to do, from and to (a site or free text), and a priority. The unit gets it on their packet and by notification, then walks the ladder from their packet or over APRS: **Acknowledge**, **En route**, **On scene**, **Done**. The Tasks panel lists open tasks worst first, with the minutes waiting; a task nobody acknowledged turns amber at five minutes and red at ten (half that for urgent). The desk can move a task forward or cancel it. Every step writes a line to the log, so the ICS 214 fills itself, and the after-action review counts tasks and the median time from dispatch to on scene.
+
+Channels can be marked **monitor only** in the comms plan: the unit listens and never transmits, which is how an interoperability or agency channel should be carried. Those rows print as MONITOR ONLY in the transmit column of the ICS 205, show a badge on the packet, and export to CHIRP with the duplex set to off.
 
 Exports from the board: **ICS 204** (assignment list per site), **ICS 205A** (communications list), **ICS 214** (activity log, including every task step). The board keeps working from cached data when the connection drops and shows "as of" the last refresh.
 

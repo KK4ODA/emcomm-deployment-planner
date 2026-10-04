@@ -94,3 +94,27 @@ describe('CHIRP export', () => {
     expect(lines[2]).toMatch(/^1,Simplex,146.550000,,0.000000,,88.5,88.5,023,NN,NFM/);
   });
 });
+
+describe('monitor-only channels', () => {
+  it('exports to CHIRP with duplex off so the radio cannot transmit', () => {
+    const csv = toChirpCsv([{ channel_name: 'VAUX1', rx_freq: 155.7525, tx_freq: 155.7525, mode: 'A', monitor_only: true, rx_bandwidth: 'N' }]);
+    const row = csv.trim().split('\n')[1].split(',');
+    expect(row[3]).toBe('off');
+    expect(csv).toContain('MONITOR ONLY');
+  });
+
+  it('does not count a monitor-only row as missing a transmit frequency', () => {
+    const rows = [
+      { condition_level: 1, path_role: 'primary', function: 'Command', rx_freq: 146.76, tx_freq: 146.16, mode: 'A' },
+      { condition_level: 1, path_role: 'alternate', function: 'Tactical', rx_freq: 145.45, tx_freq: 144.85, mode: 'A' },
+      { condition_level: 3, path_role: 'primary', function: 'Tactical', rx_freq: 146.46, tx_freq: 146.46, mode: 'A' },
+      { condition_level: 1, path_role: 'contingency', function: 'Other', rx_freq: 154.28, mode: 'A', monitor_only: true },
+    ];
+    expect(planWarnings(rows).join(' ')).not.toContain('without a transmit frequency');
+  });
+
+  it('warns when the whole plan is listen-only', () => {
+    const rows = [{ condition_level: 1, path_role: 'primary', function: 'Command', rx_freq: 154.28, mode: 'A', monitor_only: true }];
+    expect(planWarnings(rows).join(' ')).toContain('monitor only');
+  });
+});

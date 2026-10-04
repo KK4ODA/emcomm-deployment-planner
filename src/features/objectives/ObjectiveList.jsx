@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Section } from '@/components/common/Section';
 import { CallSign } from '@/components/common/CallSign';
-import { OBJECTIVE_STATUS, objectiveActions, sortObjectives } from '@/lib/objectives';
+import { OBJECTIVE_STATUS, OBJECTIVE_EVALUATION, objectiveActions, sortObjectives } from '@/lib/objectives';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDateTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 
@@ -13,9 +14,11 @@ const TONE = { warning: 'warning', info: 'info', success: 'success', muted: 'mut
 /**
  * Objectives with claim / done buttons. Used on the Objectives page and,
  * compactly, on My assignments.
- * @param {{ objectives: Object[], user: Object, isPlanner: boolean, usersById: Map<string, Object>, onStatus: (id: string, status: string) => void, onEdit?: (o: Object) => void, onDelete?: (o: Object) => void, busyId?: string|null, compact?: boolean, title?: string }} props
+ * @param {{ objectives: Object[], user: Object, isPlanner: boolean, usersById: Map<string, Object>, onStatus: (id: string, status: string) => void, onEdit?: (o: Object) => void, onDelete?: (o: Object) => void, onEvaluate?: (id: string, evaluation: string|null) => void, busyId?: string|null, compact?: boolean, title?: string }} props
  */
-export function ObjectiveList({ objectives, user, isPlanner, usersById, onStatus, onEdit, onDelete, busyId, compact = false, title = 'Objectives' }) {
+const NOT_SCORED = '__none__';
+
+export function ObjectiveList({ objectives, user, isPlanner, usersById, onStatus, onEvaluate = null, onEdit = null, onDelete = null, busyId = null, compact = false, title = 'Objectives' }) {
   const list = sortObjectives(objectives);
   const done = list.filter(o => o.status === 'done').length;
   if (!list.length) return null;
@@ -38,10 +41,20 @@ export function ObjectiveList({ objectives, user, isPlanner, usersById, onStatus
                   {o.status === 'done' && <>done {formatDateTime(o.completed_at, 'MMM d HH:mm')}{claimer ? <> by <CallSign value={claimer.call_sign} /></> : ''}{o.evidence ? ` · ${o.evidence}` : ''}</>}
                 </p>
               </div>
+              {o.evaluation && <Badge variant={TONE[OBJECTIVE_EVALUATION[o.evaluation]?.tone] || 'outline'}>{OBJECTIVE_EVALUATION[o.evaluation]?.label}</Badge>}
               <Badge variant={TONE[OBJECTIVE_STATUS[o.status]?.tone] || 'outline'}>{OBJECTIVE_STATUS[o.status]?.label || o.status}</Badge>
               <div className="flex flex-wrap gap-1">
                 {primary && <Button size="sm" onClick={() => onStatus(o.id, primary.status)} loading={busyId === o.id}>{primary.label}</Button>}
                 {rest.map(a => <Button key={a.status} size="sm" variant="ghost" onClick={() => onStatus(o.id, a.status)} disabled={busyId === o.id}>{a.label}</Button>)}
+                {isPlanner && onEvaluate && (
+                  <Select value={o.evaluation || NOT_SCORED} onValueChange={(v) => onEvaluate(o.id, v === NOT_SCORED ? null : v)}>
+                    <SelectTrigger className="h-8 w-36 text-xs" aria-label={`Evaluation for ${o.title}`}><SelectValue placeholder="Not scored" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NOT_SCORED}>Not scored</SelectItem>
+                      {Object.entries(OBJECTIVE_EVALUATION).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
                 {isPlanner && onEdit && <Button size="icon-sm" variant="ghost" aria-label={`Edit ${o.title}`} onClick={() => onEdit(o)}><Pencil /></Button>}
                 {isPlanner && onDelete && <Button size="icon-sm" variant="ghost" aria-label={`Delete ${o.title}`} className="text-destructive hover:text-destructive" onClick={() => onDelete(o)}><Trash2 /></Button>}
               </div>

@@ -38,6 +38,7 @@ import NotFound from '@/pages/NotFound';
 const Login = lazy(() => import('@/pages/Login'));
 const Guide = lazy(() => import('@/pages/Guide'));
 const Privacy = lazy(() => import('@/pages/Privacy'));
+const SharedPlan = lazy(() => import('@/pages/SharedPlan'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 
 /** Legacy /LocationTasks?location=<id> → /sites/<id>/tasks */
@@ -114,6 +115,7 @@ export default function App() {
                 <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route path={ROUTES.guide} element={<Guide />} />
                 <Route path={ROUTES.privacy} element={<Privacy />} />
+                <Route path="/s/:token" element={<SharedPlan />} />
                 <Route path="/*" element={<AuthenticatedApp />} />
               </Routes>
             </Suspense>

@@ -7,6 +7,7 @@ import { coverageSummary, overlappingAssignments, occupies } from './staffing';
 import { planWarnings, channelsForNet, snapshotStale } from './comms';
 import { isUnassigned } from './assignments';
 import { outstandingAssets } from './assets';
+import { registrationRoster, registrationSummary, registrationUrgency } from './registration';
 import { ROUTES } from '@/app/routes';
 
 /** @typedef {{ id: string, group: string, label: string, state: 'todo'|'warn'|'ok', detail?: string, to?: string, cta?: string }} ReadinessItem */
@@ -18,11 +19,11 @@ const n = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many
  * @param {{
  *   deployment: Object, positions?: Object[], shifts?: Object[], assignments?: Object[], users?: Object[],
  *   locations?: Object[], items?: Object[], tasks?: Object[], periods?: Object[], planRows?: Object[],
- *   channels?: Object[], assets?: Object[], objectives?: Object[], safety?: Object|null, unpublishedChanges?: number|null, now?: Date
+ *   channels?: Object[], assets?: Object[], objectives?: Object[], safety?: Object|null, registrations?: Object[], unpublishedChanges?: number|null, now?: Date
  * }} ctx everything already scoped to the deployment except channels and users
  * @returns {{ items: ReadinessItem[], groups: { name: string, items: ReadinessItem[] }[], todo: number, warn: number, ok: number, ready: boolean }}
  */
-export function readinessChecklist({ deployment, positions = [], shifts = [], assignments = [], users = [], locations = [], items = [], tasks = [], periods = [], planRows = [], channels = [], assets = [], objectives = [], safety = null, unpublishedChanges = null, now = new Date() }) {
+export function readinessChecklist({ deployment, positions = [], shifts = [], assignments = [], users = [], locations = [], items = [], tasks = [], periods = [], planRows = [], channels = [], assets = [], objectives = [], safety = null, registrations = [], unpublishedChanges = null, now = new Date() }) {
   /** @type {ReadinessItem[]} */
   const out = [];
   const add = (group, id, state, label, detail, to, cta) => out.push({ id, group, state, label, detail, to, cta });
@@ -67,6 +68,41 @@ export function readinessChecklist({ deployment, positions = [], shifts = [], as
     const noTac = positions.filter(p => !p.tactical_callsign);
     if (noTac.length) add('Staffing', 'tactical', 'warn', `${n(noTac.length, 'position')} without a tactical call`, 'Net control needs a name to call on the air.', ROUTES.staffing, 'Staffing');
     if (!positions.some(p => p.position_type === 'net_control')) add('Staffing', 'ncs', 'warn', 'No net control position', 'Who runs the net, and who backs them up?', ROUTES.staffing, 'Staffing');
+
+    // The served agency's own roster. Being assigned here is not the same as
+    // being admitted at the gate, and finding that out late costs a team.
+    if (deployment.registration_required) {
+      const roster = registrationRoster({ assignments, usersById, registrations });
+      const reg = registrationSummary(roster);
+      const urgency = registrationUrgency(deployment, now);
+      const names = (status) => roster.filter(r => r.status === status).map(r => r.user?.call_sign || '?').join(', ');
+      if (reg.rejected) {
+        add('Staffing', 'registration-rejected', 'todo', `${n(reg.rejected, 'operator')} rejected by the agency`, `${names('rejected')}. Reassign the position or settle it with the host.`, ROUTES.staffing, 'Staffing');
+      }
+      if (reg.outstanding - reg.rejected > 0) {
+        add('Staffing', 'registration', urgency === 'critical' ? 'todo' : 'warn', `${n(reg.outstanding - reg.rejected, 'operator')} not confirmed on the agency roster`,
+          `${reg.confirmed} of ${reg.total} confirmed${deployment.registration_deadline ? `; deadline ${new Date(deployment.registration_deadline).toLocaleString()}` : ''}.`, ROUTES.staffing, 'Staffing');
+      } else if (reg.total && !reg.rejected) {
+        add('Staffing', 'registration', 'ok', `All ${reg.total} assigned operators are on the agency roster`);
+      }
+    }
+
+    // Minimum team size: one operator cannot hold a net and raise antennas.
+    const floor = Number(deployment.min_team_size) || 0;
+    if (floor > 1) {
+      const counts = new Map();
+      for (const a of live) {
+        const sh = shifts.find(x => x.id === a.shift_id);
+        if (sh) counts.set(sh.position_id, (counts.get(sh.position_id) || 0) + 1);
+      }
+      const short = positions.filter(p => counts.has(p.id) && counts.get(p.id) < floor);
+      if (short.length) {
+        add('Staffing', 'teamsize', 'warn', `${n(short.length, 'team')} below ${floor} operators`,
+          `${short.slice(0, 5).map(p => `${p.tactical_callsign || p.name} (${counts.get(p.id)})`).join(', ')}${short.length > 5 ? ', …' : ''}`, ROUTES.staffing, 'Staffing');
+      } else if (counts.size) {
+        add('Staffing', 'teamsize', 'ok', `Every staffed team has at least ${floor} operators`);
+      }
+    }
   }
 
   // ── Comms ──
@@ -87,6 +123,21 @@ export function readinessChecklist({ deployment, positions = [], shifts = [], as
       const unseen = live.filter(a => a.status !== 'offered' && (a.packet_version_seen ?? 0) < (deployment.plan_version || 1));
       if (unseen.length) add('Comms', 'acks', 'warn', `${n(unseen.length, 'operator')} not yet on the latest packet`, 'They will see a change banner; call the ones on critical positions.', ROUTES.ncs, 'Operations');
       else if (live.length) add('Comms', 'acks', 'ok', 'Everyone has seen the latest packet');
+    }
+  }
+
+  // Written traffic needs an agreed destination. Voice nets survive without
+  // one; Winlink messages between teams simply vanish, which is what the
+  // UASI exercise found afterwards.
+  {
+    const digital = planRows.some(r => r.mode === 'D' || r.digital_mode);
+    const staffed = new Set(shifts.filter(sh => live.some(a => a.shift_id === sh.id)).map(sh => sh.position_id));
+    const units = positions.filter(p => staffed.has(p.id));
+    const addressed = units.filter(p => p.winlink_address);
+    if (digital && units.length) {
+      if (!addressed.length) add('Comms', 'winlink', 'todo', 'No unit has a Winlink address', 'The plan carries digital modes but no agreed addressing, so written traffic has nowhere to go.', ROUTES.staffing, 'Staffing');
+      else if (addressed.length < units.length) add('Comms', 'winlink', 'warn', `${n(units.length - addressed.length, 'staffed unit')} without a Winlink address`, `Addressed: ${addressed.map(p => p.tactical_callsign || p.name).join(', ')}.`, ROUTES.staffing, 'Staffing');
+      else add('Comms', 'winlink', 'ok', 'Every staffed unit has a Winlink address');
     }
   }
 

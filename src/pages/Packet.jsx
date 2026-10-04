@@ -15,7 +15,7 @@ import { QueryState } from '@/components/common/QueryState';
 import { DeploymentGate } from '@/components/common/DeploymentGate';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError, useAprsStationCalls, useOpsTasks } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useCommsPlans, useCommsPlanChannels, useItems, useOperationalPeriods, useRealtimeInvalidation, useMapLayers, reportMutationError, useAprsStationCalls, useOpsTasks, useDeploymentRegistrations } from '@/hooks/useEntities';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { buildPacket, pickCurrentAssignment } from '@/lib/packet';
@@ -54,6 +54,7 @@ function PacketContent() {
   const rowsQ = useCommsPlanChannels();
   const layersQ = useMapLayers();
   const stationsQ = useAprsStationCalls();
+  const registrationsQ = useDeploymentRegistrations(deployment?.registration_required ? deploymentId : null);
   const [coverageOpen, setCoverageOpen] = useState(false);
   const logCoverage = useMutation({
     mutationFn: (/** @type {Object} */ data) => db.coverageLog.create({ ...data, ares_group_id: deployment.ares_group_id, deployment_id: deploymentId, reported_by: user.id, occurred_at: new Date().toISOString() }),
@@ -104,8 +105,10 @@ function PacketContent() {
       assignment, shift, position, deployment, site, supervisorPosition,
       supervisorUsers: peopleOn(supervisorPosition), ncsUsers, planRows, items: site ? (itemsQ.data ?? []).filter(i => i.deployment_location_id === site.id) : [], period,
       aprsStation: station, roster,
+      positions: (positionsQ.data ?? []).filter(x => x.deployment_id === deploymentId),
+      registration: (registrationsQ.data ?? []).find(r => r.user_id === assignment.user_id) ?? null,
     });
-  }, [assignment, shiftById, positionsQ.data, usersQ.data, locationsQ.data, shiftsQ.data, assignmentsQ.data, plansQ.data, rowsQ.data, itemsQ.data, periodsQ.data, deployment, deploymentId, stationsQ.data]);
+  }, [assignment, shiftById, positionsQ.data, usersQ.data, locationsQ.data, shiftsQ.data, assignmentsQ.data, plansQ.data, rowsQ.data, itemsQ.data, periodsQ.data, deployment, deploymentId, stationsQ.data, registrationsQ.data]);
 
   // Warm the tile cache around the site once a day while online, so the map still zooms with no signal.
   const siteLat = packet?.site?.lat ?? null, siteLon = packet?.site?.lon ?? null, siteId = packet?.site?.id ?? null;

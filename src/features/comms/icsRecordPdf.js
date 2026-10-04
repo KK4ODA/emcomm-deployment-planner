@@ -110,7 +110,7 @@ export async function renderIcs214Pdf({ deployment, period, entries, person = nu
  * ICS 205A Communications List: staffed positions with names, call signs and
  * contact methods, generated from assignments (doctrinally "completed during
  * check-in").
- * @param {{ deployment: Object, period?: Object|null, rows: Array<{ position: string, tactical: string, name: string, callSign: string, method: string, net: string }>, preparedByName?: string }} params
+ * @param {{ deployment: Object, period?: Object|null, rows: Array<{ position: string, tactical: string, name: string, callSign: string, method: string, net: string, digital?: string }>, preparedByName?: string }} params
  */
 export async function renderIcs205aPdf({ deployment, period, rows, preparedByName = '' }) {
   const ctx = await openDoc('COMMUNICATIONS LIST (ICS 205A)', deployment, period);
@@ -118,12 +118,13 @@ export async function renderIcs205aPdf({ deployment, period, rows, preparedByNam
   ctx.text('3. Basic Local Communications Information', ctx.margin, ctx.y + 3);
   let y = ctx.y + 5;
   y = drawTable(ctx, [
-    { label: 'Incident Assigned Position', width: 30, key: 'position' },
+    { label: 'Incident Assigned Position', width: 26, key: 'position' },
     { label: 'Tactical', width: 16, key: 'tactical' },
     { label: 'Name', width: 26, key: 'name' },
     { label: 'Call sign', width: 16, key: 'callSign' },
-    { label: 'Method(s) of contact', width: 30, key: 'method' },
-    { label: 'Net', width: 12, key: 'net' },
+    { label: 'Method(s) of contact', width: 26, key: 'method' },
+    { label: 'Winlink', width: 20, key: 'digital' },
+    { label: 'Net', width: 10, key: 'net' },
   ], rows, y);
   preparedBy(ctx, y + 4, preparedByName, 'COML');
   ctx.footer('ICS 205A');

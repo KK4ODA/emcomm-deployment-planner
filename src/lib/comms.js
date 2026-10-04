@@ -175,8 +175,9 @@ export function planWarnings(rows) {
   if (!c1.some(r => r.path_role === 'primary')) w.push('Condition 1 has no primary channel.');
   if (!c1.some(r => r.path_role === 'alternate')) w.push('Condition 1 has no alternate (backup repeater).');
   if (!rows.some(r => r.condition_level === 3)) w.push('No Condition 3 (repeaters down) simplex path is defined.');
-  const missingTx = rows.filter(r => r.config !== 'phone' && r.mode !== 'D' && r.rx_freq && !r.tx_freq);
+  const missingTx = rows.filter(r => !r.monitor_only && r.config !== 'phone' && r.mode !== 'D' && r.rx_freq && !r.tx_freq);
   if (missingTx.length) w.push(`${missingTx.length} channel${missingTx.length === 1 ? '' : 's'} without a transmit frequency.`);
+  if (rows.length && rows.every(r => r.monitor_only)) w.push('Every channel is monitor only: the plan gives nobody a way to transmit.');
   const noFunction = rows.filter(r => !r.function);
   if (noFunction.length) w.push(`${noFunction.length} channel${noFunction.length === 1 ? '' : 's'} without a function (Command / Tactical / …).`);
   return w;
@@ -191,6 +192,8 @@ function csv(v) {
 /**
  * CHIRP-compatible CSV (generic import format). Analog FM channels only;
  * digital and phone rows are skipped. Names are trimmed to 7 characters.
+ * Monitor-only rows are exported with duplex "off", so the radio can hear
+ * them and cannot transmit on them.
  * @param {Object[]} rows plan rows in display order
  */
 export function toChirpCsv(rows) {
@@ -201,7 +204,7 @@ export function toChirpCsv(rows) {
     if (r.mode === 'D' || r.config === 'phone' || !r.rx_freq) continue;
     const rx = Number(r.rx_freq), tx = r.tx_freq != null && r.tx_freq !== '' ? Number(r.tx_freq) : rx;
     const diff = Number((tx - rx).toFixed(4));
-    const duplex = diff === 0 ? '' : diff > 0 ? '+' : '-';
+    const duplex = r.monitor_only ? 'off' : diff === 0 ? '' : diff > 0 ? '+' : '-';
     const tone = String(r.tx_tone || '').trim();
     const isTone = /^\d+(\.\d+)?$/.test(tone);
     const isDtcs = /^D?\d{3}[NR]?$/i.test(tone) && !isTone;
@@ -215,7 +218,7 @@ export function toChirpCsv(rows) {
       'NN',
       r.rx_bandwidth === 'N' ? 'NFM' : 'FM',
       '5.00', '',
-      [r.function, r.assignment, r.remarks].filter(Boolean).join(' - '),
+      [r.monitor_only ? 'MONITOR ONLY' : null, r.function, r.assignment, r.remarks].filter(Boolean).join(' - '),
       '', '', '', '',
     ].map(csv).join(','));
     i += 1;

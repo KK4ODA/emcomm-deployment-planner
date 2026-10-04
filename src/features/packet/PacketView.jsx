@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Clock, Radio, Navigation, Phone, User, Package, AlertTriangle, Info, Printer, Check, ParkingCircle, DoorOpen, KeyRound, RadioTower, Users } from 'lucide-react';
+import { MapPin, Clock, Radio, Navigation, Phone, User, Package, AlertTriangle, Info, Printer, Check, ParkingCircle, DoorOpen, KeyRound, RadioTower, Users, Mailbox, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CallSign } from '@/components/common/CallSign';
@@ -94,6 +94,7 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
                     <Badge variant={ROLE_VARIANT[r.path_role] || 'outline'} className="print:border">{PATH_ROLES[r.path_role]?.label || r.path_role}</Badge>
                     <span className="font-mono text-base font-semibold">{channelSummary(r)}</span>
                     <span className="text-sm text-muted-foreground">{r.channel_name}{r.net ? ` · ${r.net} net` : ''}{r.assignment ? ` · ${r.assignment}` : ''}</span>
+                    {r.monitor_only && <Badge variant="muted">monitor only, do not transmit</Badge>}
                     {r.remarks && <span className="basis-full text-sm text-muted-foreground">{r.remarks}</span>}
                   </li>
                 ))}
@@ -126,6 +127,45 @@ export function PacketView({ packet, asOf = null, onAcknowledge, acknowledging, 
               {p.equipment.map(i => <li key={i.id} className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-sm border print:border-black" aria-hidden /> {i.name}{i.quantity > 1 ? ` ×${i.quantity}` : ''}</li>)}
             </ul>
           )}
+        </Block>
+      )}
+
+      {p.digital && (
+        <Block title="Written traffic" icon={Mailbox}>
+          {p.digital.mine ? (
+            <p className="text-base">
+              Your unit&apos;s address is <span className="font-mono font-semibold">{p.digital.mine.address}</span>
+              {p.digital.mine.everyMinutes ? <> and you check it every <span className="font-semibold">{p.digital.mine.everyMinutes} minutes</span>.</> : '.'}
+            </p>
+          ) : (
+            <p className="text-base">Your unit has no Winlink address published. Ask net control where written traffic should go before you need it.</p>
+          )}
+          {p.digital.others.length > 0 && (
+            <ul className="mt-2 divide-y text-sm">
+              {p.digital.others.map(o => (
+                <li key={o.address} className="flex flex-wrap items-baseline gap-x-3 py-1">
+                  <span className="w-28 shrink-0 font-mono font-semibold">{o.unit}</span>
+                  <span className="font-mono">{o.address}</span>
+                  {o.everyMinutes && <span className="text-xs text-muted-foreground">every {o.everyMinutes} min</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Block>
+      )}
+
+      {p.registration && (
+        <Block title="Agency registration" icon={BadgeCheck}>
+          <p className="text-base">
+            {p.registration.status === 'confirmed'
+              ? <>You are on the host&apos;s participant roster{p.registration.reference ? <> (reference <span className="font-mono">{p.registration.reference}</span>)</> : ''}.</>
+              : p.registration.status === 'rejected'
+                ? 'The host has not accepted your registration. Contact the coordinator before travelling.'
+                : p.registration.status === 'not_required'
+                  ? 'No registration needed for you.'
+                  : 'You are not yet confirmed on the host\u2019s participant roster. Without it you may be turned away at the gate.'}
+          </p>
+          {p.registration.notes && <p className="mt-1 text-sm text-muted-foreground">{p.registration.notes}</p>}
         </Block>
       )}
 

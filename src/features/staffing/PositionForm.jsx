@@ -12,7 +12,7 @@ import { POSITION_TYPES, normalizeRequirements } from '@/lib/capabilities';
 import { deriveTactical, matchScheme, schemeDefaults } from '@/lib/naming';
 
 const NONE = '__none__';
-const EMPTY = { name: '', tactical_callsign: '', position_type: 'station', site_id: '', headcount: 1, net: '', supervisor_position_id: '', briefing_notes: '', requirements: [], open_signup: true };
+const EMPTY = { name: '', tactical_callsign: '', position_type: 'station', site_id: '', headcount: 1, net: '', supervisor_position_id: '', briefing_notes: '', requirements: [], open_signup: true, winlink_address: '', digital_check_minutes: '' };
 
 /**
  * Create or edit a position with its requirements and shifts.
@@ -35,6 +35,7 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
       setForm({
         name: position.name || '', tactical_callsign: position.tactical_callsign || '', position_type: position.position_type || 'station',
         site_id: position.site_id || '', headcount: position.headcount || 1, net: position.net || '',
+        winlink_address: position.winlink_address || '', digital_check_minutes: position.digital_check_minutes == null ? '' : String(position.digital_check_minutes),
         supervisor_position_id: position.supervisor_position_id || '', briefing_notes: position.briefing_notes || '',
         requirements: normalizeRequirements(position.requirements),
         open_signup: position.open_signup !== false,
@@ -77,6 +78,8 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
       site_id: form.site_id || null,
       headcount: Math.max(1, Number(form.headcount) || 1),
       net: form.net.trim() || null,
+      winlink_address: form.winlink_address.trim().toUpperCase() || null,
+      digital_check_minutes: form.digital_check_minutes === '' ? null : Math.min(1440, Math.max(1, Number(form.digital_check_minutes) || 0)) || null,
       supervisor_position_id: form.supervisor_position_id || null,
       briefing_notes: form.briefing_notes.trim() || null,
       requirements: form.requirements,
@@ -128,6 +131,12 @@ export function PositionForm({ open, onClose, position, shifts: existingShifts =
             </FormField>
             <FormField label="Net" hint="Which net this position reports to">
               {({ id }) => <Input id={id} value={form.net} onChange={(e) => set('net')(e.target.value)} placeholder="e.g. RACE, SAG" />}
+            </FormField>
+            <FormField label="Winlink address" hint="Where written traffic for this unit goes. A tactical mailbox or an operator's address; an exercise with no agreed addressing loses its messages.">
+              {({ id }) => <Input id={id} value={form.winlink_address} onChange={(e) => set('winlink_address')(e.target.value.toUpperCase())} placeholder="e.g. DKARES-AID12 or KK4ODA" className="font-mono uppercase" />}
+            </FormField>
+            <FormField label="Checks it every" hint="Minutes. Published on every packet so the desk knows when to expect a reply.">
+              {({ id }) => <Input id={id} type="number" min="1" max="1440" value={form.digital_check_minutes} onChange={(e) => set('digital_check_minutes')(e.target.value)} placeholder="e.g. 30" />}
             </FormField>
             <FormField label="Reports to">
               {({ id }) => (

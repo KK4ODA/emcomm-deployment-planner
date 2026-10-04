@@ -3,6 +3,25 @@
  * claim and tick off. Pure helpers; the server RPC owns the rules.
  */
 
+/**
+ * How an exercise objective came out, written up afterwards. The agency
+ * report wants this table, and writing it by hand is what the UASI
+ * after-action cost an evening.
+ */
+export const OBJECTIVE_EVALUATION = Object.freeze({
+  met: { label: 'Met', tone: 'success', rank: 0 },
+  partly_met: { label: 'Partly met', tone: 'warning', rank: 1 },
+  not_met: { label: 'Not met', tone: 'critical', rank: 2 },
+  not_exercised: { label: 'Not exercised', tone: 'muted', rank: 3 },
+});
+
+/** Counts for the after-action report, ignoring dropped objectives. */
+export function evaluationSummary(objectives = []) {
+  const live = objectives.filter(o => o.status !== 'dropped');
+  const by = (k) => live.filter(o => o.evaluation === k).length;
+  return { total: live.length, met: by('met'), partlyMet: by('partly_met'), notMet: by('not_met'), notExercised: by('not_exercised'), unscored: live.filter(o => !o.evaluation).length };
+}
+
 export const OBJECTIVE_STATUS = Object.freeze({
   open: { label: 'Open', tone: 'warning', rank: 0 },
   claimed: { label: 'Claimed', tone: 'info', rank: 1 },

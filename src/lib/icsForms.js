@@ -7,7 +7,7 @@ import { occupies } from './staffing';
  * ICS 205A (Communications List): one line per staffed position with the
  * operator's name, call sign and how to reach them.
  * @param {{ positions: Object[], shifts: Object[], assignments: Object[], usersById: Map<string, Object>, periodId?: string|null }} args
- * @returns {Array<{ position: string, tactical: string, name: string, callSign: string, method: string, net: string }>}
+ * @returns {Array<{ position: string, tactical: string, name: string, callSign: string, method: string, net: string, digital: string }>}
  */
 export function buildIcs205aRows({ positions, shifts, assignments, usersById, periodId = null }) {
   const positionById = new Map(positions.map(p => [p.id, p]));
@@ -18,7 +18,7 @@ export function buildIcs205aRows({ positions, shifts, assignments, usersById, pe
     if (!position) continue;
     const people = assignments.filter(a => a.shift_id === shift.id && occupies(a.status));
     if (!people.length) {
-      rows.push({ position: position.name, tactical: position.tactical_callsign || '', name: '(unstaffed)', callSign: '', method: '', net: position.net || '', sort: position.sort_order ?? 0 });
+      rows.push({ position: position.name, tactical: position.tactical_callsign || '', name: '(unstaffed)', callSign: '', method: '', net: position.net || '', digital: position.winlink_address || '', sort: position.sort_order ?? 0 });
       continue;
     }
     for (const a of people) {
@@ -30,6 +30,7 @@ export function buildIcs205aRows({ positions, shifts, assignments, usersById, pe
         callSign: u?.call_sign || '',
         method: [u?.phone, u?.aprs_call_sign ? `APRS ${u.aprs_call_sign}` : null].filter(Boolean).join(' · '),
         net: position.net || '',
+        digital: [position.winlink_address, position.digital_check_minutes ? `${position.digital_check_minutes}m` : null].filter(Boolean).join(' '),
         sort: position.sort_order ?? 0,
       });
     }

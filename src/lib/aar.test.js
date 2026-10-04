@@ -52,3 +52,33 @@ describe('lessonsToCarry', () => {
     expect(rows[1].position_id).toBeNull();
   });
 });
+
+describe('objective evaluation in the report', () => {
+  const objectives = [
+    { id: 'o1', title: 'Field comms within two hours', status: 'done', evaluation: 'met', evaluation_note: 'On the air at 0730' },
+    { id: 'o2', title: 'Tactical repeater on independent power', status: 'open', evaluation: 'not_exercised' },
+    { id: 'o3', title: 'Command and control to the RRCC', status: 'done', evaluation: 'partly_met', evaluation_note: 'Voice yes, Winlink unconfirmed' },
+    { id: 'o4', title: 'Dropped one', status: 'dropped', evaluation: 'met' },
+  ];
+  const summary = aarSummary({ assignments: [], positions: [], shifts: [], log: [], hours: [], feedback: [], usersById: users, objectives });
+
+  it('counts how many were scored, ignoring dropped objectives', () => {
+    expect(summary.objectives).toMatchObject({ total: 3, evaluated: 3 });
+  });
+
+  it('writes the objectives table the agency report wants', () => {
+    const md = aarMarkdown({ deployment: { name: 'UASI' }, summary, feedback: [], lessons: [], usersById: users, objectives });
+    expect(md).toContain('| # | Objective | Result | Notes |');
+    expect(md).toContain('| 1 | Field comms within two hours | Met | On the air at 0730 |');
+    expect(md).toContain('| 3 | Command and control to the RRCC | Partly met | Voice yes, Winlink unconfirmed |');
+    expect(md).not.toContain('Dropped one');
+  });
+
+  it('falls back to the checklist when nothing has been scored', () => {
+    const plain = objectives.map(({ evaluation: _e, evaluation_note: _n, ...o }) => o);
+    const s2 = aarSummary({ assignments: [], positions: [], shifts: [], log: [], hours: [], feedback: [], usersById: users, objectives: plain });
+    const md = aarMarkdown({ deployment: { name: 'UASI' }, summary: s2, feedback: [], lessons: [], usersById: users, objectives: plain });
+    expect(md).not.toContain('| # | Objective |');
+    expect(md).toContain('- [x] Field comms within two hours');
+  });
+});

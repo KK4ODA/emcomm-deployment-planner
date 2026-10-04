@@ -25,6 +25,7 @@ export const ROUTES = Object.freeze({
   about: '/profile?tab=about',
   guide: '/guide',
   privacy: '/privacy',
+  sharedPlan: (token) => `/s/${token}`,
   login: '/login',
   resetPassword: '/reset-password',
 });

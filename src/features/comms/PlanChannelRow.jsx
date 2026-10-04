@@ -3,6 +3,7 @@ import { Trash2, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Hint } from '@/components/ui/tooltip';
 import { channelSummary, PATH_ROLES, CHANNEL_FUNCTIONS, CONDITIONS, snapshotStale } from '@/lib/comms';
@@ -29,6 +30,7 @@ export function PlanChannelRow({ row, libraryChannel, canEdit, onChange, onRemov
         <p className="flex flex-wrap items-center gap-1.5 font-medium">
           <Badge variant={ROLE_VARIANT[row.path_role] || 'outline'}>{PATH_ROLES[row.path_role]?.label || row.path_role}</Badge>
           {row.channel_name}
+          {row.monitor_only && <Badge variant="muted" title="Listen only: never transmit on this channel">monitor only</Badge>}
           {row.net && <span className="text-xs font-normal text-muted-foreground">· {row.net} net</span>}
         </p>
         <p className="font-mono text-xs text-muted-foreground">{channelSummary(row)}</p>
@@ -61,6 +63,10 @@ export function PlanChannelRow({ row, libraryChannel, canEdit, onChange, onRemov
           <Input className="h-8 text-xs sm:col-span-2" defaultValue={row.assignment || ''} onBlur={commit('assignment')} placeholder="Who uses it (All AID stations)" aria-label="Assignment" key={`as-${row.id}-${row.assignment}`} />
           <Input className="h-8 text-xs" defaultValue={row.channel_number || ''} onBlur={commit('channel_number')} placeholder="Ch #" aria-label="Channel number" key={`ch-${row.id}-${row.channel_number}`} />
           <Input className="h-8 text-xs sm:col-span-2" defaultValue={row.remarks || ''} onBlur={commit('remarks')} placeholder="Remarks" aria-label="Remarks" key={`rm-${row.id}-${row.remarks}`} />
+          <label className="col-span-2 flex items-center gap-2 text-xs sm:col-span-3">
+            <Switch checked={!!row.monitor_only} onCheckedChange={(v) => onChange({ monitor_only: v })} aria-label="Monitor only" />
+            Monitor only (listen, never transmit)
+          </label>
         </div>
       ) : (
         <div className="text-xs text-muted-foreground">

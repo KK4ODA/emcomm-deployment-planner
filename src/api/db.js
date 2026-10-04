@@ -39,6 +39,8 @@ export const TABLES = Object.freeze({
   aprsOutbox: 'aprs_outbox',
   aprsStationCalls: 'aprs_station_calls',
   opsTasks: 'ops_tasks',
+  deploymentRegistrations: 'deployment_registrations',
+  deploymentShares: 'deployment_shares',
 });
 
 /** Columns the database owns; they are never sent back on update. */
@@ -198,4 +200,6 @@ export const db = Object.freeze({
   aprsOutbox: createRepository(TABLES.aprsOutbox),
   aprsStationCalls: createRepository(TABLES.aprsStationCalls),
   opsTasks: createRepository(TABLES.opsTasks),
+  deploymentRegistrations: createRepository(TABLES.deploymentRegistrations),
+  deploymentShares: createRepository(TABLES.deploymentShares),
 });

@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FormField } from '@/components/common/FormField';
 import { useAresGroups, useTemplates } from '@/hooks/useEntities';
 import { DEPLOYMENT_STATUS, DEPLOYMENT_PROFILES } from '@/lib/constants';
+import { Switch } from '@/components/ui/switch';
 import { toDateTimeLocal } from '@/lib/time';
 
 const BLANK = '__blank__';
 const EMPTY = {
   name: '', description: '', status: 'planning', profile: 'public_service', starts_at: '', ends_at: '', location: '', ares_group_id: '', template_id: '',
   served_agency: '', requesting_official: '', tasking_reference: '', map_url: '',
+  registration_required: false, registration_deadline: '', registration_url: '', registration_notes: '', min_team_size: '',
 };
 
 /** ISO from a datetime-local input value, or '' */
@@ -44,6 +46,9 @@ export function DeploymentForm({ open, onClose, onSubmit, deployment, submitting
       ends_at: deployment.ends_at || (deployment.end_date ? new Date(`${deployment.end_date}T23:59`).toISOString() : ''),
       location: deployment.location || '', ares_group_id: deployment.ares_group_id || '', template_id: '',
       served_agency: deployment.served_agency || '', requesting_official: deployment.requesting_official || '', tasking_reference: deployment.tasking_reference || '', map_url: deployment.map_url || '',
+      registration_required: !!deployment.registration_required, registration_deadline: deployment.registration_deadline || '',
+      registration_url: deployment.registration_url || '', registration_notes: deployment.registration_notes || '',
+      min_team_size: deployment.min_team_size == null ? '' : String(deployment.min_team_size),
     } : EMPTY);
   }, [deployment, open]);
 
@@ -53,7 +58,7 @@ export function DeploymentForm({ open, onClose, onSubmit, deployment, submitting
     e.preventDefault();
     if (!form.ares_group_id) { setError('Choose the ARES group that owns this deployment'); return; }
     if (form.starts_at && form.ends_at && new Date(form.ends_at) <= new Date(form.starts_at)) { setError('The end must be after the start'); return; }
-    onSubmit(form);
+    onSubmit(/** @type {any} */ ({ ...form, min_team_size: form.min_team_size === '' ? null : Number(form.min_team_size), registration_deadline: form.registration_deadline || null }));
   };
 
   return (
@@ -140,6 +145,35 @@ export function DeploymentForm({ open, onClose, onSubmit, deployment, submitting
               </FormField>
               <FormField label="Event map link" className="sm:col-span-2" hint="A shared map kept elsewhere (Google My Maps, CalTopo). Every packet gets an Event map button that opens it.">
                 {({ id }) => <Input id={id} type="url" inputMode="url" value={form.map_url} onChange={(e) => set('map_url')(e.target.value)} placeholder="https://www.google.com/maps/d/..." />}
+              </FormField>
+            </div>
+          </details>
+
+          <details className="rounded-md border p-3" open={!!(form.registration_required || form.min_team_size)}>
+            <summary className="flex cursor-pointer items-center gap-1 text-sm font-medium"><ChevronDown className="h-4 w-4" /> Registration and team rules <span className="text-xs font-normal text-muted-foreground">(optional)</span></summary>
+            <div className="mt-3 space-y-3">
+              <label className="flex items-start gap-2 text-sm">
+                <Switch checked={form.registration_required} onCheckedChange={set('registration_required')} aria-label="Registration required" />
+                <span>
+                  The served agency keeps its own participant roster
+                  <span className="block text-xs text-muted-foreground">Being assigned here does not put an operator on the host&apos;s list. Staffing then tracks each operator&apos;s registration, and readiness warns while any are outstanding.</span>
+                </span>
+              </label>
+              {form.registration_required && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField label="Registration deadline" hint="Readiness turns critical once this passes">
+                    {({ id }) => <Input id={id} type="datetime-local" value={toDateTimeLocal(form.registration_deadline)} onChange={(e) => set('registration_deadline')(isoFromLocal(e.target.value))} />}
+                  </FormField>
+                  <FormField label="Registration page">
+                    {({ id }) => <Input id={id} type="url" inputMode="url" value={form.registration_url} onChange={(e) => set('registration_url')(e.target.value)} placeholder="https://..." />}
+                  </FormField>
+                  <FormField label="What the agency needs" className="sm:col-span-2" hint="Shown on Staffing and on the shared link, e.g. government photo ID at the gate">
+                    {({ id }) => <Textarea id={id} rows={2} value={form.registration_notes} onChange={(e) => set('registration_notes')(e.target.value)} />}
+                  </FormField>
+                </div>
+              )}
+              <FormField label="Minimum operators per deployed team" hint="Readiness warns about a staffed position below this. Three is the usual floor: one holds the net while the others raise antennas.">
+                {({ id }) => <Input id={id} type="number" min="1" max="20" className="w-28" value={form.min_team_size} onChange={(e) => set('min_team_size')(e.target.value)} placeholder="none" />}
               </FormField>
             </div>
           </details>

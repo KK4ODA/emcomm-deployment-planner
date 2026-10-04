@@ -21,10 +21,11 @@ export const modeLabel = (mode) => ({ A: 'A', D: 'D', M: 'M' }[mode] || mode || 
 function cellValue(row, key) {
   switch (key) {
     case 'rx': return row.config === 'phone' ? (row.phone_number || '') : fmtFreq(row.rx_freq, row.rx_bandwidth);
-    case 'tx': return row.config === 'phone' ? '' : fmtFreq(row.tx_freq ?? row.rx_freq, row.tx_bandwidth);
+    case 'tx': return row.monitor_only ? 'MONITOR ONLY' : row.config === 'phone' ? '' : fmtFreq(row.tx_freq ?? row.rx_freq, row.tx_bandwidth);
     case 'mode': return modeLabel(row.mode);
     case 'remarks': {
       const bits = [];
+      if (row.monitor_only) bits.push('Listen only, do not transmit');
       if (row.path_role && row.path_role !== 'primary') bits.push(PATH_ROLES[row.path_role]?.label);
       if (row.mode === 'D' && row.digital_mode) bits.push(digitalModeLabel(row.digital_mode));
       if (row.gateway_callsign) bits.push(`via ${row.gateway_callsign}`);

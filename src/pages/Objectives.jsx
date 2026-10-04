@@ -14,6 +14,7 @@ import { useCurrentDeployment } from '@/contexts/DeploymentContext';
 import { useObjectives, useUsers, useEntityMutations, useRealtimeInvalidation, reportMutationError } from '@/hooks/useEntities';
 import { setObjectiveStatus } from '@/api/assets';
 import { queryKeys } from '@/lib/queryKeys';
+import { db } from '@/api/db';
 import { hasPermission } from '@/lib/permissions';
 import { objectiveSummary } from '@/lib/objectives';
 import { ObjectiveList } from '@/features/objectives/ObjectiveList';
@@ -49,6 +50,13 @@ function ObjectivesContent() {
     onSettled: () => setBusyId(null),
   });
 
+  const evaluate = useMutation({
+    mutationFn: (/** @type {{ id: string, evaluation: string|null }} */ { id, evaluation }) => { setBusyId(id); return db.objectives.update(id, { evaluation }); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.objectives }),
+    onError: reportMutationError('Score objective'),
+    onSettled: () => setBusyId(null),
+  });
+
   const submit = async (rows) => {
     const close = () => setForm({ open: false, objective: null });
     if (form.objective) { mutations.update.mutate({ id: form.objective.id, data: rows[0] }, { onSuccess: () => { close(); toast.success('Objective updated'); } }); return; }
@@ -80,7 +88,7 @@ function ObjectivesContent() {
             <StatCard label="Done" value={summary.done} icon={CheckCircle2} tone="success" hint={`of ${summary.total - summary.dropped}`} />
             {summary.points > 0 ? <StatCard label="Points" value={<>{summary.pointsDone}<span className="text-sm font-normal text-muted-foreground">/{summary.points}</span></>} icon={Trophy} tone="accent" /> : <StatCard label="Dropped" value={summary.dropped} icon={Target} />}
           </div>
-          <ObjectiveList objectives={objectives} user={user} isPlanner={isPlanner} usersById={usersById} onStatus={canClaim ? (id, s) => status.mutate({ id, status: s }) : () => {}} onEdit={(o) => setForm({ open: true, objective: o })} onDelete={remove} busyId={busyId} />
+          <ObjectiveList objectives={objectives} user={user} isPlanner={isPlanner} usersById={usersById} onStatus={canClaim ? (id, s) => status.mutate({ id, status: s }) : () => {}} onEdit={(o) => setForm({ open: true, objective: o })} onDelete={remove} onEvaluate={(id, evaluation) => evaluate.mutate({ id, evaluation })} busyId={busyId} />
         </>
       )}
       <ObjectiveForm open={form.open} objective={form.objective} onClose={() => setForm({ open: false, objective: null })} onSubmit={submit} submitting={mutations.create.isPending || mutations.update.isPending} />

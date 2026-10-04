@@ -1,13 +1,14 @@
 # Privacy policy
 
-*Effective 2026-09-12. Applies to the EmComm Planner web app at emcommplanner.org and the EmComm Planner desktop app.*
+*Effective 2026-10-04. Applies to the EmComm Planner web app at emcommplanner.org and the EmComm Planner desktop app.*
 
 EmComm Planner is a volunteer-run tool for amateur radio emergency communications groups (ARES and similar) to plan deployments, staff positions and run the desk on event day. It is operated by its author, KK4ODA, not by a company. This page says in plain words what the app stores, who can see it, which outside services touch it, and what you can do about it.
 
 ## 1. What the app stores about you
 
 - **Account**: the e-mail address you sign in with and a hashed password (or a sign-in link), managed by our database provider.
-- **Profile**: name, call sign, phone number, and, if you fill them in, APRS call sign, licence class, capabilities, station types, equipment notes and locality. The call sign and phone number exist so a planner can reach you and put you on a roster.
+- **Profile**: name, call sign, phone number, and, if you fill them in, APRS call sign, licence class, capabilities, station types, equipment notes and locality.
+- **Registration**: when a deployment's host agency keeps its own participant roster, whether you are submitted, confirmed or rejected with that agency, plus any reference number they gave. Set by your planners, visible to you on your packet. The call sign and phone number exist so a planner can reach you and put you on a roster.
 - **Membership**: which ARES groups you belong to and your role in each (operator, planner, administrator).
 - **Deployment data**: positions you are assigned to, offers you accept or decline, check-in and check-out times, hours worked, tasks dispatched to you and each step you report, notes and log entries written about the deployment, coverage checks you report, and post-event feedback (which you may submit anonymously).
 - **Notifications**: which channels you enabled, your web-push subscription if you allowed push, and the notifications sent to you.
@@ -24,6 +25,7 @@ Access follows your group and your role, enforced in the database:
 - Operators assigned to a deployment receive a packet that lists who is staffing which position, with call signs and phone numbers of the other operators on that deployment, so they can reach each other during the event.
 - Members of other groups see nothing of yours. Application administrators (the operator) can see all groups in order to run the service.
 - Planners can print or export packets, rosters and forms (PDF, CSV, a Google Sheet). Once exported, those files are outside the app's control; groups should treat them as they treat any roster.
+- A planner can create a **read-only share link** to a deployment for people with no account, such as a partner agency. That link shows the deployment's times, its sites with addresses and arrival notes, and the list of units with their tactical call signs. It does **not** include anyone's name, phone number or e-mail unless the planner ticks *Include contacts* when creating it, which adds each site's contact person and each unit's lead call sign. Anyone holding the link can see this without signing in, so treat it as public; a planner can revoke it at any time, and the app records how often it was opened.
 
 ## 3. Where it lives and who processes it
 

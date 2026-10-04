@@ -66,6 +66,8 @@ SQL editor or the Supabase CLI (`supabase db push`).
 | `aprs_actions` | Audit of APRS commands received: sender, action, matched user and assignment, result, reply (021) |
 | `aprs_outbox` | APRS messages for the bridge to send: recipient, 67-char text, status pending/sent/failed/expired, attempts (021) |
 | `ops_tasks` | Tasking (023): unit (position/assignment), kind, priority, title, from/to site or text, ladder timestamps, outcome, `seq` per deployment. Select for anyone who sees the deployment; writes only through `dispatch_task` / `set_task_state` / `update_task` (planners) and `apply_aprs_task` (service role). `activity_log.task_id` links the 214 lines |
+| `deployment_registrations` | Registration with the served agency (025): one row per operator per deployment, status not_submitted / submitted / confirmed / rejected / not_required, with the agency's reference. Select for anyone who sees the deployment; planners write |
+| `deployment_shares` | Read-only share links (025): label, SHA-256 of the token, `include_contacts`, expiry, revocation, view count. Planners only; the token itself is never stored |
 | `aprs_station_calls` (view) | Station call signs of the group's live bridges for members (022); runs as owner with a membership check in the WHERE, so operators never see `aprs_bridges` itself |
 | `open_shift_notices` | Who was told about which open shift and when; `notify_open_shift` uses it to skip repeats within 24 h (017) |
 | `notifications` | Per-user notifications produced by triggers |
@@ -136,6 +138,18 @@ deployment) and `@@#status` (`aprs_status_reply`) all use it. Status answers
 assignment`. Before 024, status picked the newest accepted assignment in any
 deployment, so an operator staffed for a Field Day months away heard about
 that slot on marathon day.
+
+Migration 025 adds the exercise columns: `deployments.registration_required`,
+`registration_deadline`, `registration_url`, `registration_notes` and
+`min_team_size`; `positions.winlink_address` and `digital_check_minutes`;
+`comms_plan_channels.monitor_only`; `objectives.evaluation` (met / partly_met
+/ not_met / not_exercised) and `evaluation_note`. Function
+`create_deployment_share(deployment, label, include_contacts, expires_at)`
+mints a link and returns the token once; `public_deployment_view(token_hash)`
+is service-role only and decides what a link may show, leaving out every
+contact detail unless the link was created with contacts included. The
+`public-plan` Edge Function (verify_jwt off) hashes the token and calls it, so
+the anonymous role never touches a deployment table.
 
 Helper predicates `is_admin()`, `has_role(...)`, `deployment_visible()` and
 `location_visible()` return `false`, never NULL, for a caller without a
@@ -209,6 +223,7 @@ the caller's JWT and use the service role only after checking the caller.
 | Slug | Called from | What it does |
 |------|-------------|--------------|
 | `deliver-notification` | database trigger (POST), Profile > Notifications (GET) | `verify_jwt` off; POST is authenticated by the `x-emcomm-hook` secret from `app_config`. Delivers a notification to the recipient's enabled channels: web push (VAPID keys generated on first use and kept in `app_config`; dead subscriptions removed on 404/410), email via Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set, SMS via Twilio when `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM` are set; `APP_URL` for links. GET returns which channels are configured and the push public key. Push (iPhone via Safari home-screen install) and email (Resend, verified domain) confirmed end to end on 2026-09-08 |
+| `public-plan` | the `/s/:token` page, unauthenticated | `verify_jwt` off. `GET ?t=<token>`: rejects anything that is not `eds_` plus 48 hex characters, hashes it, and returns whatever `public_deployment_view` allows for that link. No write path, `Cache-Control: no-store` |
 | `aprs-ingest` | the Graywolf bridge and Graywolf Actions | `verify_jwt` off; every route requires a bridge token (`Authorization: Bearer` or `?token=`), matched by SHA-256 against `aprs_bridges`. `POST /stations` upserts heard stations; `POST /action` is the Graywolf Action webhook (form fields `action`, `sender-callsign`, `arg.*`), matches the sender by APRS call then base call, requires group membership, applies the status and replies in plain text; `GET /outbox` + `POST /outbox/ack` drive outbound APRS messages; `GET /objects?deployment=active&format=json|csv` returns sites as Pinpoint-shaped objects; `GET /ping` checks the token |
 | `invite-user` (v3: optional `call_sign`, `full_name`, `phone`, `license_class` fill empty profile columns; an existing member is added to the groups instead of failing) | Members › Invite | Admin or planner. `auth.admin.inviteUserByEmail`, sets the initial role (planners: pending/viewer/operator only) and inserts active `memberships` (planners: only their own groups) |
 | `create-or-update-user-profile` | Profile › Add member, Members › Edit | Admin-only upsert of a member profile by email; invites if new |

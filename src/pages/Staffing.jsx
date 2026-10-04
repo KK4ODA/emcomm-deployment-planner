@@ -6,7 +6,7 @@ import { buildStaffingRoster, rosterCsv } from '@/lib/staffingRoster';
 import { PublishStatus } from '@/features/deployments/PublishStatus';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ClipboardList, Plus, Layers, CalendarRange, Users, AlertTriangle, MapPin, CheckCircle2, Download, Sheet } from 'lucide-react';
+import { ClipboardList, Plus, Layers, CalendarRange, Users, AlertTriangle, MapPin, CheckCircle2, Download, Sheet, IdCard, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
@@ -18,12 +18,18 @@ import { useConfirm } from '@/components/common/ConfirmDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/lib/AuthContext';
 import { useCurrentDeployment } from '@/contexts/DeploymentContext';
-import { useLocations, useUsers, usePositions, useShifts, useAssignments, useOperationalPeriods, useLessons, useNamingSchemes, useRealtimeInvalidation } from '@/hooks/useEntities';
+import { useLocations, useUsers, usePositions, useShifts, useAssignments, useOperationalPeriods, useLessons, useNamingSchemes, useDeploymentRegistrations, useRealtimeInvalidation } from '@/hooks/useEntities';
 import { CarriedLessons } from '@/features/aar/CarriedLessons';
 import { queryKeys } from '@/lib/queryKeys';
 import { hasPermission } from '@/lib/permissions';
 import { locationsOf } from '@/lib/deployments';
 import { coverageSummary, groupPositionsBySite, shiftCoverage } from '@/lib/staffing';
+import { RegistrationPanel } from '@/features/staffing/RegistrationPanel';
+import { ShareLinksDialog } from '@/features/deployments/ShareLinksDialog';
+import { setRegistration } from '@/api/registrations';
+import { buildPersonnelCards, buildCrewCards } from '@/lib/icsCards';
+import { renderIcs219Pdf } from '@/features/staffing/icsCardsPdf';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PositionCard } from '@/features/staffing/PositionCard';
 import { PositionForm } from '@/features/staffing/PositionForm';
 import { BulkPositionsDialog } from '@/features/staffing/BulkPositionsDialog';
@@ -81,6 +87,9 @@ function StaffingContent() {
   const [periodsOpen, setPeriodsOpen] = useState(false);
   const [assignFor, setAssignFor] = useState(/** @type {{ position: Object, shift: Object }|null} */ (null));
   const [publishOpen, setPublishOpen] = useState(false);
+  const [sharesOpen, setSharesOpen] = useState(false);
+  const [cardBusy, setCardBusy] = useState(/** @type {string|null} */ (null));
+  const registrationsQ = useDeploymentRegistrations(deploymentId);
   const publish = usePublishPlan();
   const queryClient = useQueryClient();
   const saveScheme = useMutation({
@@ -92,6 +101,12 @@ function StaffingContent() {
     mutationFn: (/** @type {{ shiftId: string, userIds: string[] }} */ { shiftId, userIds }) => notifyOpenShift(shiftId, userIds),
     onSuccess: (r) => toast.success(r.notified ? `${r.notified} operator${r.notified === 1 ? '' : 's'} notified` : 'Nobody new to notify', { description: r.skipped_recent ? `${r.skipped_recent} already told in the last 24 hours.` : 'They can take the shift from My assignments.' }),
     onError: reportMutationError('Notify operators'),
+  });
+
+  const registration = useMutation({
+    mutationFn: (/** @type {{ userId: string, patch: Object }} */ { userId, patch }) => setRegistration(deploymentId, userId, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...queryKeys.deploymentRegistrations, deploymentId] }),
+    onError: reportMutationError('Save registration'),
   });
 
   const sites = useMemo(() => locationsOf(locationsQ.data ?? [], deploymentId), [locationsQ.data, deploymentId]);
@@ -150,6 +165,22 @@ function StaffingContent() {
   const busy = mutations.offer.isPending || mutations.setStatus.isPending || mutations.unassign.isPending;
 
   const rosterRows = () => buildStaffingRoster({ deploymentId, positions: positionsQ.data ?? [], shifts: shiftsQ.data ?? [], assignments: assignmentsQ.data ?? [], users: usersQ.data ?? [], sites: locationsQ.data ?? [] });
+  const exportCards = async (kind) => {
+    setCardBusy(kind);
+    try {
+      const sitesById = new Map(sites.map(x => [x.id, x]));
+      const args = { positions, shifts, assignments, usersById, sitesById, deployment };
+      const cards = kind === 'crew' ? buildCrewCards(args) : buildPersonnelCards(args);
+      const blob = await renderIcs219Pdf({ deployment, cards, kind });
+      const saved = await downloadBlob(blob, safeFileName(`${deployment.name}-ICS-219-${kind === 'crew' ? '2-crew' : '5-personnel'}.pdf`));
+      if (saved) toast.success(`${cards.length} ${kind === 'crew' ? 'crew' : 'personnel'} card${cards.length === 1 ? '' : 's'}`, { description: 'Six to a page, ready to cut and put in the rack.' });
+    } catch (err) {
+      toast.error('Could not build the cards', { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setCardBusy(null);
+    }
+  };
+
   const exportRoster = () => downloadBlob(rosterCsv(rosterRows(), { deploymentName: deployment.name }), `roster_${safeFileName(deployment.name)}.csv`, 'text/csv;charset=utf-8');
   const [postingRoster, setPostingRoster] = useState(false);
   const rosterQueryClient = useQueryClient();
@@ -180,6 +211,18 @@ function StaffingContent() {
             <Button variant="ghost" size="sm" onClick={() => setPeriodsOpen(true)}><CalendarRange /> Periods ({periods.length})</Button>
             <Button variant="outline" onClick={() => setBulkOpen(true)}><Layers /> Create several</Button>
             <Button variant="outline" onClick={() => setPositionDialog({ open: true, position: null })}><Plus /> Position</Button>
+            {positions.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" loading={!!cardBusy} title="ICS 219 resource status cards, generated from the plan"><IdCard /> Cards</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem onClick={() => exportCards('personnel')}>Personnel T-cards (ICS 219-5)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportCards('crew')}>Crew / team cards (ICS 219-2)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button variant="outline" onClick={() => setSharesOpen(true)} title="Read-only links for partner agencies and anyone without an account"><Share2 /> Share</Button>
             {positions.length > 0 && <Button variant="outline" onClick={exportRoster} title="One line per seat: site, position, tactical call, shift, status, call sign, name, phone"><Download /> Roster CSV</Button>}
             {positions.length > 0 && <Button variant="outline" onClick={postRoster} loading={postingRoster} title={driveAvailability() === 'ok' ? (deployment.roster_drive_url ? 'Update the Google Sheet operators see on their packets' : 'Post the roster to your Google Drive as a Sheet and link it on every packet') : driveAvailability() === 'desktop' ? 'Google sign-in does not run inside the desktop app; use emcommplanner.org for this' : 'Google Drive is not configured for this installation (docs/GOOGLE_DRIVE.md)'}><Sheet /> {deployment.roster_drive_url ? 'Update Google Sheet' : 'Google Sheet'}</Button>}
             {positions.length > 0 && (
@@ -191,6 +234,20 @@ function StaffingContent() {
           </>
         )}
       />
+
+      {deployment.registration_required && (
+        <div className="mb-4">
+          <RegistrationPanel
+            deployment={deployment}
+            assignments={assignments}
+            usersById={usersById}
+            registrations={registrationsQ.data ?? []}
+            canEdit={canEdit}
+            busyUserId={registration.isPending ? registration.variables?.userId : null}
+            onSet={(userId, patch) => registration.mutate({ userId, patch })}
+          />
+        </div>
+      )}
 
       <CarriedLessons lessons={(lessonsQ.data ?? []).filter(l => l.deployment_id === deployment.id && l.status === 'carried_forward')} positions={positions} />
 
@@ -322,6 +379,7 @@ function StaffingContent() {
         busy={busy || notify.isPending}
       />
       <PublishPlanDialog open={publishOpen} deployment={deployment} onClose={() => setPublishOpen(false)} onPublish={(note, extra) => publish.mutate({ deployment, note, ...extra }, { onSuccess: () => setPublishOpen(false) })} submitting={publish.isPending} />
+      <ShareLinksDialog open={sharesOpen} onClose={() => setSharesOpen(false)} deployment={deployment} />
       {dialog}
     </QueryState>
   );
