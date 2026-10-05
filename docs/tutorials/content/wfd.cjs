@@ -91,6 +91,17 @@ module.exports = {
       ],
     },
     {
+      key: 'crewsize', h: 'Set the crew floor and share the site plan', step: true, blocks: [
+        'Two small settings that save a cold weekend.',
+        { do: [
+          'Edit the deployment and expand **Registration and team rules**. Set **Minimum operators per deployed team** to 2 for Winter Field Day: nobody raises an antenna in the dark alone, and a station cannot both run and be set up by one person.',
+          'On **Staffing**, click **Share** to mint a read-only link for the campground manager or the landowner: it shows the dates, the site with its address and arrival notes, and the stations, with no personal contact details unless you tick Include contacts.',
+          'Revoke the link on Monday.',
+        ] },
+        { why: 'The field lesson behind the floor is blunt: a two-person team at the 2026 UASI exercise had to drop its net for 45 minutes to put up antennas. Readiness now warns before the day whenever a staffed team is under the floor.' },
+      ],
+    },
+    {
       key: 'stations', h: 'Create the stations and crews', step: true, blocks: [
         'Each station is a position of type **Field station** with a tactical call, a headcount per slot and one shift per operating slot. The captain, the safety officer, the crews and the rovers are positions too, so they show on the board and count hours.',
         { do: [
@@ -114,6 +125,22 @@ module.exports = {
       ],
     },
     {
+      key: 'winlink', h: 'Give the gateway an address', step: true, blocks: [
+        'Two of the objectives are Winlink ones: a gateway with CMS access over Starlink, and a local post office linked to it. Written traffic needs a destination everyone knows before the weekend, not during it.',
+        { do: [
+          'Open each station under **Staffing** and fill in **Winlink address**: the tactical mailbox or the operator address that station answers on.',
+          'Set **Checks it every** to how often that station promises to look, in minutes.',
+          'Publish. Every packet now carries a Written traffic block: the operator\'s own address at the top, then every other station in the deployment with theirs.',
+        ] },
+        { enter: { columns: ['Station', 'Winlink address', 'Checks it every'], widths: [0.34, 0.36, 0.3], rows: [
+          ['GOTA / gateway', 'DKARES-WFD', '15 minutes'],
+          ['HF phone', 'DKARES-HF', '60 minutes'],
+          ['Rover', 'KK4ODA (operator address)', '60 minutes'],
+        ] } },
+        { why: 'In the 2026 UASI exercise voice worked all day and not one Winlink message between our own teams arrived, because nobody had agreed who was reachable where. It was the first corrective action in the after-action report.' },
+      ],
+    },
+    {
       key: 'comms', h: 'Talk-in and the rover paths', step: true, blocks: [
         'A field exercise still needs a communications plan: how people find the site on the way in, how rovers reach it, and what happens when the repeater is down. Add the WFD-specific channels to the library, then the plan.',
         { do: [
@@ -130,6 +157,17 @@ module.exports = {
           ['Station captain mobile phone', 'Phone number', 'your number', 'Emergency; weak signal, text first'],
         ] } },
         { img: 'wfd-09-comms-plan', caption: 'The WFD plan scoped to the Saturday operating period. Rows on the TALK-IN net appear on every station\'s packet.' },
+      ],
+    },
+    {
+      key: 'monitor', h: 'Channels you only listen to', step: true, blocks: [
+        'One of the objectives is to copy the Winter Field Day special bulletin. That is a receive-only job, and so are the NWS weather frequencies you keep an ear on in January. Carry them in the plan and mark them **monitor only**.',
+        { do: [
+          'In **Comms plan**, add the bulletin frequency and your local NWS transmitter from the channel library.',
+          'Turn on **Monitor only (listen, never transmit)** on each row.',
+          'Give them a function of Other and a remark saying when the bulletin is sent.',
+        ] },
+        { why: 'A monitor-only row prints as MONITOR ONLY in the transmit column of the ICS 205, shows the same badge on every packet, and goes into the CHIRP file with the duplex set to off, so a cold operator at 03:00 cannot key up on a channel that is not ours.' },
       ],
     },
     {
@@ -155,7 +193,8 @@ module.exports = {
           ['Rover check-ins from three locations by APRS, then simplex or VarAC', 'tertiary', '3'],
         ] } },
         { img: 'wfd-10-objectives', caption: 'Objectives: open, taken, done and points at the top; every objective with its actions below. This is the list from the DeKalb ARES objectives document.' },
-        { why: 'The 2026 drill debrief said it plainly: having specified objectives helped, and people should sign up for them. This page is that sign-up sheet.' },
+        { h2: 'Scoring them afterwards', p: 'After the weekend a planner sets a result on every objective from the same list: **Met**, **Partly met**, **Not met** or **Not exercised**. The after-action report then builds the objectives table for you instead of someone typing it into a document.' },
+        { why: 'The 2026 drill debrief said it plainly: having specified objectives helped, and people should sign up for them. This page is that sign-up sheet. Scoring closes the loop: the agency-facing report of the 2026 UASI exercise had to have its objectives table written out by hand.' },
       ],
     },
     {
@@ -199,6 +238,10 @@ module.exports = {
       key: 'after', h: 'After the weekend', step: true, blocks: [
         'The log goes to Winter Field Day by 1 March with the objectives ticked and the bulletin text pasted in; the task list carries that date. In EmComm Planner, **After action** collects each operator\'s two-minute form, assembles participation, hours and objectives, and turns findings into lessons. Publish the score back to the group from the same page: "were they ever turned in?" should never be asked again.',
         { img: 'wfd-18-after-action', caption: 'After action for WFD: the operator form and, for planners, the assembled record with Copy draft and Download draft.' },
+        { h2: 'Score the objectives first', do: [
+          'Open **Objectives** and set a result on every one: Met, Partly met, Not met or Not exercised.',
+          'Go back to **After action** and copy the draft. It now contains an Objectives table with one row per objective, its result and the note, which is the table an agency or a club report asks for.',
+        ] },
         { h2: 'Next year', bullets: [
           '**Duplicate** the deployment: stations, slots, periods, objectives and open lessons come along with the dates shifted.',
           'Update the objectives to the new rules and the dates to the new last full weekend of January.',

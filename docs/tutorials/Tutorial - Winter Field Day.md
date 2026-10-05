@@ -6,7 +6,7 @@
 > Audience: the station captain or club planner. Operators read Steps 6 and 9.
 > Time: about an hour. The exercise profile adds objectives and per-period shifts to what a public-service event uses.
 
-Written for EmComm Planner 2.6.2. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.8.0. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 
@@ -112,7 +112,19 @@ One operating site plus the backup that a weather call might send everyone to. I
 
 *Sites: the campground and the backup lot. The backup note records that simplex from the lot to the mountain failed at 50 W in the 2026 drill.*
 
-## Step 4. Create the stations and crews
+## Step 4. Set the crew floor and share the site plan
+
+Two small settings that save a cold weekend.
+
+**Do this**
+
+1. Edit the deployment and expand **Registration and team rules**. Set **Minimum operators per deployed team** to 2 for Winter Field Day: nobody raises an antenna in the dark alone, and a station cannot both run and be set up by one person.
+2. On **Staffing**, click **Share** to mint a read-only link for the campground manager or the landowner: it shows the dates, the site with its address and arrival notes, and the stations, with no personal contact details unless you tick Include contacts.
+3. Revoke the link on Monday.
+
+> **Why it matters.** The field lesson behind the floor is blunt: a two-person team at the 2026 UASI exercise had to drop its net for 45 minutes to put up antennas. Readiness now warns before the day whenever a staffed team is under the floor.
+
+## Step 5. Create the stations and crews
 
 Each station is a position of type **Field station** with a tactical call, a headcount per slot and one shift per operating slot. The captain, the safety officer, the crews and the rovers are positions too, so they show on the board and count hours.
 
@@ -145,7 +157,27 @@ Each station is a position of type **Field station** with a tactical call, a hea
 
 > **Tip.** Write the exchange into the briefing notes of every station: WD5EMA 2O GA. Whoever sits down at 03:00 reads it off the packet instead of asking.
 
-## Step 5. Talk-in and the rover paths
+## Step 6. Give the gateway an address
+
+Two of the objectives are Winlink ones: a gateway with CMS access over Starlink, and a local post office linked to it. Written traffic needs a destination everyone knows before the weekend, not during it.
+
+**Do this**
+
+1. Open each station under **Staffing** and fill in **Winlink address**: the tactical mailbox or the operator address that station answers on.
+2. Set **Checks it every** to how often that station promises to look, in minutes.
+3. Publish. Every packet now carries a Written traffic block: the operator's own address at the top, then every other station in the deployment with theirs.
+
+**Enter this**
+
+| Station | Winlink address | Checks it every |
+| --- | --- | --- |
+| GOTA / gateway | DKARES-WFD | 15 minutes |
+| HF phone | DKARES-HF | 60 minutes |
+| Rover | KK4ODA (operator address) | 60 minutes |
+
+> **Why it matters.** In the 2026 UASI exercise voice worked all day and not one Winlink message between our own teams arrived, because nobody had agreed who was reachable where. It was the first corrective action in the after-action report.
+
+## Step 7. Talk-in and the rover paths
 
 A field exercise still needs a communications plan: how people find the site on the way in, how rovers reach it, and what happens when the repeater is down. Add the WFD-specific channels to the library, then the plan.
 
@@ -170,7 +202,19 @@ A field exercise still needs a communications plan: how people find the site on 
 
 *The WFD plan scoped to the Saturday operating period. Rows on the TALK-IN net appear on every station's packet.*
 
-## Step 6. Post the objectives
+## Step 8. Channels you only listen to
+
+One of the objectives is to copy the Winter Field Day special bulletin. That is a receive-only job, and so are the NWS weather frequencies you keep an ear on in January. Carry them in the plan and mark them **monitor only**.
+
+**Do this**
+
+1. In **Comms plan**, add the bulletin frequency and your local NWS transmitter from the channel library.
+2. Turn on **Monitor only (listen, never transmit)** on each row.
+3. Give them a function of Other and a remark saying when the bulletin is sent.
+
+> **Why it matters.** A monitor-only row prints as MONITOR ONLY in the transmit column of the ICS 205, shows the same badge on every packet, and goes into the CHIRP file with the duplex set to off, so a cold operator at 03:00 cannot key up on a channel that is not ours.
+
+## Step 9. Post the objectives
 
 Objectives are the point of the weekend. Post them where everyone sees them, with points that mirror the rules' objective multipliers, and let people take them. Completion feeds the after-action record and the log submission.
 
@@ -201,9 +245,13 @@ Objectives are the point of the weekend. Post them where everyone sees them, wit
 
 *Objectives: open, taken, done and points at the top; every objective with its actions below. This is the list from the DeKalb ARES objectives document.*
 
-> **Why it matters.** The 2026 drill debrief said it plainly: having specified objectives helped, and people should sign up for them. This page is that sign-up sheet.
+### Scoring them afterwards
 
-## Step 7. Equipment, power and assets
+After the weekend a planner sets a result on every objective from the same list: **Met**, **Partly met**, **Not met** or **Not exercised**. The after-action report then builds the objectives table for you instead of someone typing it into a document.
+
+> **Why it matters.** The 2026 drill debrief said it plainly: having specified objectives helped, and people should sign up for them. This page is that sign-up sheet. Scoring closes the loop: the agency-facing report of the 2026 UASI exercise had to have its objectives table written out by hand.
+
+## Step 10. Equipment, power and assets
 
 Two lists do different jobs. The **Dashboard** carries the per-site equipment list for this event (what must be on the site, who brings it). **Assets** is the group's inventory with custody (who has the club rig right now). Field Day is where both earn their keep.
 
@@ -223,7 +271,7 @@ Two lists do different jobs. The **Dashboard** carries the per-site equipment li
 
 > **Tip.** "Does anyone know where that cord is?" is the question the asset list answers. Custody changes are one tap and are visible to everyone in the group.
 
-## Step 8. Sign people up
+## Step 11. Sign people up
 
 With four operating slots on two stations plus crews, the schedule is the old spreadsheet grid. Here every slot is a shift chip: click it to offer or assign, or let members take open slots themselves from **My Assignments**.
 
@@ -245,7 +293,7 @@ Publish the plan once the slots and the site are settled. Everyone assigned gets
 
 *Publish plan for WFD. The note to operators is the place for "Bring sleeping bags rated for 20 F".*
 
-## Step 9. On the weekend
+## Step 12. On the weekend
 
 ### Safety officer first
 
@@ -275,13 +323,20 @@ The captain keeps **Operations** open with the window set to Everything: who is 
 
 *Readiness before the weekend: open seats, the unpublished plan and the unsigned checklist are the three lines to clear.*
 
-## Step 10. After the weekend
+## Step 13. After the weekend
 
 The log goes to Winter Field Day by 1 March with the objectives ticked and the bulletin text pasted in; the task list carries that date. In EmComm Planner, **After action** collects each operator's two-minute form, assembles participation, hours and objectives, and turns findings into lessons. Publish the score back to the group from the same page: "were they ever turned in?" should never be asked again.
 
 ![After action for WFD: the operator form and, for planners, the assembled record with Copy draft and Download draft.](img/wfd-18-after-action.jpg)
 
 *After action for WFD: the operator form and, for planners, the assembled record with Copy draft and Download draft.*
+
+### Score the objectives first
+
+**Do this**
+
+1. Open **Objectives** and set a result on every one: Met, Partly met, Not met or Not exercised.
+2. Go back to **After action** and copy the draft. It now contains an Objectives table with one row per objective, its result and the note, which is the table an agency or a club report asks for.
 
 ### Next year
 

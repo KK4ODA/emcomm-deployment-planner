@@ -108,15 +108,6 @@ Some hosts keep their own participant roster, and being assigned here does not p
 ### Share the plan
 **Share** creates a read-only link for people with no account: the partner agency, the venue, the operator who cannot find the address. The link shows the times, every site with address, parking and arrival notes, and the list of units. Personal contact details are left out unless you tick **Include contacts** when you create it. Each link is listed with its view count and can be revoked.
 
-### Agency registration
-Some hosts keep their own participant roster, and being assigned here does not put an operator on it. Turn on **The served agency keeps its own participant roster** when you create or edit the deployment, with the deadline and what the host needs (a government photo ID at the gate, for example). Staffing then shows an **Agency registration** panel listing every assigned operator, where you set each one to submitted, confirmed or rejected and record the agency's reference. Readiness counts who is still outstanding and turns red once the deadline passes or the day before the event, and every operator's packet tells them whether they are confirmed.
-
-### Cards
-**Cards** on the Staffing page prints ICS 219 resource status cards from the plan, six to a page: personnel T-cards (219-5), one per assigned operator, and crew cards (219-2), one per unit with its crew, departure point, times and Winlink address. A crew card that is short of its planned headcount says so.
-
-### Share the plan
-**Share** creates a read-only link for people with no account: the partner agency, the venue, the operator who cannot find the address. The link shows the times, every site with address, parking and arrival notes, and the list of units. Personal contact details are left out unless you tick **Include contacts** when you create it. Each link is listed with its view count and can be revoked.
-
 ### Publish
 Under the Publish button a line says which version operators have and since when. **Publish plan** compares every packet with the last publication and lists what changed, position by position. Only affected operators are notified, with their changes in the message. Tick *Notify everyone assigned* for whole-event notes such as weather. Operators whose packet did not change see no banner.
 

@@ -6,7 +6,7 @@
 > Audience: a planner or admin building the deployment. Operators can read Steps 7 and 10 to see what they get.
 > Time: about 90 minutes the first year. The second year starts from Duplicate and takes twenty.
 
-Written for EmComm Planner 2.6.2. Live guide: https://emcommplanner.org/guide
+Written for EmComm Planner 2.8.0. Live guide: https://emcommplanner.org/guide
 
 ## What you will build
 
@@ -55,6 +55,28 @@ A deployment is the container for one event: its sites, positions, plan and reco
 | Served agency | Atlanta Track Club |
 | Requesting official | ATC Race Operations, volunteer coordinator |
 | Tasking reference | ATC volunteer radio operator request, January 2027 |
+
+### If the agency keeps its own volunteer roster
+
+Atlanta Track Club registers every volunteer in its own portal, and a radio operator who is not on that list is not admitted at the gate. Being assigned in EmComm Planner is not the same thing, so record the second list here and the app will chase it for you.
+
+**Do this**
+
+1. Still in the deployment form, expand **Registration and team rules**.
+2. Switch on **The served agency keeps its own participant roster**.
+3. Set the **deadline** to the date the agency closes registration, paste its **registration page**, and write what the host needs under **What the agency needs**.
+4. Leave **Minimum operators per deployed team** empty for a marathon: aid stations are one-operator posts. Set it to 3 for an exercise where teams deploy together.
+
+**Enter this**
+
+| Field | Value |
+| --- | --- |
+| Served agency keeps its own roster | On |
+| Registration deadline | 02/21/2027 11:59 PM (two weeks out) |
+| Registration page | The ATC volunteer portal link |
+| What the agency needs | Register in the ATC volunteer portal and bring photo ID. Wristbands are collected at Volunteer Check-in from 04:30. |
+
+> **Why it matters.** In the 2026 Atlanta UASI exercise three operators, one of them a team leader, turned out not to be registered with the host. It was discovered at 08:58 the morning before the event and cost the rest of the day in reshuffles. Tracked here, it is a readiness line weeks earlier.
 
 ![The New deployment form with the marathon filled in. Start and end are the first report time and the last release.](img/pam-02-new-deployment.jpg)
 
@@ -193,6 +215,18 @@ A one-day race needs a single period. Open **Periods** and confirm "Race day" sp
 
 *Operational periods: one is enough for a single-day event.*
 
+### Where written traffic goes
+
+The marathon runs on voice and APRS, but the net-control desks and the medical tent pass written traffic when a runner is transported. Give those positions a **Winlink address** and how often they check it; both print on every packet, in the ICS 205A and on the crew card.
+
+**Enter this**
+
+| Position | Winlink address | Checks it every |
+| --- | --- | --- |
+| NCS RACE | ATLMAR-RACE | 15 minutes |
+| NCS SAG | ATLMAR-SAG | 15 minutes |
+| MED 1 | ATLMAR-MED | 30 minutes |
+
 > **Tip.** Position names are what the sheet says (AID MILE 20); tactical calls are what is said on the air (AID 20). Net control never has to invent a call during the race, and the packet prints both.
 
 ## Step 5. Build the channel library
@@ -246,6 +280,18 @@ The plan says which channel each net uses, in normal conditions and when things 
 | 3 Repeaters down | RACE | Simplex 146.550, relays AID 12 and MED 1 |  | Backup 440 if any repeater survives |
 | 3 Repeaters down | SAG | Simplex 446.000, relay NCS SAG |  |  |
 
+### Channels you listen to but never key
+
+The race has channels that are not ours: the ATC race-operations channel and the public-safety talkgroup the MACC monitors. Carry them in the plan so operators can follow what is happening, and mark them **monitor only** so nobody transmits on a channel we are not authorised to use.
+
+**Do this**
+
+1. Add the channel from the library as usual, with its condition, role and net.
+2. Turn on **Monitor only (listen, never transmit)** on the row.
+3. Check the ICS 205: the transmit column now reads MONITOR ONLY, and the CHIRP export sets that channel to receive only, so the radio physically cannot key up on it.
+
+> **Why it matters.** The UASI exercise handed ARES a transmit list and no monitor list. None of those channels were used during the exercise, so operators could not follow the traffic they were there to support. A plan should carry both, and say which is which.
+
 ![Condition 1 of the plan: each row carries role, condition, function, net, assignment, channel number and remarks. Plan check on the right confirms a primary, an alternate and a repeaters-down path exist.](img/pam-13-comms-plan.jpg)
 
 *Condition 1 of the plan: each row carries role, condition, function, net, assignment, channel number and remarks. Plan check on the right confirms a primary, an alternate and a repeaters-down path exist.*
@@ -279,7 +325,17 @@ Operators answer offers and pick up open shifts from **My Assignments**. Shifts 
 
 *My Assignments for an operator holding AID MILE 20: the accepted position, then open shifts with the reasons they cannot take them.*
 
-> **Why it matters.** The 2026 marathon needed three escalating appeals over five weeks. With open shifts visible and notifications targeted at qualified people, the coordinator sees exactly which seats are short instead of counting replies.
+### Agency registration
+
+Because this deployment says the agency keeps its own roster, Staffing now shows an **Agency registration** panel above the positions. Every operator who holds an offered or accepted shift appears in it.
+
+**Do this**
+
+1. As each operator registers with the agency, set their row to **Submitted, waiting**, then **Confirmed by the agency** when the host confirms.
+2. Use **Add ref** to record the agency's own reference or wristband number.
+3. Set **Rejected** if the host turns someone down. The row turns red, Readiness raises it as a job to fix, and you still have time to reassign the position.
+
+> **Why it matters.** The 2026 marathon needed three escalating appeals over five weeks. With open shifts visible and notifications targeted at qualified people, the coordinator sees exactly which seats are short instead of counting replies. The registration panel does the same for the agency's list, which is the one that decides who gets through the gate.
 
 ## Step 8. Equipment kits and setup tasks
 
@@ -337,6 +393,30 @@ The packet is one page per assignment with everything needed to show up and get 
 *Further down the packet: parking, arrival and access notes from the site, the frequency plan by condition, and the briefing notes from the position.*
 
 > **Why it matters.** In 2026 the brief went out three times to everyone, each edition amending the last, with "we apologize for any changes". Publishing per position means an operator whose packet did not change never hears about the change at all.
+
+### Cards for the check-in desk
+
+ICS 219 resource status cards are the paper the check-in desk works from. **Cards** on Staffing prints them from the plan, six to a page, so they cannot disagree with it.
+
+**Do this**
+
+1. On **Staffing**, click **Cards**.
+2. Choose **Personnel T-cards (ICS 219-5)** for one card per operator: call sign, name, licence, phone, unit, site, departure point, times, and blanks for check in and check out.
+3. Choose **Crew / team cards (ICS 219-2)** for one card per unit, with its crew, leader, Winlink address and net. A card short of its planned headcount is marked SHORT.
+4. Print, cut along the boxes, and put them in the rack at the MACC.
+
+### A read-only link for the agency
+
+Race operations, the medical lead and the venue need the plan but have no account here. **Share** on Staffing mints a link for them.
+
+**Do this**
+
+1. Click **Share**, name the link so you know what you are revoking later ("ATC race operations"), and create it.
+2. Copy the link from the green box. It is shown once.
+3. Leave **Include contacts** off unless the recipient genuinely needs names and numbers: without it the page shows times, every site with its address, parking and arrival notes, and the list of units with their tactical calls, and no personal contact details at all.
+4. The dialog lists each link with how many times it has been opened. **Revoke** kills it the moment the event is over.
+
+> **Why it matters.** At one in the morning before the UASI exercise an operator e-mailed the whole list asking for the address of the training centre, because it was in a spreadsheet attached to a message sent hours earlier. A link that shows every site with its arrival notes answers that without anyone waking up.
 
 ## Step 11. Race day
 

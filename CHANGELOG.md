@@ -9,6 +9,12 @@ notes and into the desktop updater prompt, so keep entries user-facing.
 
 ## [Unreleased]
 
+### Fixed
+- The user guide repeated the agency registration, cards and share-link sections twice.
+
+### Changed
+- Both tutorials cover the new features: the marathon walk-through adds agency registration, Winlink addressing for the net-control desks, a monitor-only channel, ICS 219 cards for the check-in desk and a read-only link for the agency; the Winter Field Day walk-through adds a crew-size floor, Winlink addresses for the gateway stations, monitor-only bulletin frequencies and scoring the objectives into the after-action report.
+
 ### Added
 - **Agency registration.** A deployment can record that the served agency keeps its own participant roster, with a deadline, a link and what the host needs. Staffing tracks each assigned operator as submitted, confirmed or rejected, readiness counts who is outstanding and turns critical at the deadline, and each packet tells the operator where they stand.
 - **ICS 219 cards.** *Cards* on Staffing prints personnel T-cards (219-5) and crew cards (219-2) from the plan, six to a page, with the crew, departure point, times and Winlink address. A crew card short of its planned headcount says so.
