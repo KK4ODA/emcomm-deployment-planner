@@ -176,6 +176,18 @@ messages and add a line under `[Unreleased]` in the changelog for anything a
 user would notice. Bug reports and feature requests go to the
 [issue tracker](https://github.com/KK4ODA/emcomm-deployment-planner/issues).
 
+<!-- tota-support:start -->
+## Support
+
+EmComm Deployment Planner is free and stays free. It is written by KK4ODA, who also runs
+[Tiles on the Air](https://tilesontheair.com), a free program for portable
+operators, and both are kept going by the people who use them. If EmComm Deployment Planner is
+useful to you, a contribution through the
+[Tiles on the Air giving page](https://tilesontheair.com/Giving) helps keep this tool and Tiles
+running. Nothing is ever locked behind it, and a bug report or an on-air
+report helps just as much.
+<!-- tota-support:end -->
+
 ## Credits and license
 
 Built and maintained by KK4ODA, with Claude (Anthropic) as pair programmer for
