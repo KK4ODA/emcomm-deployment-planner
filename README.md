@@ -194,4 +194,4 @@ Built and maintained by KK4ODA, with Claude (Anthropic) as pair programmer for
 the 2026 modernization. Map tiles © OpenStreetMap contributors and Esri.
 ICS 205 follows the FEMA/NIMS form layout.
 
-Private project. All rights reserved unless a license file is added.
+Released under the [MIT License](LICENSE).
